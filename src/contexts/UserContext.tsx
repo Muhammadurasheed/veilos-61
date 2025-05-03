@@ -1,6 +1,7 @@
 
 import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { generateAlias } from '@/lib/alias';
+import { UserRole } from '@/types';
 
 // Define the user type
 export interface User {
@@ -8,6 +9,7 @@ export interface User {
   alias: string;
   avatarIndex: number;
   loggedIn: boolean;
+  role?: UserRole; // Add role to match what's used in AdminPanel.tsx
 }
 
 // Define the context type
