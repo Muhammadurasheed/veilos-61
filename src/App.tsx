@@ -13,6 +13,9 @@ import BeaconsList from "./pages/BeaconsList";
 import ExpertProfile from "./pages/ExpertProfile";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
+import ExpertRegistration from "./pages/ExpertRegistration";
+import AdminPanel from "./pages/AdminPanel";
+import SessionHub from "./pages/SessionHub";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +33,9 @@ const App = () => (
               <Route path="/beacons" element={<BeaconsList />} />
               <Route path="/beacons/:expertId" element={<ExpertProfile />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/register-expert" element={<ExpertRegistration />} />
+              <Route path="/admin/*" element={<AdminPanel />} />
+              <Route path="/sessions" element={<SessionHub />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

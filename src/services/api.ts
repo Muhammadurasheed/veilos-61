@@ -1,5 +1,5 @@
 
-import { ApiResponse, ApiPostRequest, ApiExpertRegisterRequest, ApiChatSessionRequest, Post, Expert } from '@/types';
+import { ApiResponse, ApiPostRequest, ApiExpertRegisterRequest, ApiChatSessionRequest, Post, Expert, ApiVerificationRequest, Session, VerificationDocument } from '@/types';
 
 // Base API URL (would be configured based on environment)
 const API_BASE_URL = process.env.NODE_ENV === 'production' 
@@ -43,6 +43,49 @@ async function fetchApi<T>(
   }
 }
 
+// File upload helper
+async function uploadFile(
+  endpoint: string,
+  file: File,
+  additionalData: Record<string, any> = {}
+): Promise<ApiResponse<{ fileUrl: string }>> {
+  try {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // Add any additional data to the form
+    Object.entries(additionalData).forEach(([key, value]) => {
+      formData.append(key, value);
+    });
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data.error || 'An unexpected error occurred',
+      };
+    }
+
+    return {
+      success: true,
+      data: data as { fileUrl: string },
+    };
+  } catch (error) {
+    console.error('File upload failed:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'An unexpected error occurred',
+    };
+  }
+}
+
 // Post related API endpoints
 export const PostApi = {
   getPosts: () => fetchApi<Post[]>('/post'),
@@ -68,6 +111,18 @@ export const PostApi = {
       method: 'POST',
       body: JSON.stringify({ content }),
     }),
+    
+  flagPost: (postId: string, reason: string) =>
+    fetchApi<{ success: boolean }>(`/post/${postId}/flag`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+    
+  translatePost: (postId: string, targetLanguage: string) =>
+    fetchApi<{ translatedContent: string }>(`/post/${postId}/translate`, {
+      method: 'POST',
+      body: JSON.stringify({ targetLanguage }),
+    }),
 };
 
 // Expert related API endpoints
@@ -79,35 +134,58 @@ export const ExpertApi = {
       method: 'POST',
       body: JSON.stringify(expertData),
     }),
+    
+  uploadVerificationDocument: (expertId: string, file: File, documentType: string) =>
+    uploadFile(`/expert/${expertId}/document`, file, { documentType }),
+    
+  getExpertDocuments: (expertId: string) =>
+    fetchApi<VerificationDocument[]>(`/expert/${expertId}/documents`),
   
   getExpertProfile: (expertId: string) =>
     fetchApi<Expert>(`/expert/${expertId}`),
+    
+  updateExpertProfile: (expertId: string, profileData: Partial<Expert>) =>
+    fetchApi<Expert>(`/expert/${expertId}`, {
+      method: 'PUT',
+      body: JSON.stringify(profileData),
+    }),
 };
 
 // Chat session related API endpoints
-export const ChatApi = {
+export const SessionApi = {
   createSession: (sessionData: ApiChatSessionRequest) =>
-    fetchApi<{ sessionId: string }>('/chat/session', {
+    fetchApi<Session>('/session', {
       method: 'POST',
       body: JSON.stringify(sessionData),
     }),
   
-  getSessionMessages: (sessionId: string) =>
-    fetchApi<{ messages: any[] }>(`/chat/session/${sessionId}/messages`),
+  getSessions: (userId: string) =>
+    fetchApi<Session[]>(`/session/user/${userId}`),
+    
+  getExpertSessions: (expertId: string) =>
+    fetchApi<Session[]>(`/session/expert/${expertId}`),
   
-  sendMessage: (sessionId: string, content: string) =>
-    fetchApi<{ message: any }>(`/chat/session/${sessionId}/message`, {
+  getSessionDetails: (sessionId: string) =>
+    fetchApi<Session>(`/session/${sessionId}`),
+    
+  updateSessionStatus: (sessionId: string, status: Session['status']) =>
+    fetchApi<Session>(`/session/${sessionId}/status`, {
       method: 'POST',
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ status }),
+    }),
+    
+  createVideoRoom: (sessionId: string) =>
+    fetchApi<{ meetingUrl: string }>(`/session/${sessionId}/video`, {
+      method: 'POST',
     }),
 };
 
 // Admin related API endpoints
 export const AdminApi = {
-  verifyExpert: (expertId: string, verificationLevel: 'blue' | 'gold' | 'platinum') =>
+  verifyExpert: (expertId: string, verificationData: ApiVerificationRequest) =>
     fetchApi<{ success: boolean }>(`/admin/verify/${expertId}`, {
       method: 'POST',
-      body: JSON.stringify({ verificationLevel }),
+      body: JSON.stringify(verificationData),
     }),
   
   getFlaggedContent: () =>
@@ -117,5 +195,17 @@ export const AdminApi = {
     fetchApi<{ success: boolean }>(`/admin/flagged/${contentId}`, {
       method: 'POST',
       body: JSON.stringify({ action }),
+    }),
+    
+  getPendingExperts: () =>
+    fetchApi<Expert[]>('/admin/experts/pending'),
+    
+  getAllExperts: () =>
+    fetchApi<Expert[]>('/admin/experts'),
+    
+  adminLogin: (email: string, password: string) =>
+    fetchApi<{ token: string }>('/admin/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
     }),
 };

@@ -5,6 +5,7 @@ export interface User {
   alias: string;
   avatarIndex: number;
   loggedIn: boolean;
+  role?: UserRole;
 }
 
 // Expert Types
@@ -15,10 +16,25 @@ export interface Expert {
   specialization: string;
   verificationLevel: 'blue' | 'gold' | 'platinum';
   bio: string;
-  pricingModel: string;
+  pricingModel: 'free' | 'donation' | 'fixed';
+  pricingDetails?: string;
   rating: number;
   testimonials: Testimonial[];
   topicsHelped: string[];
+  verificationDocuments?: VerificationDocument[];
+  verified: boolean;
+  email?: string;
+  phoneNumber?: string;
+  accountStatus: 'pending' | 'approved' | 'rejected';
+}
+
+export interface VerificationDocument {
+  id: string;
+  type: 'id' | 'credential' | 'certificate' | 'other';
+  fileUrl: string;
+  fileName: string;
+  uploadedAt: string;
+  status: 'pending' | 'approved' | 'rejected';
 }
 
 export interface Testimonial {
@@ -43,6 +59,9 @@ export interface Post {
   likes: string[];
   comments: Comment[];
   wantsExpertHelp?: boolean;
+  languageCode?: string;
+  flagged?: boolean;
+  flagReason?: string;
 }
 
 export interface Comment {
@@ -54,6 +73,7 @@ export interface Comment {
   expertId?: string;
   content: string;
   timestamp: string;
+  languageCode?: string;
 }
 
 // Form State Types
@@ -64,11 +84,35 @@ export interface PostFormData {
   wantsExpertHelp?: boolean;
 }
 
+export interface ExpertRegistrationData {
+  name: string;
+  specialization: string;
+  bio: string;
+  email: string;
+  phoneNumber?: string;
+  pricingModel: 'free' | 'donation' | 'fixed';
+  pricingDetails?: string;
+}
+
 // Role Types
 export enum UserRole {
   SHADOW = 'shadow',  // Anonymous User
   BEACON = 'beacon',  // Expert
   ADMIN = 'admin'     // Administrator
+}
+
+// Session Types
+export interface Session {
+  id: string;
+  expertId: string;
+  userId: string;
+  userAlias: string;
+  scheduledTime?: string;
+  status: 'requested' | 'scheduled' | 'completed' | 'canceled';
+  sessionType: 'chat' | 'video' | 'voice';
+  notes?: string;
+  createdAt: string;
+  meetingUrl?: string;
 }
 
 // API Contract Types (for future implementation)
@@ -90,10 +134,21 @@ export interface ApiExpertRegisterRequest {
   email: string;
   specialization: string;
   bio: string;
-  credentials: string;
+  pricingModel: 'free' | 'donation' | 'fixed';
+  pricingDetails?: string;
+  phoneNumber?: string;
 }
 
 export interface ApiChatSessionRequest {
   expertId: string;
   initialMessage: string;
+  sessionType: 'chat' | 'video' | 'voice';
+  scheduledTime?: string;
+}
+
+export interface ApiVerificationRequest {
+  expertId: string;
+  verificationLevel: 'blue' | 'gold' | 'platinum';
+  status: 'approved' | 'rejected';
+  feedback?: string;
 }
