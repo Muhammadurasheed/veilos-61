@@ -78,7 +78,8 @@ export const sampleExperts: Expert[] = [
     specialization: 'Clinical Psychologist',
     verificationLevel: 'platinum',
     bio: 'Specializing in anxiety, depression, and trauma recovery. My approach combines cognitive behavioral therapy with mindfulness practices.',
-    pricingModel: 'Sliding scale available',
+    pricingModel: 'fixed',
+    pricingDetails: 'Sliding scale available',
     rating: 4.9,
     testimonials: [
       {
@@ -107,7 +108,8 @@ export const sampleExperts: Expert[] = [
     specialization: 'Family Therapist',
     verificationLevel: 'gold',
     bio: 'Helping individuals and families navigate relationship challenges. I believe in the power of healthy connections to transform lives.',
-    pricingModel: 'Free initial consultation',
+    pricingModel: 'free',
+    pricingDetails: 'Free initial consultation',
     rating: 4.8,
     testimonials: [
       {
@@ -128,7 +130,8 @@ export const sampleExperts: Expert[] = [
     specialization: 'Grief Counselor',
     verificationLevel: 'blue',
     bio: 'Supporting people through grief and loss. Certified in trauma-informed care and mindfulness-based grief therapy.',
-    pricingModel: 'Pay what you can',
+    pricingModel: 'donation',
+    pricingDetails: 'Pay what you can',
     rating: 5.0,
     testimonials: [
       {
