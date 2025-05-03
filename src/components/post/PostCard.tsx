@@ -9,6 +9,14 @@ import { formatDate } from '@/lib/alias';
 import CommentList from './CommentList';
 import CommentForm from './CommentForm';
 import { useVeiloData } from '@/contexts/VeiloDataContext';
+import { Flag, Globe, MessageSquare, Share2 } from 'lucide-react';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { toast } from '@/hooks/use-toast';
 
 interface PostCardProps {
   post: PostType;
@@ -31,13 +39,39 @@ const PostCard = ({ post, currentUser }: PostCardProps) => {
     }
   };
   
+  const handleShare = (platform: string) => {
+    // Simulate sharing functionality
+    toast({
+      title: `Share to ${platform}`,
+      description: "Sharing functionality would open here.",
+    });
+  };
+  
+  const handleReport = () => {
+    toast({
+      title: "Content reported",
+      description: "Thank you for helping keep our community safe.",
+      variant: "destructive"
+    });
+  };
+  
+  const handleTranslate = () => {
+    toast({
+      title: "Translation",
+      description: "Post would be translated here.",
+    });
+  };
+  
   return (
-    <Card className="mb-6 overflow-hidden animate-scale-in card-hover glass">
+    <Card className="overflow-hidden animate-scale-in card-hover glass">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
           <div className="flex items-center space-x-3">
             <Avatar className="h-10 w-10 border-2 border-veilo-blue-light">
-              <AvatarImage src={`/avatars/avatar-${post.userAvatarIndex}.svg`} alt={post.userAlias} />
+              <AvatarImage 
+                src={`/avatars/avatar-${post.userAvatarIndex}.svg`} 
+                alt={post.userAlias} 
+              />
               <AvatarFallback className="bg-veilo-blue-light text-veilo-blue-dark">
                 {post.userAlias.substring(0, 2).toUpperCase()}
               </AvatarFallback>
@@ -54,9 +88,18 @@ const PostCard = ({ post, currentUser }: PostCardProps) => {
                 {post.feeling}
               </Badge>
             )}
-            {post.topic && (
-              <Badge variant="outline" className="border-veilo-blue text-veilo-blue-dark">
-                {post.topic}
+            {post.topic && post.topic.split(',').map((topic, index) => (
+              <Badge 
+                key={index}
+                variant="outline" 
+                className="border-veilo-blue text-veilo-blue-dark"
+              >
+                #{topic.trim()}
+              </Badge>
+            ))}
+            {post.wantsExpertHelp && (
+              <Badge className="bg-veilo-gold text-white">
+                Seeking advice
               </Badge>
             )}
           </div>
@@ -96,32 +139,65 @@ const PostCard = ({ post, currentUser }: PostCardProps) => {
             </span>
           </Button>
           
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-gray-500 hover:text-veilo-blue-dark"
-            onClick={() => setShowComments(!showComments)}
-          >
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              width="20" 
-              height="20" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2" 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              className="mr-1"
+          <div className="flex gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-gray-500 hover:text-veilo-blue-dark"
+              onClick={() => setShowComments(!showComments)}
             >
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
-            {post.comments.length > 0 ? `${post.comments.length} ${post.comments.length === 1 ? 'response' : 'responses'}` : 'Respond'}
-          </Button>
+              <MessageSquare className="h-4 w-4 mr-1" />
+              {post.comments.length > 0 
+                ? `${post.comments.length} ${post.comments.length === 1 ? 'response' : 'responses'}` 
+                : 'Respond'
+              }
+            </Button>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="text-gray-500 hover:text-veilo-blue-dark">
+                  <Share2 className="h-4 w-4 mr-1" />
+                  Share
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => handleShare('WhatsApp')}>
+                  WhatsApp
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleShare('Telegram')}>
+                  Telegram
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleShare('Twitter')}>
+                  Twitter/X
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleShare('Link')}>
+                  Copy link
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-gray-400 hover:text-gray-600"
+              onClick={handleTranslate}
+            >
+              <Globe className="h-4 w-4" />
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-gray-400 hover:text-destructive"
+              onClick={handleReport}
+            >
+              <Flag className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         
         {showComments && (
-          <div className="mt-3 w-full">
+          <div className="mt-4 w-full border-t pt-4 animate-fade-in">
             <CommentList comments={post.comments} />
             
             {currentUser && (

@@ -42,6 +42,7 @@ export interface Post {
   timestamp: string;
   likes: string[];
   comments: Comment[];
+  wantsExpertHelp?: boolean;
 }
 
 export interface Comment {
@@ -60,4 +61,39 @@ export interface PostFormData {
   content: string;
   feeling?: string;
   topic?: string;
+  wantsExpertHelp?: boolean;
+}
+
+// Role Types
+export enum UserRole {
+  SHADOW = 'shadow',  // Anonymous User
+  BEACON = 'beacon',  // Expert
+  ADMIN = 'admin'     // Administrator
+}
+
+// API Contract Types (for future implementation)
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+export interface ApiPostRequest {
+  content: string;
+  feeling?: string;
+  topic?: string;
+  wantsExpertHelp?: boolean;
+}
+
+export interface ApiExpertRegisterRequest {
+  name: string;
+  email: string;
+  specialization: string;
+  bio: string;
+  credentials: string;
+}
+
+export interface ApiChatSessionRequest {
+  expertId: string;
+  initialMessage: string;
 }

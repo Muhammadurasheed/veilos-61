@@ -154,6 +154,44 @@ export default {
 						transform: 'scale(1)',
 						opacity: '1'
 					}
+				},
+				'scale-out': {
+					'0%': {
+						transform: 'scale(1)',
+						opacity: '1'
+					},
+					'100%': {
+						transform: 'scale(0.95)',
+						opacity: '0'
+					}
+				},
+				'slide-up': {
+					'0%': {
+						transform: 'translateY(20px)',
+						opacity: '0'
+					},
+					'100%': {
+						transform: 'translateY(0)',
+						opacity: '1'
+					}
+				},
+				'slide-right': {
+					'0%': {
+						transform: 'translateX(-20px)',
+						opacity: '0'
+					},
+					'100%': {
+						transform: 'translateX(0)',
+						opacity: '1'
+					}
+				},
+				'breathe': {
+					'0%, 100%': {
+						transform: 'scale(1)'
+					},
+					'50%': {
+						transform: 'scale(1.03)'
+					}
 				}
 			},
 			animation: {
@@ -162,7 +200,11 @@ export default {
 				'fade-in': 'fade-in 0.5s ease-out',
 				'float': 'float 6s ease-in-out infinite',
 				'pulse-gentle': 'pulse-gentle 3s ease-in-out infinite',
-				'scale-in': 'scale-in 0.3s ease-out'
+				'scale-in': 'scale-in 0.3s ease-out',
+				'scale-out': 'scale-out 0.3s ease-out',
+				'slide-up': 'slide-up 0.4s ease-out',
+				'slide-right': 'slide-right 0.4s ease-out',
+				'breathe': 'breathe 8s ease-in-out infinite'
 			},
 			backgroundImage: {
 				'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))'
@@ -170,6 +212,11 @@ export default {
 			boxShadow: {
 				'soft': '0 4px 20px rgba(0, 0, 0, 0.05)',
 				'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)'
+			},
+			fontFamily: {
+				'sans': ['Inter', 'ui-sans-serif', 'system-ui'],
+				'sora': ['Sora', 'sans-serif'],
+				'manrope': ['Manrope', 'sans-serif'],
 			}
 		}
 	},

@@ -8,6 +8,9 @@ import Layout from '@/components/layout/Layout';
 import { useVeiloData } from '@/contexts/VeiloDataContext';
 import { useUserContext } from '@/contexts/UserContext';
 import { Post } from '@/types';
+import { Button } from '@/components/ui/button';
+import { Globe } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 const Feed = () => {
   const { posts } = useVeiloData();
@@ -15,6 +18,7 @@ const Feed = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('latest');
   const [filterBy, setFilterBy] = useState('all');
+  const [language, setLanguage] = useState('en');
   
   // Filter posts based on search term and filter option
   const filteredPosts = posts.filter((post) => {
@@ -50,7 +54,7 @@ const Feed = () => {
   return (
     <Layout>
       <div className="container py-8">
-        <h1 className="text-3xl font-bold mb-8 text-center text-veilo-blue-dark">Community Feed</h1>
+        <h1 className="text-3xl font-bold mb-8 text-center text-veilo-blue-dark">Community Sanctuary</h1>
         
         <div className="max-w-3xl mx-auto">
           <CreatePostForm />
@@ -88,17 +92,44 @@ const Feed = () => {
                   <SelectItem value="mostComments">Most Responses</SelectItem>
                 </SelectContent>
               </Select>
+
+              <Button 
+                variant="outline" 
+                className="w-12 flex items-center justify-center"
+                title="Change Language"
+              >
+                <Globe className="h-4 w-4" />
+              </Button>
             </div>
+          </div>
+
+          {/* Featured topics */}
+          <div className="mb-6 flex flex-wrap gap-2">
+            <Badge variant="outline" className="bg-veilo-blue-light text-veilo-blue-dark hover:bg-veilo-blue hover:text-white cursor-pointer">
+              #MentalHealth
+            </Badge>
+            <Badge variant="outline" className="bg-veilo-green-light text-veilo-green-dark hover:bg-veilo-green hover:text-white cursor-pointer">
+              #FamilyChallenges
+            </Badge>
+            <Badge variant="outline" className="bg-veilo-gold-light text-veilo-gold-dark hover:bg-veilo-gold hover:text-white cursor-pointer">
+              #Relationships
+            </Badge>
+            <Badge variant="outline" className="bg-veilo-purple-light text-veilo-purple-dark hover:bg-veilo-purple hover:text-white cursor-pointer">
+              #CareerAdvice
+            </Badge>
+            <Badge variant="outline" className="bg-veilo-peach-light text-veilo-peach-dark hover:bg-veilo-peach hover:text-white cursor-pointer">
+              #SelfDiscovery
+            </Badge>
           </div>
           
           {sortedPosts.length > 0 ? (
-            <div>
+            <div className="space-y-6 animate-fade-in">
               {sortedPosts.map((post: Post) => (
                 <PostCard key={post.id} post={post} currentUser={user} />
               ))}
             </div>
           ) : (
-            <div className="text-center p-8 bg-white bg-opacity-50 rounded-lg">
+            <div className="text-center p-8 bg-white bg-opacity-50 rounded-2xl glass">
               <p className="text-gray-500">No posts found. Try adjusting your search or filters.</p>
             </div>
           )}
