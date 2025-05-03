@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,39 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Veilo custom colors
+				veilo: {
+					blue: {
+						light: '#D3E4FD',
+						DEFAULT: '#33C3F0',
+						dark: '#1EAEDB',
+					},
+					green: {
+						light: '#F2FCE2',
+						DEFAULT: '#9CC69B',
+						dark: '#7FB77E',
+					},
+					gold: {
+						light: '#FFF8E8',
+						DEFAULT: '#E6C780',
+						dark: '#D4AF37',
+					},
+					purple: {
+						light: '#E5DEFF',
+						DEFAULT: '#9F91CC',
+						dark: '#7A6BB0',
+					},
+					peach: {
+						light: '#FDE1D3',
+						DEFAULT: '#F8B195',
+						dark: '#F67E7D',
+					},
+					gray: {
+						light: '#F1F0FB',
+						DEFAULT: '#aaadb0',
+						dark: '#6E7275',
+					}
 				}
 			},
 			borderRadius: {
@@ -84,11 +118,58 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'fade-in': {
+					'0%': {
+						opacity: '0',
+						transform: 'translateY(10px)'
+					},
+					'100%': {
+						opacity: '1',
+						transform: 'translateY(0)'
+					}
+				},
+				'float': {
+					'0%, 100%': {
+						transform: 'translateY(0)'
+					},
+					'50%': {
+						transform: 'translateY(-10px)'
+					}
+				},
+				'pulse-gentle': {
+					'0%, 100%': {
+						opacity: '1'
+					},
+					'50%': {
+						opacity: '0.8'
+					}
+				},
+				'scale-in': {
+					'0%': {
+						transform: 'scale(0.95)',
+						opacity: '0'
+					},
+					'100%': {
+						transform: 'scale(1)',
+						opacity: '1'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'fade-in': 'fade-in 0.5s ease-out',
+				'float': 'float 6s ease-in-out infinite',
+				'pulse-gentle': 'pulse-gentle 3s ease-in-out infinite',
+				'scale-in': 'scale-in 0.3s ease-out'
+			},
+			backgroundImage: {
+				'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))'
+			},
+			boxShadow: {
+				'soft': '0 4px 20px rgba(0, 0, 0, 0.05)',
+				'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)'
 			}
 		}
 	},
