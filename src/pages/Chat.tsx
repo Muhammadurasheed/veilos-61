@@ -34,7 +34,7 @@ const ChatPage = () => {
         avatarIndex: user?.avatarIndex || 1,
         isExpert: false
       },
-      content: 'I've been feeling really anxious lately and having trouble sleeping.',
+      content: "I've been feeling really anxious lately and having trouble sleeping.",
       timestamp: new Date(Date.now() - 1000 * 60 * 28).toISOString() // 28 minutes ago
     },
     {
@@ -45,7 +45,7 @@ const ChatPage = () => {
         avatarUrl: '/experts/expert-1.jpg',
         isExpert: true
       },
-      content: 'I'm sorry to hear you're going through that. Anxiety and sleep issues often go hand in hand. Can you tell me when this started and if there's anything specific that might have triggered these feelings?',
+      content: "I'm sorry to hear you're going through that. Anxiety and sleep issues often go hand in hand. Can you tell me when this started and if there's anything specific that might have triggered these feelings?",
       timestamp: new Date(Date.now() - 1000 * 60 * 25).toISOString() // 25 minutes ago
     },
   ]);
