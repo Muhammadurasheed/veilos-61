@@ -109,7 +109,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       alias: generateAlias(),
       avatarIndex: Math.floor(Math.random() * 12) + 1,
       loggedIn: false,
-      role: 'shadow'
+      role: UserRole.SHADOW // Using the enum value instead of the string literal
     };
     
     setUser(fallbackUser);
