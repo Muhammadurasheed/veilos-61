@@ -1,44 +1,56 @@
 
 import { ApiResponse, ApiPostRequest, ApiExpertRegisterRequest, ApiChatSessionRequest, Post, Expert, ApiVerificationRequest, Session, VerificationDocument } from '@/types';
+import axios from 'axios';
 
-// Base API URL (would be configured based on environment)
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://api.veilo.app/api'
-  : '/api';
+// Base API URL
+const API_BASE_URL = 'http://localhost:3000/api';
 
-// Generic fetch wrapper with error handling
-async function fetchApi<T>(
-  endpoint: string, 
-  options: RequestInit = {}
+// Create axios instance with base configuration
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  }
+});
+
+// Add auth token to requests if available
+api.interceptors.request.use(config => {
+  const token = localStorage.getItem('veilo-token');
+  if (token) {
+    config.headers['x-auth-token'] = token;
+  }
+  return config;
+});
+
+// Generic API request wrapper
+async function apiRequest<T>(
+  method: string,
+  endpoint: string,
+  data?: any,
+  options?: any
 ): Promise<ApiResponse<T>> {
   try {
-    const url = `${API_BASE_URL}${endpoint}`;
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+    const response = await api.request({
+      method,
+      url: endpoint,
+      data,
+      ...options
     });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      return {
-        success: false,
-        error: data.error || 'An unexpected error occurred',
-      };
-    }
 
     return {
       success: true,
-      data: data as T,
+      data: response.data.data as T,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('API request failed:', error);
+    const errorMessage = 
+      error.response?.data?.error || 
+      error.message || 
+      'An unexpected error occurred';
+    
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'An unexpected error occurred',
+      error: errorMessage,
     };
   }
 }
@@ -50,162 +62,143 @@ async function uploadFile(
   additionalData: Record<string, any> = {}
 ): Promise<ApiResponse<{ fileUrl: string }>> {
   try {
-    const url = `${API_BASE_URL}${endpoint}`;
     const formData = new FormData();
     formData.append('file', file);
     
     // Add any additional data to the form
     Object.entries(additionalData).forEach(([key, value]) => {
-      formData.append(key, value);
+      formData.append(key, value.toString());
     });
     
-    const response = await fetch(url, {
-      method: 'POST',
-      body: formData,
+    const response = await api.post(endpoint, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      }
     });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      return {
-        success: false,
-        error: data.error || 'An unexpected error occurred',
-      };
-    }
 
     return {
       success: true,
-      data: data as { fileUrl: string },
+      data: response.data.data,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('File upload failed:', error);
+    const errorMessage = 
+      error.response?.data?.error || 
+      error.message || 
+      'An unexpected error occurred';
+    
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'An unexpected error occurred',
+      error: errorMessage,
     };
   }
 }
 
+// User related API endpoints
+export const UserApi = {
+  register: () => 
+    apiRequest<{ token: string, user: any }>('POST', '/users/register'),
+  
+  authenticate: (token: string) =>
+    apiRequest<{ user: any }>('POST', '/users/authenticate', { token }),
+  
+  getCurrentUser: () =>
+    apiRequest<{ user: any }>('GET', '/users/me'),
+  
+  refreshIdentity: () =>
+    apiRequest<{ user: any }>('POST', '/users/refresh-identity'),
+};
+
 // Post related API endpoints
 export const PostApi = {
-  getPosts: () => fetchApi<Post[]>('/post'),
+  getPosts: () => apiRequest<Post[]>('GET', '/posts'),
   
   createPost: (postData: ApiPostRequest) => 
-    fetchApi<Post>('/post', {
-      method: 'POST',
-      body: JSON.stringify(postData),
-    }),
+    apiRequest<Post>('POST', '/posts', postData),
   
   likePost: (postId: string) =>
-    fetchApi<{ likes: string[] }>(`/post/${postId}/like`, {
-      method: 'POST',
-    }),
+    apiRequest<{ likes: string[] }>('POST', `/posts/${postId}/like`),
   
   unlikePost: (postId: string) =>
-    fetchApi<{ likes: string[] }>(`/post/${postId}/unlike`, {
-      method: 'POST',
-    }),
+    apiRequest<{ likes: string[] }>('POST', `/posts/${postId}/unlike`),
   
   addComment: (postId: string, content: string) =>
-    fetchApi<Post>(`/post/${postId}/comment`, {
-      method: 'POST',
-      body: JSON.stringify({ content }),
-    }),
+    apiRequest<Post>('POST', `/posts/${postId}/comment`, { content }),
     
   flagPost: (postId: string, reason: string) =>
-    fetchApi<{ success: boolean }>(`/post/${postId}/flag`, {
-      method: 'POST',
-      body: JSON.stringify({ reason }),
-    }),
+    apiRequest<{ success: boolean }>('POST', `/posts/${postId}/flag`, { reason }),
     
   translatePost: (postId: string, targetLanguage: string) =>
-    fetchApi<{ translatedContent: string }>(`/post/${postId}/translate`, {
-      method: 'POST',
-      body: JSON.stringify({ targetLanguage }),
-    }),
+    apiRequest<{ translatedContent: string }>('POST', `/posts/${postId}/translate`, { targetLanguage }),
 };
 
 // Expert related API endpoints
 export const ExpertApi = {
-  getExperts: () => fetchApi<Expert[]>('/expert'),
+  getExperts: () => apiRequest<Expert[]>('GET', '/experts'),
   
   registerExpert: (expertData: ApiExpertRegisterRequest) =>
-    fetchApi<Expert>('/expert/register', {
-      method: 'POST',
-      body: JSON.stringify(expertData),
-    }),
+    apiRequest<Expert>('POST', '/experts/register', expertData),
     
   uploadVerificationDocument: (expertId: string, file: File, documentType: string) =>
-    uploadFile(`/expert/${expertId}/document`, file, { documentType }),
+    uploadFile(`/experts/${expertId}/document`, file, { documentType }),
     
   getExpertDocuments: (expertId: string) =>
-    fetchApi<VerificationDocument[]>(`/expert/${expertId}/documents`),
+    apiRequest<VerificationDocument[]>('GET', `/experts/${expertId}/documents`),
   
   getExpertProfile: (expertId: string) =>
-    fetchApi<Expert>(`/expert/${expertId}`),
+    apiRequest<Expert>('GET', `/experts/${expertId}`),
     
   updateExpertProfile: (expertId: string, profileData: Partial<Expert>) =>
-    fetchApi<Expert>(`/expert/${expertId}`, {
-      method: 'PUT',
-      body: JSON.stringify(profileData),
-    }),
+    apiRequest<Expert>('PUT', `/experts/${expertId}`, profileData),
 };
 
-// Chat session related API endpoints
+// Session related API endpoints
 export const SessionApi = {
   createSession: (sessionData: ApiChatSessionRequest) =>
-    fetchApi<Session>('/session', {
-      method: 'POST',
-      body: JSON.stringify(sessionData),
-    }),
+    apiRequest<Session>('POST', '/sessions', sessionData),
   
   getSessions: (userId: string) =>
-    fetchApi<Session[]>(`/session/user/${userId}`),
+    apiRequest<Session[]>('GET', `/sessions/user/${userId}`),
     
   getExpertSessions: (expertId: string) =>
-    fetchApi<Session[]>(`/session/expert/${expertId}`),
+    apiRequest<Session[]>('GET', `/sessions/expert/${expertId}`),
   
   getSessionDetails: (sessionId: string) =>
-    fetchApi<Session>(`/session/${sessionId}`),
+    apiRequest<Session>('GET', `/sessions/${sessionId}`),
     
   updateSessionStatus: (sessionId: string, status: Session['status']) =>
-    fetchApi<Session>(`/session/${sessionId}/status`, {
-      method: 'POST',
-      body: JSON.stringify({ status }),
-    }),
+    apiRequest<Session>('POST', `/sessions/${sessionId}/status`, { status }),
     
   createVideoRoom: (sessionId: string) =>
-    fetchApi<{ meetingUrl: string }>(`/session/${sessionId}/video`, {
-      method: 'POST',
-    }),
+    apiRequest<{ meetingUrl: string }>('POST', `/sessions/${sessionId}/video`),
 };
 
 // Admin related API endpoints
 export const AdminApi = {
   verifyExpert: (expertId: string, verificationData: ApiVerificationRequest) =>
-    fetchApi<{ success: boolean }>(`/admin/verify/${expertId}`, {
-      method: 'POST',
-      body: JSON.stringify(verificationData),
-    }),
+    apiRequest<{ success: boolean }>('PATCH', `/admin/experts/${expertId}/verify`, verificationData),
   
   getFlaggedContent: () =>
-    fetchApi<{ posts: Post[] }>('/admin/flagged'),
+    apiRequest<{ posts: Post[] }>('GET', '/admin/flagged'),
   
   resolveFlag: (contentId: string, action: 'approve' | 'remove') =>
-    fetchApi<{ success: boolean }>(`/admin/flagged/${contentId}`, {
-      method: 'POST',
-      body: JSON.stringify({ action }),
-    }),
+    apiRequest<{ success: boolean }>('POST', `/admin/flagged/${contentId}`, { action }),
     
   getPendingExperts: () =>
-    fetchApi<Expert[]>('/admin/experts/pending'),
+    apiRequest<Expert[]>('GET', '/admin/experts/unverified'),
     
   getAllExperts: () =>
-    fetchApi<Expert[]>('/admin/experts'),
+    apiRequest<Expert[]>('GET', '/admin/experts'),
     
   adminLogin: (email: string, password: string) =>
-    fetchApi<{ token: string }>('/admin/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    }),
+    apiRequest<{ token: string }>('POST', '/admin/login', { email, password }),
+};
+
+// Ratings related API endpoints
+export const RatingApi = {
+  rateExpert: (expertId: string, rating: number) =>
+    apiRequest<{ rating: number }>('POST', '/ratings', { expertId, rating }),
+    
+  addTestimonial: (expertId: string, text: string) =>
+    apiRequest<any>('POST', '/ratings/testimonial', { expertId, text }),
 };

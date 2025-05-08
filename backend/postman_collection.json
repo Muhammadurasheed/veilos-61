@@ -1,0 +1,582 @@
+
+{
+  "info": {
+    "_postman_id": "ef723a4e-5e6b-4c64-9b1c-2b3c5e6d7f8g",
+    "name": "Veilo API",
+    "description": "API collection for Veilo platform",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "register"]
+            },
+            "description": "Register a new anonymous user"
+          },
+          "response": []
+        },
+        {
+          "name": "Authenticate User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"token\": \"your_jwt_token\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/authenticate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "authenticate"]
+            },
+            "description": "Authenticate a user with a token"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-auth-token",
+                "value": "your_jwt_token"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "me"]
+            },
+            "description": "Get the current user's information"
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Identity",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-auth-token",
+                "value": "your_jwt_token"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/refresh-identity",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "refresh-identity"]
+            },
+            "description": "Generate a new alias and avatar for the user"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Experts",
+      "item": [
+        {
+          "name": "Register Expert",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-auth-token",
+                "value": "your_jwt_token"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Dr. Jane Smith\",\n    \"email\": \"jane.smith@example.com\",\n    \"specialization\": \"Clinical Psychologist\",\n    \"bio\": \"Specializing in anxiety, depression, and trauma recovery. My approach combines cognitive behavioral therapy with mindfulness practices.\",\n    \"pricingModel\": \"fixed\",\n    \"pricingDetails\": \"$100 per session\",\n    \"phoneNumber\": \"+1234567890\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/experts/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "experts", "register"]
+            },
+            "description": "Register a new expert"
+          },
+          "response": []
+        },
+        {
+          "name": "Upload Document",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-auth-token",
+                "value": "your_jwt_token"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/file.pdf"
+                },
+                {
+                  "key": "documentType",
+                  "value": "credential"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/experts/:id/document",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "experts", ":id", "document"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "expert-123"
+                }
+              ]
+            },
+            "description": "Upload a verification document for an expert"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Experts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/experts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "experts"]
+            },
+            "description": "Get all approved experts"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Expert by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/experts/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "experts", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "expert-123"
+                }
+              ]
+            },
+            "description": "Get an expert by ID"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Posts",
+      "item": [
+        {
+          "name": "Create Post",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-auth-token",
+                "value": "your_jwt_token"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"content\": \"I've been feeling so disconnected lately. It's like there's this wall between me and everyone else. Does anyone else feel this way?\",\n    \"feeling\": \"Disconnected\",\n    \"topic\": \"Mental Health\",\n    \"wantsExpertHelp\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/posts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts"]
+            },
+            "description": "Create a new post"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Posts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/posts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts"]
+            },
+            "description": "Get all posts"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Post by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/posts/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "post-123"
+                }
+              ]
+            },
+            "description": "Get a post by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Like Post",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-auth-token",
+                "value": "your_jwt_token"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/posts/:id/like",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts", ":id", "like"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "post-123"
+                }
+              ]
+            },
+            "description": "Like a post"
+          },
+          "response": []
+        },
+        {
+          "name": "Add Comment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-auth-token",
+                "value": "your_jwt_token"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"content\": \"I've been there too. For me, small connections helped - just texting a friend about something simple or going for a walk in a busy park.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/posts/:id/comment",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts", ":id", "comment"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "post-123"
+                }
+              ]
+            },
+            "description": "Add a comment to a post"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Sessions",
+      "item": [
+        {
+          "name": "Request Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-auth-token",
+                "value": "your_jwt_token"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"expertId\": \"expert-123\",\n    \"initialMessage\": \"I've been struggling with anxiety lately and would like some guidance.\",\n    \"sessionType\": \"video\",\n    \"scheduledTime\": \"2023-06-15T15:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sessions"]
+            },
+            "description": "Request a session with an expert"
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-auth-token",
+                "value": "your_jwt_token"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/sessions/user/:userId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sessions", "user", ":userId"],
+              "variable": [
+                {
+                  "key": "userId",
+                  "value": "user-123"
+                }
+              ]
+            },
+            "description": "Get sessions for a user"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Expert Sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-auth-token",
+                "value": "your_jwt_token"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/sessions/expert/:expertId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sessions", "expert", ":expertId"],
+              "variable": [
+                {
+                  "key": "expertId",
+                  "value": "expert-123"
+                }
+              ]
+            },
+            "description": "Get sessions for an expert"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Session Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-auth-token",
+                "value": "your_jwt_token"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"scheduled\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/sessions/:id/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sessions", ":id", "status"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "session-123"
+                }
+              ]
+            },
+            "description": "Update the status of a session"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Get Unverified Experts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-auth-token",
+                "value": "your_jwt_token"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/experts/unverified",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "experts", "unverified"]
+            },
+            "description": "Get all unverified experts (admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Expert",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-auth-token",
+                "value": "your_jwt_token"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"verificationLevel\": \"gold\",\n    \"status\": \"approved\",\n    \"feedback\": \"All documents verified.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/experts/:id/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "experts", ":id", "verify"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "expert-123"
+                }
+              ]
+            },
+            "description": "Verify an expert (admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Flagged Content",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-auth-token",
+                "value": "your_jwt_token"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/flagged",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "flagged"]
+            },
+            "description": "Get all flagged content (admin only)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Ratings",
+      "item": [
+        {
+          "name": "Rate Expert",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-auth-token",
+                "value": "your_jwt_token"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"expertId\": \"expert-123\",\n    \"rating\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ratings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ratings"]
+            },
+            "description": "Rate an expert"
+          },
+          "response": []
+        },
+        {
+          "name": "Add Testimonial",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-auth-token",
+                "value": "your_jwt_token"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"expertId\": \"expert-123\",\n    \"text\": \"Dr. Harris helped me understand my anxiety in a way that finally made sense. Her gentle guidance has been transformative.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ratings/testimonial",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ratings", "testimonial"]
+            },
+            "description": "Add a testimonial for an expert"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    }
+  ]
+}

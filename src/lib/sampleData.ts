@@ -1,6 +1,7 @@
 
 import { Post, Expert } from '@/types';
 
+// For development/fallback use only - will be replaced by API calls
 export const samplePosts: Post[] = [
   {
     id: '1',
@@ -99,7 +100,9 @@ export const sampleExperts: Expert[] = [
         }
       }
     ],
-    topicsHelped: ['Anxiety', 'Depression', 'Trauma', 'Self-esteem']
+    topicsHelped: ['Anxiety', 'Depression', 'Trauma', 'Self-esteem'],
+    verified: true,
+    accountStatus: 'approved'
   },
   {
     id: 'expert-2',
@@ -121,7 +124,9 @@ export const sampleExperts: Expert[] = [
         }
       }
     ],
-    topicsHelped: ['Family Conflict', 'Communication Skills', 'Parenting', 'Couples Therapy']
+    topicsHelped: ['Family Conflict', 'Communication Skills', 'Parenting', 'Couples Therapy'],
+    verified: true,
+    accountStatus: 'approved'
   },
   {
     id: 'expert-3',
@@ -143,6 +148,8 @@ export const sampleExperts: Expert[] = [
         }
       }
     ],
-    topicsHelped: ['Grief', 'Loss', 'Life Transitions', 'Healing']
+    topicsHelped: ['Grief', 'Loss', 'Life Transitions', 'Healing'],
+    verified: true,
+    accountStatus: 'approved'
   }
 ];

@@ -2,6 +2,8 @@
 import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { generateAlias } from '@/lib/alias';
 import { UserRole } from '@/types';
+import { UserApi } from '@/services/api';
+import { toast } from '@/hooks/use-toast';
 
 // Define the user type
 export interface User {
@@ -18,6 +20,7 @@ interface UserContextType {
   setUser: (user: User | null) => void;
   logout: () => void;
   refreshIdentity: () => void;
+  isLoading: boolean;
 }
 
 // Create context with default values
@@ -26,6 +29,7 @@ const UserContext = createContext<UserContextType>({
   setUser: () => {},
   logout: () => {},
   refreshIdentity: () => {},
+  isLoading: false,
 });
 
 // Custom hook to use the UserContext
@@ -33,37 +37,140 @@ export const useUserContext = () => useContext(UserContext);
 
 // Provider component
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    // Check localStorage for saved user
-    const savedUser = localStorage.getItem('veilo-user');
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Save user to localStorage whenever it changes
+  // Initialize user from token on mount
   useEffect(() => {
-    if (user) {
-      localStorage.setItem('veilo-user', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('veilo-user');
-    }
-  }, [user]);
+    const initializeUser = async () => {
+      const token = localStorage.getItem('veilo-token');
+      
+      if (token) {
+        try {
+          // Attempt to authenticate with saved token
+          const response = await UserApi.authenticate(token);
+          
+          if (response.success && response.data?.user) {
+            setUser({
+              ...response.data.user,
+              loggedIn: true
+            });
+          } else {
+            // Invalid token, clear it
+            localStorage.removeItem('veilo-token');
+            // Register as new user
+            await registerNewUser();
+          }
+        } catch (error) {
+          console.error('Authentication error:', error);
+          // Register as new user on error
+          await registerNewUser();
+        }
+      } else {
+        // No token found, register new user
+        await registerNewUser();
+      }
+      
+      setIsLoading(false);
+    };
+    
+    initializeUser();
+  }, []);
 
-  const logout = () => {
-    setUser(null);
+  // Register new anonymous user
+  const registerNewUser = async () => {
+    try {
+      const response = await UserApi.register();
+      
+      if (response.success && response.data) {
+        // Save token
+        localStorage.setItem('veilo-token', response.data.token);
+        
+        // Set user
+        setUser({
+          ...response.data.user,
+          loggedIn: true
+        });
+      } else {
+        // Failed to register, use fallback
+        console.error('Registration failed:', response.error);
+        useFallbackUser();
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      useFallbackUser();
+    }
   };
 
-  const refreshIdentity = () => {
+  // Create fallback user when API is unavailable
+  const useFallbackUser = () => {
+    const fallbackUser: User = {
+      id: `user-${Math.random().toString(36).substring(2, 10)}`,
+      alias: generateAlias(),
+      avatarIndex: Math.floor(Math.random() * 12) + 1,
+      loggedIn: false,
+      role: 'shadow'
+    };
+    
+    setUser(fallbackUser);
+  };
+
+  const logout = () => {
+    localStorage.removeItem('veilo-token');
+    setUser(null);
+    
+    // Register as new anonymous user after logout
+    registerNewUser();
+    
+    toast({
+      title: 'Logged out',
+      description: 'You have been logged out. A new anonymous identity has been created.',
+    });
+  };
+
+  const refreshIdentity = async () => {
     if (user) {
-      setUser({
-        ...user,
-        alias: generateAlias(),
-        avatarIndex: Math.floor(Math.random() * 12) + 1,
-      });
+      try {
+        const response = await UserApi.refreshIdentity();
+        
+        if (response.success && response.data?.user) {
+          setUser({
+            ...response.data.user,
+            loggedIn: true
+          });
+          
+          toast({
+            title: 'Identity refreshed',
+            description: 'Your anonymous identity has been refreshed.',
+          });
+        } else {
+          // Fallback to local refresh if API fails
+          setUser({
+            ...user,
+            alias: generateAlias(),
+            avatarIndex: Math.floor(Math.random() * 12) + 1,
+          });
+          
+          toast({
+            title: 'Identity refreshed',
+            description: 'Your anonymous identity has been refreshed locally.',
+          });
+        }
+      } catch (error) {
+        console.error('Identity refresh error:', error);
+        
+        // Fallback to local refresh
+        setUser({
+          ...user,
+          alias: generateAlias(),
+          avatarIndex: Math.floor(Math.random() * 12) + 1,
+        });
+      }
     }
   };
 
   return (
-    <UserContext.Provider value={{ user, setUser, logout, refreshIdentity }}>
+    <UserContext.Provider value={{ user, setUser, logout, refreshIdentity, isLoading }}>
       {children}
     </UserContext.Provider>
   );
