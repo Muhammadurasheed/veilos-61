@@ -24,7 +24,7 @@ const CommentForm = ({ postId, userId, userAlias, userAvatarIndex }: CommentForm
     
     setIsSubmitting(true);
     
-    // Pass the content as a string directly, not as an object
+    // Pass the content as a string directly
     addComment(postId, content.trim());
     
     setContent('');
