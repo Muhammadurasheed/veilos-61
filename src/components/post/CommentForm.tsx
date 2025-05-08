@@ -4,6 +4,7 @@ import { useVeiloData } from '@/contexts/VeiloDataContext';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ApiCommentRequest } from '@/types';
 
 interface CommentFormProps {
   postId: string;
@@ -25,10 +26,8 @@ const CommentForm = ({ postId, userId, userAlias, userAvatarIndex }: CommentForm
     setIsSubmitting(true);
     
     addComment(postId, {
-      userId,
-      userAlias,
-      userAvatarIndex,
       content: content.trim(),
+      languageCode: 'en' // Default language code
     });
     
     setContent('');

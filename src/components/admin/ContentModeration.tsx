@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Post } from '@/types';
 import { AdminApi, PostApi } from '@/services/api';
@@ -45,6 +44,8 @@ const ContentModeration = () => {
       comments: [],
       flagged: true,
       flagReason: 'potential_self_harm',
+      wantsExpertHelp: true,
+      languageCode: 'en'
     },
     {
       id: '2',
@@ -59,6 +60,8 @@ const ContentModeration = () => {
       comments: [],
       flagged: true,
       flagReason: 'abuse_report',
+      wantsExpertHelp: true,
+      languageCode: 'en'
     },
     {
       id: '3',
@@ -73,6 +76,8 @@ const ContentModeration = () => {
       comments: [],
       flagged: true,
       flagReason: 'harmful_content',
+      wantsExpertHelp: false,
+      languageCode: 'en'
     },
   ]);
   

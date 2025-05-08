@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Expert } from '@/types';
@@ -46,7 +45,9 @@ const ExpertVerification = () => {
   const sampleExperts: Expert[] = [
     {
       id: '1',
+      userId: 'user-expert-1',
       name: 'Dr. Sarah Johnson',
+      email: 'sarah.johnson@example.com',
       avatarUrl: '/experts/expert-1.jpg',
       specialization: 'Mental Health Counselor',
       bio: 'Licensed therapist with 10+ years of experience helping individuals navigate anxiety, depression, and life transitions.',
@@ -61,13 +62,16 @@ const ExpertVerification = () => {
     },
     {
       id: '2',
+      userId: 'user-expert-2',
       name: 'Pastor Michael Williams',
+      email: 'michael.williams@example.com',
       avatarUrl: '/experts/expert-2.jpg',
       specialization: 'Faith Counselor',
       bio: 'Ordained minister with extensive experience in spiritual guidance and family counseling.',
       verificationLevel: 'blue',
       verified: false,
       pricingModel: 'donation',
+      pricingDetails: 'Donation-based',
       rating: 4.7,
       testimonials: [],
       topicsHelped: ['Faith Crisis', 'Spiritual Growth', 'Family'],
@@ -75,7 +79,9 @@ const ExpertVerification = () => {
     },
     {
       id: '3',
+      userId: 'user-expert-3',
       name: 'Dr. Aisha Rahman',
+      email: 'aisha.rahman@example.com',
       avatarUrl: '/experts/expert-3.jpg',
       specialization: 'Relationship Counselor',
       bio: 'PhD in Family Therapy with specialized training in cultural competency and relationship dynamics.',

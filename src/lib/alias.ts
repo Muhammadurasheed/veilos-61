@@ -20,3 +20,41 @@ export function generateAlias(): string {
   
   return `${randomAdjective}${randomNoun}${randomNumber}`;
 }
+
+/**
+ * Format a date string to a more readable format
+ * @param dateString - ISO date string
+ * @returns Formatted date string
+ */
+export function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  
+  // Check if the date is today
+  const today = new Date();
+  if (date.toDateString() === today.toDateString()) {
+    return `Today at ${date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
+  }
+  
+  // Check if the date is yesterday
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) {
+    return `Yesterday at ${date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
+  }
+  
+  // If date is within the last 7 days
+  const oneWeekAgo = new Date(today);
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  if (date > oneWeekAgo) {
+    return `${date.toLocaleDateString(undefined, { weekday: 'long' })} at ${date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
+  }
+  
+  // Default formatting for older dates
+  return date.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
