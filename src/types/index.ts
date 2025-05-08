@@ -1,52 +1,21 @@
 
-// User Types
+// User-related types
+export enum UserRole {
+  SHADOW = "shadow",
+  BEACON = "beacon",
+  ADMIN = "admin"
+}
+
 export interface User {
   id: string;
   alias: string;
   avatarIndex: number;
   loggedIn: boolean;
   role?: UserRole;
+  expertId?: string;
 }
 
-// Expert Types
-export interface Expert {
-  id: string;
-  name: string;
-  avatarUrl: string;
-  specialization: string;
-  verificationLevel: 'blue' | 'gold' | 'platinum';
-  bio: string;
-  pricingModel: 'free' | 'donation' | 'fixed';
-  pricingDetails?: string;
-  rating: number;
-  testimonials: Testimonial[];
-  topicsHelped: string[];
-  verificationDocuments?: VerificationDocument[];
-  verified: boolean;
-  email?: string;
-  phoneNumber?: string;
-  accountStatus: 'pending' | 'approved' | 'rejected';
-}
-
-export interface VerificationDocument {
-  id: string;
-  type: 'id' | 'credential' | 'certificate' | 'other';
-  fileUrl: string;
-  fileName: string;
-  uploadedAt: string;
-  status: 'pending' | 'approved' | 'rejected';
-}
-
-export interface Testimonial {
-  id: string;
-  text: string;
-  user: {
-    alias: string;
-    avatarIndex: number;
-  };
-}
-
-// Post Types
+// Post-related types
 export interface Post {
   id: string;
   userId: string;
@@ -58,8 +27,8 @@ export interface Post {
   timestamp: string;
   likes: string[];
   comments: Comment[];
-  wantsExpertHelp?: boolean;
-  languageCode?: string;
+  wantsExpertHelp: boolean;
+  languageCode: string;
   flagged?: boolean;
   flagReason?: string;
 }
@@ -69,64 +38,78 @@ export interface Comment {
   userId: string;
   userAlias: string;
   userAvatarIndex: number;
-  isExpert?: boolean;
+  isExpert: boolean;
   expertId?: string;
   content: string;
   timestamp: string;
-  languageCode?: string;
+  languageCode: string;
 }
 
-// Form State Types
-export interface PostFormData {
-  content: string;
-  feeling?: string;
-  topic?: string;
-  wantsExpertHelp?: boolean;
-}
-
-export interface ExpertRegistrationData {
+// Expert-related types
+export interface Expert {
+  id: string;
+  userId: string;
   name: string;
+  email: string;
+  avatarUrl?: string;
   specialization: string;
   bio: string;
-  email: string;
-  phoneNumber?: string;
-  pricingModel: 'free' | 'donation' | 'fixed';
+  verificationLevel: "blue" | "gold" | "platinum" | "none";
+  verified: boolean;
+  pricingModel: "free" | "donation" | "fixed";
   pricingDetails?: string;
+  phoneNumber?: string;
+  rating: number;
+  testimonials: Testimonial[];
+  topicsHelped: string[];
+  accountStatus: "pending" | "approved" | "rejected";
+  verificationDocuments?: VerificationDocument[];
 }
 
-// Role Types
-export enum UserRole {
-  SHADOW = 'shadow',  // Anonymous User
-  BEACON = 'beacon',  // Expert
-  ADMIN = 'admin'     // Administrator
+export interface Testimonial {
+  id: string;
+  text: string;
+  user: {
+    alias: string;
+    avatarIndex: number;
+  };
 }
 
-// Session Types
+export interface VerificationDocument {
+  id: string;
+  type: "id" | "credential" | "certificate" | "other";
+  fileUrl: string;
+  fileName: string;
+  uploadedAt: string;
+  status: "pending" | "approved" | "rejected";
+}
+
+// Session-related types
 export interface Session {
   id: string;
   expertId: string;
   userId: string;
   userAlias: string;
   scheduledTime?: string;
-  status: 'requested' | 'scheduled' | 'completed' | 'canceled';
-  sessionType: 'chat' | 'video' | 'voice';
+  status: "requested" | "scheduled" | "completed" | "canceled";
+  sessionType: "chat" | "video" | "voice";
   notes?: string;
-  createdAt: string;
   meetingUrl?: string;
+  createdAt: string;
 }
 
-// API Contract Types (for future implementation)
-export interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
-
+// API request types
 export interface ApiPostRequest {
   content: string;
   feeling?: string;
   topic?: string;
   wantsExpertHelp?: boolean;
+  languageCode?: string;
+}
+
+export interface ApiCommentRequest {
+  content: string;
+  languageCode?: string;
 }
 
 export interface ApiExpertRegisterRequest {
@@ -134,21 +117,27 @@ export interface ApiExpertRegisterRequest {
   email: string;
   specialization: string;
   bio: string;
-  pricingModel: 'free' | 'donation' | 'fixed';
+  pricingModel: "free" | "donation" | "fixed";
   pricingDetails?: string;
   phoneNumber?: string;
 }
 
 export interface ApiChatSessionRequest {
   expertId: string;
-  initialMessage: string;
-  sessionType: 'chat' | 'video' | 'voice';
+  initialMessage?: string;
+  sessionType: "chat" | "video" | "voice";
   scheduledTime?: string;
 }
 
 export interface ApiVerificationRequest {
-  expertId: string;
-  verificationLevel: 'blue' | 'gold' | 'platinum';
-  status: 'approved' | 'rejected';
+  verificationLevel: "blue" | "gold" | "platinum" | "none";
+  status: "approved" | "rejected";
   feedback?: string;
+}
+
+// API response type
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
 }

@@ -1,17 +1,16 @@
 
-import { ReactNode } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 
 interface LayoutProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 const Layout = ({ children }: LayoutProps) => {
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-radial from-veilo-blue-light via-white to-veilo-green-light">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-veilo-blue-light/10 to-veilo-purple-light/10">
       <Header />
-      <main className="flex-grow">
+      <main className="flex-1">
         {children}
       </main>
       <Footer />

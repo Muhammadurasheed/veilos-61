@@ -1,218 +1,228 @@
 
 import { useState } from 'react';
-import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Post as PostType, User } from '@/types';
-import { formatDate } from '@/lib/alias';
-import CommentList from './CommentList';
-import CommentForm from './CommentForm';
 import { useVeiloData } from '@/contexts/VeiloDataContext';
-import { Flag, Globe, MessageSquare, Share2 } from 'lucide-react';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
-import { toast } from '@/hooks/use-toast';
+import { useUserContext } from '@/contexts/UserContext';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { formatDistanceToNow } from 'date-fns';
+import { Heart, MessageSquare, Flag, Send } from 'lucide-react';
+import { Post, Comment } from '@/types';
 
 interface PostCardProps {
-  post: PostType;
-  currentUser: User | null;
+  post: Post;
 }
 
-const PostCard = ({ post, currentUser }: PostCardProps) => {
-  const [showComments, setShowComments] = useState(false);
-  const { likePost, unlikePost } = useVeiloData();
-  
-  const isLiked = currentUser ? post.likes.includes(currentUser.id) : false;
-  
-  const handleLikeToggle = () => {
-    if (!currentUser) return;
+const PostCard = ({ post }: PostCardProps) => {
+  const { user } = useUserContext();
+  const { likePost, unlikePost, addComment, flagPost } = useVeiloData();
+  const [comment, setComment] = useState('');
+  const [showCommentInput, setShowCommentInput] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [flagReason, setFlagReason] = useState('');
+  const [flagDialogOpen, setFlagDialogOpen] = useState(false);
+
+  const isLiked = user ? post.likes.includes(user.id) : false;
+
+  const handleLikeToggle = async () => {
+    if (!user) return;
     
     if (isLiked) {
-      unlikePost(post.id, currentUser.id);
+      await unlikePost(post.id);
     } else {
-      likePost(post.id, currentUser.id);
+      await likePost(post.id);
     }
   };
-  
-  const handleShare = (platform: string) => {
-    // Simulate sharing functionality
-    toast({
-      title: `Share to ${platform}`,
-      description: "Sharing functionality would open here.",
-    });
+
+  const handleSubmitComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!comment.trim() || !user) return;
+    
+    setLoading(true);
+    await addComment(post.id, comment);
+    setComment('');
+    setShowCommentInput(false);
+    setLoading(false);
   };
-  
-  const handleReport = () => {
-    toast({
-      title: "Content reported",
-      description: "Thank you for helping keep our community safe.",
-      variant: "destructive"
-    });
+
+  const handleFlagPost = async () => {
+    if (!flagReason.trim() || !user) return;
+    
+    const success = await flagPost(post.id, flagReason);
+    if (success) {
+      setFlagDialogOpen(false);
+      setFlagReason('');
+    }
   };
-  
-  const handleTranslate = () => {
-    toast({
-      title: "Translation",
-      description: "Post would be translated here.",
-    });
-  };
-  
+
   return (
-    <Card className="overflow-hidden animate-scale-in card-hover glass">
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-start">
-          <div className="flex items-center space-x-3">
-            <Avatar className="h-10 w-10 border-2 border-veilo-blue-light">
+    <Card className="mb-4 overflow-hidden bg-white/80 backdrop-blur-sm border-veilo-blue-light/20 shadow-sm">
+      <CardContent className="pt-4">
+        <div className="flex justify-between items-start mb-2">
+          <div className="flex items-center">
+            <Avatar className="h-8 w-8 mr-2">
               <AvatarImage 
                 src={`/avatars/avatar-${post.userAvatarIndex}.svg`} 
                 alt={post.userAlias} 
               />
-              <AvatarFallback className="bg-veilo-blue-light text-veilo-blue-dark">
+              <AvatarFallback>
                 {post.userAlias.substring(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div>
-              <p className="font-medium text-veilo-blue-dark">{post.userAlias}</p>
-              <p className="text-sm text-gray-500">{formatDate(post.timestamp)}</p>
+              <p className="text-sm font-medium">{post.userAlias}</p>
+              <p className="text-xs text-gray-500">
+                {formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}
+              </p>
             </div>
           </div>
           
-          <div className="flex flex-wrap gap-2">
+          <div className="flex space-x-1">
             {post.feeling && (
-              <Badge variant="secondary" className="bg-veilo-purple-light text-veilo-purple-dark">
+              <Badge variant="outline" className="bg-veilo-blue-light/10">
                 {post.feeling}
               </Badge>
             )}
-            {post.topic && post.topic.split(',').map((topic, index) => (
-              <Badge 
-                key={index}
-                variant="outline" 
-                className="border-veilo-blue text-veilo-blue-dark"
-              >
-                #{topic.trim()}
-              </Badge>
-            ))}
-            {post.wantsExpertHelp && (
-              <Badge className="bg-veilo-gold text-white">
-                Seeking advice
+            {post.topic && (
+              <Badge variant="outline" className="bg-veilo-purple-light/10">
+                {post.topic}
               </Badge>
             )}
-          </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent>
-        <p className="text-gray-700 whitespace-pre-wrap">{post.content}</p>
-      </CardContent>
-      
-      <CardFooter className="border-t pt-3 flex flex-col items-stretch">
-        <div className="flex justify-between items-center mb-2">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className={`group ${isLiked ? 'text-veilo-blue' : 'text-gray-500'}`}
-            onClick={handleLikeToggle}
-            disabled={!currentUser}
-          >
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              width="20" 
-              height="20" 
-              viewBox="0 0 24 24" 
-              fill={isLiked ? "currentColor" : "none"}
-              stroke="currentColor" 
-              strokeWidth="2" 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              className="mr-1"
-            >
-              <path d="M7 10v12" />
-              <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z" />
-            </svg>
-            <span className="group-hover:text-veilo-blue transition-colors">
-              {post.likes.length > 0 ? `${post.likes.length} ${post.likes.length === 1 ? 'person' : 'people'} felt this` : 'I feel this'}
-            </span>
-          </Button>
-          
-          <div className="flex gap-2">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-gray-500 hover:text-veilo-blue-dark"
-              onClick={() => setShowComments(!showComments)}
-            >
-              <MessageSquare className="h-4 w-4 mr-1" />
-              {post.comments.length > 0 
-                ? `${post.comments.length} ${post.comments.length === 1 ? 'response' : 'responses'}` 
-                : 'Respond'
-              }
-            </Button>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-gray-500 hover:text-veilo-blue-dark">
-                  <Share2 className="h-4 w-4 mr-1" />
-                  Share
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => handleShare('WhatsApp')}>
-                  WhatsApp
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleShare('Telegram')}>
-                  Telegram
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleShare('Twitter')}>
-                  Twitter/X
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleShare('Link')}>
-                  Copy link
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-gray-400 hover:text-gray-600"
-              onClick={handleTranslate}
-            >
-              <Globe className="h-4 w-4" />
-            </Button>
-            
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-gray-400 hover:text-destructive"
-              onClick={handleReport}
-            >
-              <Flag className="h-4 w-4" />
-            </Button>
+            {post.wantsExpertHelp && (
+              <Badge variant="outline" className="bg-veilo-purple/10 text-veilo-purple-dark">
+                Seeking Help
+              </Badge>
+            )}
           </div>
         </div>
         
-        {showComments && (
-          <div className="mt-4 w-full border-t pt-4 animate-fade-in">
-            <CommentList comments={post.comments} />
+        <p className="my-2 whitespace-pre-wrap">{post.content}</p>
+        
+        <div className="flex items-center justify-between mt-4 border-t pt-3 text-sm text-gray-600">
+          <div className="flex items-center">
+            <button 
+              onClick={handleLikeToggle}
+              className={`flex items-center mr-4 ${isLiked ? 'text-red-500' : 'text-gray-500'}`}
+            >
+              <Heart className={`h-4 w-4 mr-1 ${isLiked ? 'fill-red-500' : ''}`} />
+              {post.likes.length > 0 && <span>{post.likes.length}</span>}
+            </button>
             
-            {currentUser && (
-              <div className="mt-4">
-                <CommentForm 
-                  postId={post.id}
-                  userId={currentUser.id}
-                  userAlias={currentUser.alias}
-                  userAvatarIndex={currentUser.avatarIndex}
+            <button 
+              onClick={() => setShowCommentInput(!showCommentInput)}
+              className="flex items-center text-gray-500"
+            >
+              <MessageSquare className="h-4 w-4 mr-1" />
+              {post.comments.length > 0 && <span>{post.comments.length}</span>}
+            </button>
+          </div>
+          
+          <Dialog open={flagDialogOpen} onOpenChange={setFlagDialogOpen}>
+            <DialogTrigger asChild>
+              <button className="text-gray-500">
+                <Flag className="h-4 w-4" />
+              </button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Report Post</DialogTitle>
+              </DialogHeader>
+              <div className="py-4">
+                <p className="text-sm text-gray-500 mb-4">
+                  Please tell us why you're reporting this post.
+                  This will help our moderators review it.
+                </p>
+                <Textarea
+                  value={flagReason}
+                  onChange={(e) => setFlagReason(e.target.value)}
+                  placeholder="Why are you reporting this post?"
                 />
               </div>
-            )}
-          </div>
-        )}
-      </CardFooter>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setFlagDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleFlagPost}>
+                  Report
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </CardContent>
+      
+      {showCommentInput && (
+        <CardFooter className="border-t pt-3 pb-3">
+          <form onSubmit={handleSubmitComment} className="w-full">
+            <div className="flex items-start space-x-2">
+              <Avatar className="h-8 w-8">
+                <AvatarImage 
+                  src={`/avatars/avatar-${user?.avatarIndex || 1}.svg`} 
+                  alt={user?.alias || 'User'} 
+                />
+                <AvatarFallback>
+                  {user?.alias?.substring(0, 2).toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <Textarea
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="Write a response..."
+                  className="mb-2 min-h-[60px]"
+                />
+                <div className="flex justify-end">
+                  <Button 
+                    type="submit" 
+                    size="sm" 
+                    disabled={!comment.trim() || loading}
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    Reply
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </CardFooter>
+      )}
+      
+      {post.comments.length > 0 && (
+        <div className="border-t bg-gray-50/50">
+          {post.comments.map((comment: Comment) => (
+            <div key={comment.id} className="p-3 border-b last:border-0">
+              <div className="flex items-start space-x-2">
+                <Avatar className="h-6 w-6">
+                  <AvatarImage 
+                    src={`/avatars/avatar-${comment.userAvatarIndex}.svg`} 
+                    alt={comment.userAlias} 
+                  />
+                  <AvatarFallback>
+                    {comment.userAlias.substring(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="flex items-center">
+                    <p className="text-xs font-medium">{comment.userAlias}</p>
+                    {comment.isExpert && (
+                      <Badge variant="outline" className="ml-1 h-4 text-[10px] bg-blue-500/10 text-blue-700">
+                        Expert
+                      </Badge>
+                    )}
+                    <p className="text-[10px] text-gray-500 ml-1">
+                      {formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}
+                    </p>
+                  </div>
+                  <p className="text-sm">{comment.content}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </Card>
   );
 };

@@ -1,112 +1,141 @@
 
-import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
-import Layout from "@/components/layout/Layout";
-import { useUserContext } from "@/contexts/UserContext";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import Layout from '@/components/layout/Layout';
+import { useUserContext } from '@/contexts/UserContext';
+import { Shield, MessageSquare, Heart } from 'lucide-react';
 
 const Index = () => {
   const { user } = useUserContext();
-  
+  const navigate = useNavigate();
+
   return (
     <Layout>
       {/* Hero Section */}
-      <section className="py-16 md:py-24">
+      <section className="bg-gradient-to-b from-veilo-blue-light/20 to-veilo-purple-light/20 py-20">
         <div className="container px-4 mx-auto">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-veilo-blue-dark">
-              Speak freely. Get real answers. <span className="text-veilo-blue">Safely.</span>
-            </h1>
-            <p className="text-xl text-gray-600 mb-10 max-w-2xl mx-auto">
-              Veilo is a safe, anonymous space for people to drop their shame and seek healing through compassionate expert guidance.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link to="/feed">
-                <Button className="text-lg px-8 py-6 bg-veilo-blue hover:bg-veilo-blue-dark text-white">
-                  Browse the Feed
+          <div className="flex flex-col md:flex-row items-center">
+            <div className="md:w-1/2 mb-10 md:mb-0">
+              <h1 className="text-4xl md:text-5xl font-bold mb-6 text-veilo-blue-dark">
+                A Safe Space for <span className="text-veilo-purple">Anonymous</span> Emotional Support
+              </h1>
+              <p className="text-lg mb-8 text-gray-600">
+                Veilo connects you with verified support specialists in a completely anonymous environment. 
+                Share your feelings, get expert advice, and heal without judgment or exposure.
+              </p>
+              <div className="flex flex-wrap gap-4">
+                <Button 
+                  className="bg-veilo-blue hover:bg-veilo-blue-dark text-white px-6"
+                  onClick={() => navigate('/feed')}
+                >
+                  Join the Community
                 </Button>
-              </Link>
-              <Link to="/beacons">
-                <Button variant="outline" className="text-lg px-8 py-6 border-veilo-blue text-veilo-blue-dark hover:bg-veilo-blue hover:text-white">
-                  Find Support
+                <Button 
+                  variant="outline"
+                  className="border-veilo-purple text-veilo-purple hover:bg-veilo-purple hover:text-white"
+                  onClick={() => navigate('/beacons')}
+                >
+                  Find Support Beacons
                 </Button>
-              </Link>
+              </div>
+            </div>
+            <div className="md:w-1/2 md:pl-10">
+              <div className="relative">
+                <div className="absolute -left-6 -top-6 w-64 h-64 bg-veilo-blue/10 rounded-full filter blur-xl"></div>
+                <div className="absolute -right-6 -bottom-6 w-64 h-64 bg-veilo-purple/10 rounded-full filter blur-xl"></div>
+                <Card className="bg-white/80 backdrop-blur-sm p-6 relative z-10">
+                  <div className="space-y-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="h-10 w-10 rounded-full bg-veilo-blue-light/30 flex items-center justify-center">
+                        <span className="text-veilo-blue-dark font-bold">A</span>
+                      </div>
+                      <div className="bg-gray-100 rounded-lg p-3 flex-1">
+                        <p className="text-gray-700">
+                          I've been feeling so disconnected lately. It's like there's this wall between me and everyone else.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-3 ml-12">
+                      <div className="h-10 w-10 rounded-full bg-veilo-purple-light/30 flex items-center justify-center">
+                        <span className="text-veilo-purple-dark font-bold">B</span>
+                      </div>
+                      <div className="bg-gray-100 rounded-lg p-3 flex-1">
+                        <p className="text-gray-700">
+                          I understand that feeling. I've found that small moments of connection help break through that wall.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <div className="flex space-x-3">
+                        <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center">
+                          <Shield className="h-3 w-3 text-blue-600" />
+                        </div>
+                        <span className="text-sm text-blue-600 font-medium">Verified Expert</span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              </div>
             </div>
           </div>
         </div>
       </section>
-      
+
       {/* Features Section */}
-      <section className="py-16 bg-white bg-opacity-60">
+      <section className="py-16 bg-white">
         <div className="container px-4 mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12 text-veilo-blue-dark">How Veilo Works</h2>
+          <h2 className="text-3xl font-bold text-center mb-12 text-gray-800">How Veilo Works</h2>
           
           <div className="grid md:grid-cols-3 gap-8">
-            {/* Feature 1 */}
-            <div className="flex flex-col items-center text-center">
-              <div className="w-20 h-20 rounded-full bg-veilo-blue-light flex items-center justify-center mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-10 h-10 text-veilo-blue-dark">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
+            <Card className="p-6 hover:shadow-md transition-shadow">
+              <div className="h-12 w-12 rounded-full bg-veilo-blue-light/30 mb-4 flex items-center justify-center">
+                <MessageSquare className="h-6 w-6 text-veilo-blue" />
               </div>
-              <h3 className="text-xl font-semibold mb-2 text-veilo-blue-dark">Sacred Anonymity</h3>
+              <h3 className="text-xl font-semibold mb-2">Anonymous Expression</h3>
               <p className="text-gray-600">
-                Share your thoughts without revealing your identity. Our auto-generated aliases and abstract avatars protect your privacy.
+                Share your thoughts and feelings in our safe community without revealing your identity.
               </p>
-            </div>
+            </Card>
             
-            {/* Feature 2 */}
-            <div className="flex flex-col items-center text-center">
-              <div className="w-20 h-20 rounded-full bg-veilo-green-light flex items-center justify-center mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-10 h-10 text-veilo-green-dark">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
+            <Card className="p-6 hover:shadow-md transition-shadow">
+              <div className="h-12 w-12 rounded-full bg-veilo-purple-light/30 mb-4 flex items-center justify-center">
+                <Shield className="h-6 w-6 text-veilo-purple" />
               </div>
-              <h3 className="text-xl font-semibold mb-2 text-veilo-blue-dark">Verified Beacons</h3>
+              <h3 className="text-xl font-semibold mb-2">Verified Support Beacons</h3>
               <p className="text-gray-600">
-                Connect with compassionate experts who have verified credentials and a proven record of helping others.
+                Connect with professionally verified experts who specialize in emotional support and guidance.
               </p>
-            </div>
+            </Card>
             
-            {/* Feature 3 */}
-            <div className="flex flex-col items-center text-center">
-              <div className="w-20 h-20 rounded-full bg-veilo-gold-light flex items-center justify-center mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-10 h-10 text-veilo-gold-dark">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
+            <Card className="p-6 hover:shadow-md transition-shadow">
+              <div className="h-12 w-12 rounded-full bg-green-100 mb-4 flex items-center justify-center">
+                <Heart className="h-6 w-6 text-green-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-2 text-veilo-blue-dark">Empathetic Community</h3>
+              <h3 className="text-xl font-semibold mb-2">Healing Together</h3>
               <p className="text-gray-600">
-                Join a supportive community where shared experiences create understanding and healing without judgment.
+                Find comfort in community responses or book private sessions with experts for deeper support.
               </p>
-            </div>
+            </Card>
           </div>
         </div>
       </section>
-      
+
       {/* CTA Section */}
-      <section className="py-16 md:py-24">
-        <div className="container px-4 mx-auto">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6 text-veilo-blue-dark">
-              Ready to Start Your Healing Journey?
-            </h2>
-            <p className="text-xl text-gray-600 mb-10">
-              Join Veilo today and experience the freedom of expressing yourself in a safe, supportive environment.
-            </p>
-            {!user?.loggedIn ? (
-              <Link to="/feed">
-                <Button className="text-lg px-8 py-6 bg-veilo-blue hover:bg-veilo-blue-dark text-white">
-                  Enter Anonymously
-                </Button>
-              </Link>
-            ) : (
-              <Link to="/feed">
-                <Button className="text-lg px-8 py-6 bg-veilo-blue hover:bg-veilo-blue-dark text-white">
-                  Go to Your Feed
-                </Button>
-              </Link>
-            )}
-          </div>
+      <section className="py-20 bg-gradient-to-r from-veilo-blue to-veilo-purple text-white">
+        <div className="container px-4 mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Begin Your Healing Journey?</h2>
+          <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
+            Join our anonymous community where you can safely express yourself and connect with others who understand.
+          </p>
+          <Button 
+            size="lg"
+            className="bg-white text-veilo-blue hover:bg-gray-100"
+            onClick={() => navigate(user?.loggedIn ? '/feed' : '/register')}
+          >
+            {user?.loggedIn ? 'View Community Feed' : 'Create Anonymous Account'}
+          </Button>
         </div>
       </section>
     </Layout>

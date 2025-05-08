@@ -9,11 +9,10 @@ import { useVeiloData } from '@/contexts/VeiloDataContext';
 import { useUserContext } from '@/contexts/UserContext';
 import { Post } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Globe } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Globe, Loader2 } from 'lucide-react';
 
 const Feed = () => {
-  const { posts } = useVeiloData();
+  const { posts, loading, refreshPosts } = useVeiloData();
   const { user } = useUserContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('latest');
@@ -86,51 +85,50 @@ const Feed = () => {
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="latest">Latest First</SelectItem>
-                  <SelectItem value="oldest">Oldest First</SelectItem>
-                  <SelectItem value="mostLiked">Most Felt</SelectItem>
-                  <SelectItem value="mostComments">Most Responses</SelectItem>
+                  <SelectItem value="latest">Latest</SelectItem>
+                  <SelectItem value="oldest">Oldest</SelectItem>
+                  <SelectItem value="mostLiked">Most Liked</SelectItem>
+                  <SelectItem value="mostComments">Most Comments</SelectItem>
                 </SelectContent>
               </Select>
-
-              <Button 
-                variant="outline" 
-                className="w-12 flex items-center justify-center"
-                title="Change Language"
-              >
-                <Globe className="h-4 w-4" />
-              </Button>
             </div>
-          </div>
-
-          {/* Featured topics */}
-          <div className="mb-6 flex flex-wrap gap-2">
-            <Badge variant="outline" className="bg-veilo-blue-light text-veilo-blue-dark hover:bg-veilo-blue hover:text-white cursor-pointer">
-              #MentalHealth
-            </Badge>
-            <Badge variant="outline" className="bg-veilo-green-light text-veilo-green-dark hover:bg-veilo-green hover:text-white cursor-pointer">
-              #FamilyChallenges
-            </Badge>
-            <Badge variant="outline" className="bg-veilo-gold-light text-veilo-gold-dark hover:bg-veilo-gold hover:text-white cursor-pointer">
-              #Relationships
-            </Badge>
-            <Badge variant="outline" className="bg-veilo-purple-light text-veilo-purple-dark hover:bg-veilo-purple hover:text-white cursor-pointer">
-              #CareerAdvice
-            </Badge>
-            <Badge variant="outline" className="bg-veilo-peach-light text-veilo-peach-dark hover:bg-veilo-peach hover:text-white cursor-pointer">
-              #SelfDiscovery
-            </Badge>
           </div>
           
-          {sortedPosts.length > 0 ? (
-            <div className="space-y-6 animate-fade-in">
+          {loading.posts ? (
+            <div className="flex justify-center p-12">
+              <Loader2 className="h-8 w-8 animate-spin text-veilo-blue" />
+            </div>
+          ) : sortedPosts.length > 0 ? (
+            <div>
               {sortedPosts.map((post: Post) => (
-                <PostCard key={post.id} post={post} currentUser={user} />
+                <PostCard key={post.id} post={post} />
               ))}
+              
+              {sortedPosts.length > 5 && (
+                <div className="flex justify-center mt-6">
+                  <Button variant="outline">
+                    Load More
+                  </Button>
+                </div>
+              )}
             </div>
           ) : (
-            <div className="text-center p-8 bg-white bg-opacity-50 rounded-2xl glass">
-              <p className="text-gray-500">No posts found. Try adjusting your search or filters.</p>
+            <div className="text-center py-12 border rounded-lg bg-white bg-opacity-50">
+              <Globe className="mx-auto h-12 w-12 text-gray-400 mb-3" />
+              <h3 className="text-lg font-medium text-gray-900">No posts found</h3>
+              <p className="mt-2 text-sm text-gray-500">
+                {searchTerm 
+                  ? 'Try adjusting your search or filters' 
+                  : 'Be the first to share something'}
+              </p>
+              {!user?.loggedIn && (
+                <Button 
+                  className="mt-4"
+                  onClick={() => {}}
+                >
+                  Sign in to Post
+                </Button>
+              )}
             </div>
           )}
         </div>

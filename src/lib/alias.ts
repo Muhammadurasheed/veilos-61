@@ -1,32 +1,22 @@
 
-const adjectives = [
-  'Silent', 'Gentle', 'Whispered', 'Hidden', 'Quiet', 'Veiled', 'Soft', 'Calm',
-  'Peaceful', 'Serene', 'Tender', 'Mellow', 'Tranquil', 'Soothing', 'Graceful', 'Subtle',
-  'Delicate', 'Light', 'Dreamy', 'Floating', 'Dancing', 'Gliding', 'Free', 'Wise',
-  'Honest', 'True', 'Kind', 'Brave', 'Noble', 'Pure', 'Open', 'Healing'
-];
-
-const nouns = [
-  'River', 'Ocean', 'Wind', 'Rain', 'Cloud', 'Star', 'Moon', 'Sky',
-  'Leaf', 'Tree', 'Flower', 'Meadow', 'Garden', 'Forest', 'Mountain', 'Valley',
-  'Shadow', 'Light', 'Whisper', 'Song', 'Voice', 'Echo', 'Spirit', 'Soul',
-  'Heart', 'Mind', 'Thought', 'Dream', 'Hope', 'Journey', 'Path', 'Story'
-];
-
+/**
+ * Generate a random alias for anonymous users
+ * @returns A random alias in the format "AdjectiveNounXX"
+ */
 export function generateAlias(): string {
-  const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-  const noun = nouns[Math.floor(Math.random() * nouns.length)];
-  const number = Math.floor(Math.random() * 100);
+  const adjectives = [
+    'Wise', 'Silent', 'Gentle', 'Peaceful', 'Hidden', 'Noble', 'Subtle', 'Calm', 
+    'Patient', 'Honest', 'Graceful', 'Dreamy', 'Humble', 'Ancient', 'Serene'
+  ];
   
-  return `${adjective}${noun}${number}`;
-}
-
-export function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit'
-  }).format(date);
+  const nouns = [
+    'Soul', 'Wind', 'Rain', 'Mountain', 'River', 'Shadow', 'Light', 'Forest',
+    'Wave', 'Stone', 'Bird', 'Ocean', 'Moon', 'Star', 'Meadow'
+  ];
+  
+  const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
+  const randomNumber = Math.floor(Math.random() * 100);
+  
+  return `${randomAdjective}${randomNoun}${randomNumber}`;
 }
