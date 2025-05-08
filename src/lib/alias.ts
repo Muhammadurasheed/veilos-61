@@ -1,17 +1,17 @@
-
 /**
- * Generate a random alias for anonymous users
- * @returns A random alias in the format "AdjectiveNounXX"
+ * Generate a unique alias
  */
-export function generateAlias(): string {
+export const generateAlias = (): string => {
   const adjectives = [
-    'Wise', 'Silent', 'Gentle', 'Peaceful', 'Hidden', 'Noble', 'Subtle', 'Calm', 
-    'Patient', 'Honest', 'Graceful', 'Dreamy', 'Humble', 'Ancient', 'Serene'
+    'Gentle', 'Peaceful', 'Mindful', 'Brave', 'Wise', 
+    'Kind', 'Calm', 'Happy', 'Serene', 'Quiet',
+    'Silent', 'Noble', 'Humble', 'Honest', 'Bold'
   ];
   
   const nouns = [
-    'Soul', 'Wind', 'Rain', 'Mountain', 'River', 'Shadow', 'Light', 'Forest',
-    'Wave', 'Stone', 'Bird', 'Ocean', 'Moon', 'Star', 'Meadow'
+    'Soul', 'Spirit', 'Mind', 'Heart', 'Star', 
+    'Light', 'Wind', 'Shadow', 'River', 'Ocean',
+    'Mountain', 'Forest', 'Leaf', 'Tree', 'Journey'
   ];
   
   const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
@@ -19,42 +19,43 @@ export function generateAlias(): string {
   const randomNumber = Math.floor(Math.random() * 100);
   
   return `${randomAdjective}${randomNoun}${randomNumber}`;
-}
+};
 
 /**
- * Format a date string to a more readable format
- * @param dateString - ISO date string
- * @returns Formatted date string
+ * Format a timestamp for display
  */
-export function formatDate(dateString: string): string {
-  const date = new Date(dateString);
+export const formatDate = (timestamp: string): string => {
+  const date = new Date(timestamp);
+  const now = new Date();
   
-  // Check if the date is today
-  const today = new Date();
-  if (date.toDateString() === today.toDateString()) {
-    return `Today at ${date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
+  // If today, show time only
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
   
-  // Check if the date is yesterday
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
+  // If yesterday
+  const yesterday = new Date();
+  yesterday.setDate(now.getDate() - 1);
   if (date.toDateString() === yesterday.toDateString()) {
-    return `Yesterday at ${date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
+    return 'Yesterday';
   }
   
-  // If date is within the last 7 days
-  const oneWeekAgo = new Date(today);
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-  if (date > oneWeekAgo) {
-    return `${date.toLocaleDateString(undefined, { weekday: 'long' })} at ${date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
+  // If this week, show day name
+  const daysAgo = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+  if (daysAgo < 7) {
+    return date.toLocaleString(undefined, { weekday: 'long' });
   }
   
-  // Default formatting for older dates
-  return date.toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-}
+  // Otherwise show date
+  return date.toLocaleDateString();
+};
+
+/**
+ * Format seconds into MM:SS format
+ */
+export const formatDuration = (seconds: number): string => {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  
+  return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+};

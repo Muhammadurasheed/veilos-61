@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -8,13 +8,37 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { useUserContext } from '@/contexts/UserContext';
 import { formatDate } from '@/lib/alias';
+import { Mic, Send, Image, PaperClip, Phone, Video, MoreVertical } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-// This is a placeholder component for now - we'll connect it to real data later
+// Message type
+interface Message {
+  id: string;
+  sender: {
+    id: string;
+    alias: string;
+    avatarUrl?: string;
+    avatarIndex?: number;
+    isExpert: boolean;
+  };
+  content: string;
+  timestamp: string;
+  status?: 'sending' | 'sent' | 'delivered' | 'read';
+  type?: 'text' | 'image' | 'voice';
+  attachment?: {
+    url: string;
+    type: string;
+  };
+}
+
 const ChatPage = () => {
   const { sessionId } = useParams();
   const { user } = useUserContext();
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<any[]>([
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       sender: {
@@ -51,10 +75,22 @@ const ChatPage = () => {
   ]);
 
   useEffect(() => {
+    // Scroll to bottom on new messages
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  useEffect(() => {
     // This would be a real API call to fetch messages for this session
     if (sessionId) {
       console.log(`Fetching messages for session ${sessionId}`);
       // Fetch real messages here
+      
+      // Simulate typing indicator
+      const typingInterval = setInterval(() => {
+        setIsTyping(prev => !prev);
+      }, 5000);
+      
+      return () => clearInterval(typingInterval);
     }
   }, [sessionId]);
 
@@ -63,7 +99,7 @@ const ChatPage = () => {
     
     if (!message.trim()) return;
     
-    const newMessage = {
+    const newMessage: Message = {
       id: `local-${Date.now()}`,
       sender: {
         id: user?.id || 'user-1',
@@ -72,14 +108,99 @@ const ChatPage = () => {
         isExpert: false
       },
       content: message.trim(),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      status: 'sending'
     };
     
     setMessages((prev) => [...prev, newMessage]);
     setMessage('');
     
-    // This would make a real API call to send the message
-    console.log('Sending message:', message);
+    // Simulate sending message to server
+    setTimeout(() => {
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === newMessage.id 
+            ? {...msg, status: 'delivered'} 
+            : msg
+        )
+      );
+      
+      // Simulate expert typing
+      setIsTyping(true);
+      
+      // Simulate expert response
+      setTimeout(() => {
+        setIsTyping(false);
+        
+        const expertResponse: Message = {
+          id: `expert-${Date.now()}`,
+          sender: {
+            id: 'expert-1',
+            alias: 'Dr. Emma Wilson',
+            avatarUrl: '/experts/expert-1.jpg',
+            isExpert: true
+          },
+          content: "Thank you for sharing that. Let's explore some relaxation techniques that might help with both anxiety and sleep issues. Have you tried any breathing exercises or meditation before?",
+          timestamp: new Date().toISOString()
+        };
+        
+        setMessages(prev => [...prev, expertResponse]);
+      }, 3000);
+    }, 1000);
+  };
+
+  const handleVoiceNote = () => {
+    setIsRecording(!isRecording);
+    
+    // In a real implementation, we would start/stop recording here
+    if (isRecording) {
+      // Simulate sending a voice note
+      const voiceNote: Message = {
+        id: `voice-${Date.now()}`,
+        sender: {
+          id: user?.id || 'user-1',
+          alias: user?.alias || 'Anonymous',
+          avatarIndex: user?.avatarIndex || 1,
+          isExpert: false
+        },
+        content: "Voice message",
+        timestamp: new Date().toISOString(),
+        type: 'voice',
+        attachment: {
+          url: '#',
+          type: 'audio/webm'
+        }
+      };
+      
+      setMessages(prev => [...prev, voiceNote]);
+    }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    
+    if (file) {
+      // In a real implementation, we would upload the file to a server
+      // For now, let's simulate sending an image message
+      const imageMessage: Message = {
+        id: `image-${Date.now()}`,
+        sender: {
+          id: user?.id || 'user-1',
+          alias: user?.alias || 'Anonymous',
+          avatarIndex: user?.avatarIndex || 1,
+          isExpert: false
+        },
+        content: "Image attachment",
+        timestamp: new Date().toISOString(),
+        type: 'image',
+        attachment: {
+          url: URL.createObjectURL(file),
+          type: file.type
+        }
+      };
+      
+      setMessages(prev => [...prev, imageMessage]);
+    }
   };
 
   return (
@@ -102,13 +223,14 @@ const ChatPage = () => {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"></path></svg>
-                Schedule Session
+              <Button variant="outline" size="icon" className="rounded-full">
+                <Phone className="h-4 w-4" />
               </Button>
-              <Button variant="default" size="sm" className="bg-veilo-blue hover:bg-veilo-blue-dark">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="m2 8 4 4"></path><path d="m6 12 4-4"></path><path d="M22 12v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-4"></path><path d="M18 12a2 2 0 0 0 0-4 2 2 0 0 0-4 0"></path><path d="M14 8a2 2 0 0 0 0 4 2 2 0 0 0 4 0"></path><circle cx="18" cy="18" r="3"></circle><circle cx="6" cy="18" r="3"></circle></svg>
-                Start Video Call
+              <Button variant="outline" size="icon" className="rounded-full">
+                <Video className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="icon" className="rounded-full">
+                <MoreVertical className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -147,51 +269,135 @@ const ChatPage = () => {
                           : 'bg-veilo-blue text-white rounded-tr-none'
                       }`}
                     >
+                      {msg.type === 'image' && msg.attachment && (
+                        <div className="mb-2">
+                          <img 
+                            src={msg.attachment.url} 
+                            alt="Attachment" 
+                            className="rounded-md max-h-48 w-auto"
+                          />
+                        </div>
+                      )}
+                      {msg.type === 'voice' && (
+                        <div className="flex items-center space-x-2 my-1">
+                          <Button variant={msg.sender.isExpert ? "outline" : "secondary"} size="sm" className="h-8 w-8 rounded-full p-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                          </Button>
+                          <div className="w-32 h-2 bg-gray-300 dark:bg-gray-600 rounded-full">
+                            <div className="h-full w-0 bg-gray-500 dark:bg-gray-400 rounded-full"></div>
+                          </div>
+                          <span className="text-xs">0:00</span>
+                        </div>
+                      )}
                       <p>{msg.content}</p>
                     </div>
-                    <div className={`text-xs text-gray-500 mt-1 ${
-                      msg.sender.isExpert ? 'text-left' : 'text-right'
+                    <div className={`text-xs text-gray-500 mt-1 flex items-center ${
+                      msg.sender.isExpert ? 'justify-start' : 'justify-end'
                     }`}>
                       {formatDate(msg.timestamp)}
+                      {!msg.sender.isExpert && msg.status && (
+                        <span className="ml-1">
+                          {msg.status === 'sending' && '•'}
+                          {msg.status === 'sent' && '✓'}
+                          {msg.status === 'delivered' && '✓✓'}
+                          {msg.status === 'read' && (
+                            <span className="text-blue-500">✓✓</span>
+                          )}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
             ))}
+            
+            {isTyping && (
+              <div className="flex justify-start">
+                <div className="flex max-w-[80%] flex-row">
+                  <div className="flex-shrink-0 mr-3">
+                    <Avatar>
+                      <AvatarImage src="/experts/expert-1.jpg" alt="Dr. Emma Wilson" />
+                      <AvatarFallback>EW</AvatarFallback>
+                    </Avatar>
+                  </div>
+                  <div>
+                    <div className="py-3 px-4 rounded-lg bg-gray-100 dark:bg-gray-700 rounded-tl-none">
+                      <div className="flex space-x-1">
+                        <div className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500 animate-bounce"></div>
+                        <div className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500 animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                        <div className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500 animate-bounce" style={{animationDelay: '0.4s'}}></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div ref={messagesEndRef} />
           </div>
           
           {/* Message input */}
           <div className="p-4 border-t">
-            <form onSubmit={handleSendMessage} className="flex space-x-2">
-              <Button 
-                type="button" 
-                variant="ghost" 
-                size="icon" 
-                className="flex-shrink-0"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"></path></svg>
-              </Button>
-              <Button 
-                type="button" 
-                variant="ghost" 
-                size="icon" 
-                className="flex-shrink-0"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>
-              </Button>
+            <form onSubmit={handleSendMessage} className="flex space-x-2 items-center">
+              <div className="flex-shrink-0 flex items-center space-x-1">
+                <label htmlFor="image-upload">
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="icon" 
+                    className="rounded-full"
+                  >
+                    <Image className="h-5 w-5 text-gray-500" />
+                  </Button>
+                  <input 
+                    id="image-upload" 
+                    type="file" 
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
+                </label>
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="icon"
+                  className="rounded-full"
+                >
+                  <PaperClip className="h-5 w-5 text-gray-500" />
+                </Button>
+              </div>
               <Input
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Type a message..."
-                className="flex-1"
+                className="flex-1 rounded-full"
+                disabled={isRecording}
               />
-              <Button 
-                type="submit" 
-                className="flex-shrink-0 bg-veilo-blue hover:bg-veilo-blue-dark text-white"
-                disabled={!message.trim()}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"></path><path d="M22 2 11 13"></path></svg>
-              </Button>
+              <div className="flex-shrink-0">
+                {message.trim() ? (
+                  <Button 
+                    type="submit" 
+                    size="icon"
+                    className="rounded-full bg-veilo-blue hover:bg-veilo-blue-dark text-white"
+                  >
+                    <Send className="h-5 w-5" />
+                  </Button>
+                ) : (
+                  <Button 
+                    type="button" 
+                    size="icon"
+                    className={cn(
+                      "rounded-full",
+                      isRecording 
+                        ? "bg-red-500 hover:bg-red-600 text-white animate-pulse" 
+                        : "bg-veilo-blue hover:bg-veilo-blue-dark text-white"
+                    )}
+                    onClick={handleVoiceNote}
+                  >
+                    <Mic className="h-5 w-5" />
+                  </Button>
+                )}
+              </div>
             </form>
           </div>
         </Card>

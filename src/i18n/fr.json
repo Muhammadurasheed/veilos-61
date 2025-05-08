@@ -1,0 +1,94 @@
+
+{
+  "common": {
+    "appName": "Veilo",
+    "loading": "Chargement...",
+    "error": "Une erreur est survenue",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "submit": "Soumettre",
+    "continue": "Continuer",
+    "back": "Retour"
+  },
+  "auth": {
+    "login": "Connexion",
+    "signup": "S'inscrire",
+    "logout": "Déconnexion",
+    "email": "Email",
+    "password": "Mot de passe",
+    "forgotPassword": "Mot de passe oublié ?"
+  },
+  "navigation": {
+    "home": "Accueil",
+    "feed": "Fil d'actualité",
+    "beacons": "Beacons",
+    "sessions": "Sessions",
+    "profile": "Profil",
+    "settings": "Paramètres",
+    "admin": "Admin"
+  },
+  "home": {
+    "welcome": "Bienvenue sur Veilo",
+    "subtitle": "Trouvez des conseils et du soutien dans un espace sûr et anonyme",
+    "getStarted": "Commencer",
+    "howItWorks": "Comment ça marche"
+  },
+  "expertProfile": {
+    "connect": "Connecter",
+    "message": "Message",
+    "schedule": "Planifier une session",
+    "about": "À propos",
+    "expertise": "Domaines d'expertise",
+    "testimonials": "Témoignages",
+    "noTestimonials": "Pas encore de témoignages",
+    "verified": "Vérifié",
+    "goldVerified": "Vérifié Or",
+    "platinumVerified": "Vérifié Platine"
+  },
+  "beaconRegistration": {
+    "becomeBeacon": "Devenir Beacon",
+    "stepDetails": "Détails de l'expert",
+    "stepDocuments": "Documents de vérification",
+    "stepAvailability": "Définir votre disponibilité",
+    "stepPreferences": "Préférences de session",
+    "stepVerification": "Processus de vérification",
+    "fullName": "Nom complet",
+    "email": "Email",
+    "phoneNumber": "Numéro de téléphone (Optionnel)",
+    "specialization": "Domaine d'expertise",
+    "bio": "Biographie professionnelle",
+    "uploadPhoto": "Télécharger photo de profil",
+    "uploadCredentials": "Télécharger credentials",
+    "uploadID": "Télécharger pièce d'identité",
+    "setAvailability": "Définissez votre disponibilité",
+    "voiceMasking": "Masquage de voix",
+    "completeRegistration": "Compléter l'inscription"
+  },
+  "chat": {
+    "typeMessage": "Tapez un message...",
+    "sendMessage": "Envoyer",
+    "startVideo": "Démarrer appel vidéo",
+    "startVoice": "Démarrer appel vocal",
+    "noMessages": "Pas encore de messages",
+    "online": "En ligne",
+    "offline": "Hors ligne",
+    "typing": "en train d'écrire...",
+    "recordVoice": "Enregistrer message vocal"
+  },
+  "session": {
+    "requestSession": "Demander une session",
+    "scheduleSession": "Planifier une session",
+    "activeSession": "Session active",
+    "endSession": "Terminer la session",
+    "sessionHistory": "Historique des sessions",
+    "feedback": "Donner un avis"
+  },
+  "profile": {
+    "editProfile": "Modifier le profil",
+    "changeAvatar": "Changer d'avatar",
+    "changeAlias": "Changer de pseudonyme",
+    "notifications": "Notifications",
+    "language": "Langue",
+    "theme": "Thème"
+  }
+}

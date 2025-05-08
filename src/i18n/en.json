@@ -1,0 +1,94 @@
+
+{
+  "common": {
+    "appName": "Veilo",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "save": "Save",
+    "cancel": "Cancel",
+    "submit": "Submit",
+    "continue": "Continue",
+    "back": "Back"
+  },
+  "auth": {
+    "login": "Login",
+    "signup": "Sign Up",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot Password?"
+  },
+  "navigation": {
+    "home": "Home",
+    "feed": "Feed",
+    "beacons": "Beacons",
+    "sessions": "Sessions",
+    "profile": "Profile",
+    "settings": "Settings",
+    "admin": "Admin"
+  },
+  "home": {
+    "welcome": "Welcome to Veilo",
+    "subtitle": "Find guidance and support in a safe, anonymous space",
+    "getStarted": "Get Started",
+    "howItWorks": "How It Works"
+  },
+  "expertProfile": {
+    "connect": "Connect",
+    "message": "Message",
+    "schedule": "Schedule Session",
+    "about": "About",
+    "expertise": "Areas of Expertise",
+    "testimonials": "Testimonials",
+    "noTestimonials": "No testimonials yet",
+    "verified": "Verified",
+    "goldVerified": "Gold Verified",
+    "platinumVerified": "Platinum Verified"
+  },
+  "beaconRegistration": {
+    "becomeBeacon": "Become a Beacon",
+    "stepDetails": "Expert Details",
+    "stepDocuments": "Verification Documents",
+    "stepAvailability": "Set Your Availability",
+    "stepPreferences": "Session Preferences",
+    "stepVerification": "Verification Process",
+    "fullName": "Full Name",
+    "email": "Email",
+    "phoneNumber": "Phone Number (Optional)",
+    "specialization": "Area of Expertise",
+    "bio": "Professional Bio",
+    "uploadPhoto": "Upload Profile Photo",
+    "uploadCredentials": "Upload Credentials",
+    "uploadID": "Upload Government ID",
+    "setAvailability": "Set your availability",
+    "voiceMasking": "Voice Masking",
+    "completeRegistration": "Complete Registration"
+  },
+  "chat": {
+    "typeMessage": "Type a message...",
+    "sendMessage": "Send",
+    "startVideo": "Start Video Call",
+    "startVoice": "Start Voice Call",
+    "noMessages": "No messages yet",
+    "online": "Online",
+    "offline": "Offline",
+    "typing": "typing...",
+    "recordVoice": "Record Voice Message"
+  },
+  "session": {
+    "requestSession": "Request Session",
+    "scheduleSession": "Schedule Session",
+    "activeSession": "Active Session",
+    "endSession": "End Session",
+    "sessionHistory": "Session History",
+    "feedback": "Provide Feedback"
+  },
+  "profile": {
+    "editProfile": "Edit Profile",
+    "changeAvatar": "Change Avatar",
+    "changeAlias": "Change Alias",
+    "notifications": "Notifications",
+    "language": "Language",
+    "theme": "Theme"
+  }
+}

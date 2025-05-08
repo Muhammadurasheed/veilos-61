@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, MessageSquare, Calendar, Sun, Moon } from 'lucide-react';
+import { Bell, MessageSquare, Calendar, Sun, Moon, Menu } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useUserContext } from '@/contexts/UserContext';
@@ -11,6 +11,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
+import { DrawerTrigger } from '@/components/ui/drawer';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Drawer } from '@/components/ui/drawer';
+import { LanguageSelector } from '@/components/settings/LanguageSelector';
+import { useTranslation } from 'react-i18next';
 
 interface TopbarProps {
   toggleTheme: () => void;
@@ -18,18 +23,45 @@ interface TopbarProps {
 }
 
 const Topbar = ({ toggleTheme, theme }: TopbarProps) => {
+  const { t } = useTranslation();
   const { user } = useUserContext();
   const [notificationCount] = useState(3); // This would come from a real notification system
   const [messageCount] = useState(2); // This would come from a real messaging system
+  const isMobile = useIsMobile();
 
   return (
     <div className="h-16 px-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-      <div className="md:hidden">
-        {/* Mobile logo */}
+      {/* Logo and Menu Button */}
+      <div className="flex items-center">
+        {isMobile ? (
+          <Drawer>
+            <DrawerTrigger asChild>
+              <Button variant="ghost" size="icon" className="mr-2">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </DrawerTrigger>
+          </Drawer>
+        ) : (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="mr-2"
+            onClick={() => {
+              // This will be handled by the Layout component to toggle sidebar
+              const event = new CustomEvent('toggle-sidebar');
+              window.dispatchEvent(event);
+            }}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+        )}
         <span className="text-xl font-semibold text-veilo-blue">Veilo</span>
       </div>
 
-      <div className="flex items-center space-x-4 ml-auto">
+      <div className="flex items-center space-x-3 ml-auto">
+        {/* Language Selector */}
+        <LanguageSelector />
+        
         {/* Calendar / Schedule */}
         <Button variant="ghost" size="icon" asChild className="relative">
           <Link to="/sessions">
@@ -51,7 +83,7 @@ const Topbar = ({ toggleTheme, theme }: TopbarProps) => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80">
             <div className="p-4 text-center border-b">
-              <h3 className="font-medium">Notifications</h3>
+              <h3 className="font-medium">{t('profile.notifications')}</h3>
             </div>
             <div className="max-h-72 overflow-y-auto">
               <div className="p-3 border-b hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
@@ -89,7 +121,7 @@ const Topbar = ({ toggleTheme, theme }: TopbarProps) => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80">
             <div className="p-4 text-center border-b">
-              <h3 className="font-medium">Messages</h3>
+              <h3 className="font-medium">{t('navigation.feed')}</h3>
             </div>
             <div className="max-h-72 overflow-y-auto">
               <div className="p-3 border-b hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
@@ -158,13 +190,13 @@ const Topbar = ({ toggleTheme, theme }: TopbarProps) => {
               <p className="text-xs text-gray-500">{user?.role || 'shadow'}</p>
             </div>
             <DropdownMenuItem asChild>
-              <Link to="/profile" className="cursor-pointer">Profile</Link>
+              <Link to="/profile" className="cursor-pointer">{t('navigation.profile')}</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to="/settings" className="cursor-pointer">Settings</Link>
+              <Link to="/settings" className="cursor-pointer">{t('navigation.settings')}</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to="/logout" className="cursor-pointer text-red-500">Logout</Link>
+              <Link to="/logout" className="cursor-pointer text-red-500">{t('auth.logout')}</Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

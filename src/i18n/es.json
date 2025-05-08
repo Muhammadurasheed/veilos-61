@@ -1,0 +1,94 @@
+
+{
+  "common": {
+    "appName": "Veilo",
+    "loading": "Cargando...",
+    "error": "Ha ocurrido un error",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "submit": "Enviar",
+    "continue": "Continuar",
+    "back": "Atrás"
+  },
+  "auth": {
+    "login": "Iniciar Sesión",
+    "signup": "Registrarse",
+    "logout": "Cerrar Sesión",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "forgotPassword": "¿Olvidó su Contraseña?"
+  },
+  "navigation": {
+    "home": "Inicio",
+    "feed": "Muro",
+    "beacons": "Beacons",
+    "sessions": "Sesiones",
+    "profile": "Perfil",
+    "settings": "Configuración",
+    "admin": "Administrador"
+  },
+  "home": {
+    "welcome": "Bienvenido a Veilo",
+    "subtitle": "Encuentra orientación y apoyo en un espacio seguro y anónimo",
+    "getStarted": "Comenzar",
+    "howItWorks": "Cómo Funciona"
+  },
+  "expertProfile": {
+    "connect": "Conectar",
+    "message": "Mensaje",
+    "schedule": "Programar Sesión",
+    "about": "Acerca de",
+    "expertise": "Áreas de Especialidad",
+    "testimonials": "Testimonios",
+    "noTestimonials": "Aún no hay testimonios",
+    "verified": "Verificado",
+    "goldVerified": "Verificado Oro",
+    "platinumVerified": "Verificado Platino"
+  },
+  "beaconRegistration": {
+    "becomeBeacon": "Conviértete en Beacon",
+    "stepDetails": "Detalles del Experto",
+    "stepDocuments": "Documentos de Verificación",
+    "stepAvailability": "Establece tu Disponibilidad",
+    "stepPreferences": "Preferencias de Sesión",
+    "stepVerification": "Proceso de Verificación",
+    "fullName": "Nombre Completo",
+    "email": "Correo Electrónico",
+    "phoneNumber": "Número de Teléfono (Opcional)",
+    "specialization": "Área de Especialidad",
+    "bio": "Biografía Profesional",
+    "uploadPhoto": "Subir Foto de Perfil",
+    "uploadCredentials": "Subir Credenciales",
+    "uploadID": "Subir Identificación",
+    "setAvailability": "Establece tu disponibilidad",
+    "voiceMasking": "Enmascaramiento de Voz",
+    "completeRegistration": "Completar Registro"
+  },
+  "chat": {
+    "typeMessage": "Escribe un mensaje...",
+    "sendMessage": "Enviar",
+    "startVideo": "Iniciar Videollamada",
+    "startVoice": "Iniciar Llamada de Voz",
+    "noMessages": "Aún no hay mensajes",
+    "online": "En línea",
+    "offline": "Desconectado",
+    "typing": "escribiendo...",
+    "recordVoice": "Grabar Mensaje de Voz"
+  },
+  "session": {
+    "requestSession": "Solicitar Sesión",
+    "scheduleSession": "Programar Sesión",
+    "activeSession": "Sesión Activa",
+    "endSession": "Finalizar Sesión",
+    "sessionHistory": "Historial de Sesiones",
+    "feedback": "Proporcionar Retroalimentación"
+  },
+  "profile": {
+    "editProfile": "Editar Perfil",
+    "changeAvatar": "Cambiar Avatar",
+    "changeAlias": "Cambiar Alias",
+    "notifications": "Notificaciones",
+    "language": "Idioma",
+    "theme": "Tema"
+  }
+}

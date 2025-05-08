@@ -16,6 +16,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { UserRole } from '@/types';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerOverlay,
+  DrawerTrigger,
+} from '@/components/ui/drawer';
 
 interface SidebarProps {
   className?: string;
@@ -26,6 +32,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(isMobile);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     setCollapsed(isMobile);
@@ -77,14 +84,8 @@ export const Sidebar = ({ className }: SidebarProps) => {
     });
   }
 
-  return (
-    <aside 
-      className={cn(
-        'h-screen fixed left-0 top-0 z-30 flex flex-col transition-all duration-300 ease-in-out bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800',
-        collapsed ? 'w-16' : 'w-64',
-        className
-      )}
-    >
+  const SidebarContent = () => (
+    <div className="h-full flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
       {/* Logo */}
       <div className={cn('flex items-center h-16 px-3',
         collapsed ? 'justify-center' : 'justify-between'
@@ -109,6 +110,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
             <li key={item.name}>
               <NavLink
                 to={item.href}
+                onClick={() => isMobile && setOpen(false)}
                 className={({ isActive }) => cn(
                   'flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors',
                   isActive 
@@ -134,7 +136,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
         collapsed ? 'items-center justify-center' : ''
       )}>
         {collapsed ? (
-          <NavLink to="/register-expert">
+          <NavLink to="/register-expert" onClick={() => isMobile && setOpen(false)}>
             <Button 
               variant="ghost"
               size="icon"
@@ -144,7 +146,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
             </Button>
           </NavLink>
         ) : (
-          <NavLink to="/register-expert">
+          <NavLink to="/register-expert" onClick={() => isMobile && setOpen(false)}>
             <Button 
               className="w-full bg-veilo-blue hover:bg-veilo-blue-dark text-white"
             >
@@ -153,6 +155,30 @@ export const Sidebar = ({ className }: SidebarProps) => {
           </NavLink>
         )}
       </div>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={setOpen}>
+        <DrawerContent className="h-[90vh] p-0">
+          <div className="h-full">
+            <SidebarContent />
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <aside 
+      className={cn(
+        'h-screen fixed left-0 top-0 z-30 flex flex-col transition-all duration-300 ease-in-out',
+        collapsed ? 'w-0 overflow-hidden' : 'w-64',
+        className
+      )}
+    >
+      <SidebarContent />
     </aside>
   );
 };
