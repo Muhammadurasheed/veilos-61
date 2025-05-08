@@ -14,7 +14,8 @@ import {
   Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useMediaQuery } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { UserRole } from '@/types';
 
 interface SidebarProps {
   className?: string;
@@ -23,7 +24,7 @@ interface SidebarProps {
 export const Sidebar = ({ className }: SidebarProps) => {
   const { user } = useUserContext();
   const location = useLocation();
-  const isMobile = useMediaQuery('(max-width: 768px)');
+  const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(isMobile);
 
   useEffect(() => {
@@ -68,7 +69,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
   ];
 
   // Admin link for admin users
-  if (user?.role === 'ADMIN') {
+  if (user?.role === UserRole.ADMIN) {
     navigationItems.push({
       name: 'Admin',
       href: '/admin',
