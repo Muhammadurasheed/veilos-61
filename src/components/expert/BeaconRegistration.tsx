@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
@@ -25,7 +24,7 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileUpload } from '@/components/expert/FileUpload';
-import { Calendar, Check, ChevronRight, Shield, Upload } from 'lucide-react';
+import { Calendar, Check, ChevronRight, Shield, Upload, MessageSquare, Video } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 

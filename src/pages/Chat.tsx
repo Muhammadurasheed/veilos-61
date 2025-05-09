@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
@@ -8,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { useUserContext } from '@/contexts/UserContext';
 import { formatDate } from '@/lib/alias';
-import { Mic, Send, Image, PaperClip, Phone, Video, MoreVertical } from 'lucide-react';
+import { Mic, Send, Image, Paperclip, Phone, Video, MoreVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Message type
@@ -363,7 +362,7 @@ const ChatPage = () => {
                   size="icon"
                   className="rounded-full"
                 >
-                  <PaperClip className="h-5 w-5 text-gray-500" />
+                  <Paperclip className="h-5 w-5 text-gray-500" />
                 </Button>
               </div>
               <Input
