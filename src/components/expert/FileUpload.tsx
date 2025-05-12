@@ -10,7 +10,8 @@ interface FileUploadProps {
   label: string;
   description: string;
   acceptedFileTypes: string;
-  onUpload: (file: File) => Promise<void> | void;
+  onUpload: (file: File) => Promise<void>;
+  required?: boolean;
 }
 
 export const FileUpload = ({
@@ -18,6 +19,7 @@ export const FileUpload = ({
   description,
   acceptedFileTypes,
   onUpload,
+  required = false,
 }: FileUploadProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -44,26 +46,29 @@ export const FileUpload = ({
     setError(null);
     setIsUploaded(false);
     setFilename(selectedFile.name);
+    setFile(selectedFile);
     
     // Validate file type
     const fileType = selectedFile.type;
-    const acceptedTypes = acceptedFileTypes.split(',').map(type => 
-      type.trim().startsWith('.') ? type.trim().substring(1) : type.trim()
-    );
+    const fileExtension = selectedFile.name.split('.').pop()?.toLowerCase();
+    const acceptedTypes = acceptedFileTypes.split(',').map(type => type.trim());
     
-    const isValidType = acceptedTypes.some(type => {
-      if (type.includes('/*')) {
-        // Handle wildcard mime types like 'image/*'
+    let isValidType = false;
+    for (const type of acceptedTypes) {
+      if (type.startsWith('.') && fileExtension === type.substring(1)) {
+        isValidType = true;
+        break;
+      } else if (type.includes('/*')) {
         const mainType = type.split('/')[0];
-        return fileType.startsWith(`${mainType}/`);
-      } else if (type.startsWith('.')) {
-        // Handle file extensions like '.pdf'
-        return selectedFile.name.toLowerCase().endsWith(type);
-      } else {
-        // Handle specific mime types
-        return fileType === type;
+        if (fileType.startsWith(`${mainType}/`)) {
+          isValidType = true;
+          break;
+        }
+      } else if (fileType === type) {
+        isValidType = true;
+        break;
       }
-    });
+    }
     
     if (!isValidType) {
       setError(`Please upload a valid file type (${acceptedFileTypes})`);
@@ -72,29 +77,30 @@ export const FileUpload = ({
       return;
     }
     
-    // Check file size (max 10MB)
-    if (selectedFile.size > 10 * 1024 * 1024) {
-      setError('File size exceeds 10MB limit');
+    // Check file size (max 5MB)
+    if (selectedFile.size > 5 * 1024 * 1024) {
+      setError('File size exceeds 5MB limit');
       e.target.value = '';
       setFile(null);
       return;
     }
     
-    setFile(selectedFile);
+    // Auto-upload the file when selected
+    uploadSelectedFile(selectedFile);
   };
 
-  const uploadFile = async () => {
-    if (!file) return;
+  const uploadSelectedFile = async (selectedFile: File) => {
+    if (!selectedFile) return;
     
     setIsUploading(true);
     setError(null);
     
     try {
-      await onUpload(file);
+      await onUpload(selectedFile);
       setIsUploaded(true);
       toast({
         title: "File uploaded successfully",
-        description: `${file.name} has been uploaded.`,
+        description: `${selectedFile.name} has been uploaded.`,
       });
     } catch (error) {
       console.error('Upload error:', error);
@@ -109,6 +115,11 @@ export const FileUpload = ({
     }
   };
 
+  const uploadFile = async () => {
+    if (!file) return;
+    uploadSelectedFile(file);
+  };
+
   const clearFile = () => {
     setFile(null);
     setFilename(null);
@@ -121,14 +132,16 @@ export const FileUpload = ({
 
   return (
     <div className="space-y-3">
-      <Label htmlFor={`file-${label}`}>{label}</Label>
+      <Label htmlFor={`file-${label}`}>
+        {label} {required && <span className="text-red-500">*</span>}
+      </Label>
       
-      <div className="border border-gray-200 rounded-lg p-4 bg-white bg-opacity-50">
+      <div className="border border-gray-200 rounded-lg p-4 bg-white bg-opacity-50 dark:bg-gray-800 dark:border-gray-700">
         {!file ? (
           <>
             <div className="flex flex-col items-center justify-center py-4">
               <Paperclip className="h-8 w-8 text-gray-400 mb-2" />
-              <p className="text-sm text-gray-600 mb-2">{description}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{description}</p>
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
@@ -137,7 +150,7 @@ export const FileUpload = ({
                 >
                   Select File
                 </Button>
-                <span className="text-xs text-gray-500">Max size: 10MB</span>
+                <span className="text-xs text-gray-500">Max size: 5MB</span>
               </div>
             </div>
             <Input
@@ -152,7 +165,7 @@ export const FileUpload = ({
         ) : (
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="bg-veilo-blue-light p-2 rounded-md">
+              <div className="bg-veilo-blue-light p-2 rounded-md dark:bg-veilo-blue-dark/30">
                 <Paperclip className="h-5 w-5 text-veilo-blue" />
               </div>
               <div>
@@ -172,15 +185,6 @@ export const FileUpload = ({
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="bg-veilo-blue hover:bg-veilo-blue-dark"
-                        onClick={uploadFile}
-                      >
-                        <Upload className="h-4 w-4 mr-1" />
-                        Upload
-                      </Button>
                       <Button
                         type="button"
                         size="sm"

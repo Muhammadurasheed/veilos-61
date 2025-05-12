@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -55,6 +55,12 @@ const ExpertRegistration = () => {
   });
   const [step, setStep] = useState<'details' | 'documents' | 'verification'>('details');
   const [expertId, setExpertId] = useState<string | null>(null);
+  const [apiBaseUrl, setApiBaseUrl] = useState('https://veilo-backend.onrender.com');
+
+  // Initialize baseUrl for API calls
+  useEffect(() => {
+    console.log('API base URL set to:', apiBaseUrl);
+  }, [apiBaseUrl]);
 
   const form = useForm<ExpertFormValues>({
     resolver: zodResolver(expertFormSchema),
@@ -83,7 +89,11 @@ const ExpertRegistration = () => {
         phoneNumber: values.phoneNumber,
       };
 
+      console.log('Submitting expert registration:', expertData);
+      
       const response = await ExpertApi.registerExpert(expertData);
+      
+      console.log('Registration response:', response);
       
       if (!response.success || !response.data) {
         throw new Error(response.error || 'Failed to register. Please try again.');
@@ -112,8 +122,12 @@ const ExpertRegistration = () => {
 
   const handleFileUpload = async (file: File, type: string) => {
     if (!expertId) {
-      // Use a temporary ID for demo mode if no real expert ID exists yet
-      console.log('Using temporary ID for demo uploads');
+      toast({
+        variant: 'destructive',
+        title: 'Upload error',
+        description: 'Expert ID is not available. Please try again or refresh the page.',
+      });
+      return;
     }
     
     try {
@@ -124,28 +138,29 @@ const ExpertRegistration = () => {
       formData.append('file', file);
       formData.append('documentType', type);
       
-      // Make the API call to backend
-      const uploadUrl = `https://veilo-backend.onrender.com/api/experts/${expertId || 'temp-id'}/document`;
-      
+      // Get token from local storage
       const token = localStorage.getItem('veilo-token');
+      if (!token) {
+        throw new Error('Authentication token not found. Please login again.');
+      }
       
-      const response = await fetch(uploadUrl, {
+      console.log(`Uploading to ${apiBaseUrl}/api/experts/${expertId}/document`);
+      console.log('Form data:', Array.from(formData.entries()));
+      
+      // Make the API call to backend
+      const response = await fetch(`${apiBaseUrl}/api/experts/${expertId}/document`, {
         method: 'POST',
-        headers: token ? {
+        headers: {
           'x-auth-token': token
-        } : {},
+        },
         body: formData
       });
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to upload document');
-      }
-      
       const responseData = await response.json();
+      console.log('Upload response:', responseData);
       
-      if (!responseData.success) {
-        throw new Error(responseData.error || 'Upload failed on server');
+      if (!response.ok || !responseData.success) {
+        throw new Error(responseData.error || `Failed to upload document (${response.status})`);
       }
       
       // Mark this document type as uploaded
@@ -154,12 +169,20 @@ const ExpertRegistration = () => {
         [type]: true
       }));
       
-      console.log('Upload successful:', responseData);
+      toast({
+        title: 'Document uploaded successfully',
+        description: `Your ${type} document has been uploaded.`,
+      });
       
       return responseData.data;
     } catch (error) {
       console.error('Upload error:', error);
-      throw error; // Re-throw to be caught by the FileUpload component
+      toast({
+        variant: 'destructive',
+        title: 'Upload failed',
+        description: error instanceof Error ? error.message : 'An unexpected error occurred during upload.',
+      });
+      throw error; // Re-throw for the FileUpload component to handle
     }
   };
 
@@ -352,6 +375,7 @@ const ExpertRegistration = () => {
                     description="Upload your professional license or certification (PDF, JPG, PNG)" 
                     acceptedFileTypes=".pdf,.jpg,.jpeg,.png"
                     onUpload={(file) => handleFileUpload(file, 'credential')}
+                    required={true}
                   />
                   
                   <FileUpload 
@@ -359,6 +383,7 @@ const ExpertRegistration = () => {
                     description="Upload a government-issued ID for identity verification" 
                     acceptedFileTypes=".jpg,.jpeg,.png,.pdf"
                     onUpload={(file) => handleFileUpload(file, 'id')}
+                    required={true}
                   />
                   
                   <FileUpload 
@@ -391,14 +416,24 @@ const ExpertRegistration = () => {
                     Continue
                   </Button>
                 </div>
+                
+                <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <h4 className="text-sm font-medium text-blue-800 dark:text-blue-300">Upload Instructions:</h4>
+                  <ul className="text-sm text-blue-700 dark:text-blue-400 list-disc list-inside mt-1">
+                    <li>Maximum file size: 5MB per document</li>
+                    <li>Accepted formats: PDF, JPG, PNG</li>
+                    <li>Required documents: Professional license/certification and government ID</li>
+                    <li>Please ensure all documents are clear and legible</li>
+                  </ul>
+                </div>
               </div>
             )}
 
             {step === 'verification' && (
               <div className="space-y-6">
-                <div className="bg-veilo-blue-light p-4 rounded-md">
-                  <h4 className="font-semibold text-veilo-blue-dark mb-2">Verification Process</h4>
-                  <ol className="list-decimal list-inside space-y-2 text-gray-700">
+                <div className="bg-veilo-blue-light p-4 rounded-md dark:bg-veilo-blue-dark/30">
+                  <h4 className="font-semibold text-veilo-blue-dark dark:text-veilo-blue-light mb-2">Verification Process</h4>
+                  <ol className="list-decimal list-inside space-y-2 text-gray-700 dark:text-gray-300">
                     <li>Our admin team will review your application within 1-3 business days</li>
                     <li>We may contact you for additional information or clarification</li>
                     <li>Once approved, you'll receive an email with access to your expert dashboard</li>
@@ -406,9 +441,9 @@ const ExpertRegistration = () => {
                   </ol>
                 </div>
                 
-                <div className="bg-veilo-green-light p-4 rounded-md">
-                  <h4 className="font-semibold text-veilo-green-dark mb-2">What Happens Next?</h4>
-                  <ul className="list-disc list-inside space-y-2 text-gray-700">
+                <div className="bg-veilo-green-light p-4 rounded-md dark:bg-veilo-green-dark/30">
+                  <h4 className="font-semibold text-veilo-green-dark dark:text-veilo-green-light mb-2">What Happens Next?</h4>
+                  <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300">
                     <li>Your profile will be created with "Pending" status</li>
                     <li>You'll be notified via email when your account is approved</li>
                     <li>Once approved, you can start receiving session requests from users</li>

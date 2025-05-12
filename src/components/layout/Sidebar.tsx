@@ -94,17 +94,19 @@ export const Sidebar = ({ className }: SidebarProps) => {
                 to={item.href}
                 onClick={handleNavigation}
                 className={({ isActive }) => cn(
-                  'flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors',
+                  'flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors',
                   isActive 
-                    ? 'bg-veilo-blue-light text-veilo-blue-dark' 
+                    ? 'bg-veilo-blue-light text-veilo-blue-dark dark:bg-veilo-blue-dark/30 dark:text-veilo-blue-light' 
                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                 )}
               >
                 <item.icon className={cn(
                   'h-5 w-5',
-                  location.pathname === item.href ? 'text-veilo-blue-dark' : ''
+                  location.pathname === item.href 
+                    ? 'text-veilo-blue-dark dark:text-veilo-blue-light' 
+                    : 'text-gray-500 dark:text-gray-400'
                 )} />
-                <span>{item.name}</span>
+                <span className="font-medium">{item.name}</span>
               </NavLink>
             </li>
           ))}
