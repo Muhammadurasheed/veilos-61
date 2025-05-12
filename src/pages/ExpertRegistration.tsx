@@ -47,7 +47,7 @@ const ExpertRegistration = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [documents, setDocuments] = useState<File[]>([]);
+  const [uploadedDocuments, setUploadedDocuments] = useState<string[]>([]);
   const [step, setStep] = useState<'details' | 'documents' | 'verification'>('details');
   const [expertId, setExpertId] = useState<string | null>(null);
 
@@ -103,27 +103,57 @@ const ExpertRegistration = () => {
   };
 
   const handleFileUpload = async (file: File, type: string) => {
-    if (!expertId) return;
+    if (!expertId) {
+      // Use a temporary ID for demo mode if no real expert ID exists yet
+      console.log('Using temporary ID for demo uploads');
+    }
     
     try {
-      const response = await ExpertApi.uploadVerificationDocument(expertId, file, type);
+      // Create FormData object
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('documentType', type);
       
-      if (!response.success) {
-        throw new Error(response.error || 'Failed to upload document');
+      console.log(`Uploading ${type} document:`, file.name);
+      
+      // Make the API call
+      const uploadUrl = `https://veilo-backend.onrender.com/api/experts/${expertId || 'temp-id'}/document`;
+      
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
+          // Don't set Content-Type for FormData requests
+          ...(localStorage.getItem('veilo-token') ? { 'x-auth-token': localStorage.getItem('veilo-token')! } : {})
+        },
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to upload document');
       }
+      
+      const responseData = await response.json();
+      
+      if (!responseData.success) {
+        throw new Error(responseData.error || 'Upload failed on server');
+      }
+      
+      // Add to list of uploaded documents
+      setUploadedDocuments(prev => [...prev, file.name]);
       
       toast({
         title: 'Document uploaded',
         description: 'Your verification document has been uploaded successfully.',
       });
-      
-      setDocuments(prev => [...prev, file]);
     } catch (error) {
+      console.error('Upload error:', error);
       toast({
         variant: 'destructive',
         title: 'Upload failed',
         description: error instanceof Error ? error.message : 'An unexpected error occurred.',
       });
+      throw error; // Re-throw to be caught by the FileUpload component
     }
   };
 
@@ -137,7 +167,7 @@ const ExpertRegistration = () => {
 
   return (
     <Layout>
-      <div className="container py-10">
+      <div className="container py-10 w-full max-w-full">
         <h1 className="text-3xl font-bold mb-8 text-center text-veilo-blue-dark">
           Become a Beacon
         </h1>
@@ -337,7 +367,7 @@ const ExpertRegistration = () => {
                   <Button 
                     className="bg-veilo-blue hover:bg-veilo-blue-dark"
                     onClick={() => setStep('verification')}
-                    disabled={documents.length === 0}
+                    disabled={uploadedDocuments.length === 0}
                   >
                     Continue
                   </Button>

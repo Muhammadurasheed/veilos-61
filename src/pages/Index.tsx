@@ -1,5 +1,4 @@
 
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -14,8 +13,8 @@ const Index = () => {
   return (
     <Layout>
       {/* Hero Section */}
-      <section className="bg-gradient-to-b from-veilo-blue-light/20 to-veilo-purple-light/20 py-20">
-        <div className="container px-4 mx-auto">
+      <section className="bg-gradient-to-b from-veilo-blue-light/20 to-veilo-purple-light/20 py-10 md:py-20 -mx-4 md:-mx-6">
+        <div className="container px-4 mx-auto max-w-full">
           <div className="flex flex-col md:flex-row items-center">
             <div className="md:w-1/2 mb-10 md:mb-0">
               <h1 className="text-4xl md:text-5xl font-bold mb-6 text-veilo-blue-dark">
@@ -41,7 +40,7 @@ const Index = () => {
                 </Button>
               </div>
             </div>
-            <div className="md:w-1/2 md:pl-10">
+            <div className="md:w-1/2 md:pl-10 w-full">
               <div className="relative">
                 <div className="absolute -left-6 -top-6 w-64 h-64 bg-veilo-blue/10 rounded-full filter blur-xl"></div>
                 <div className="absolute -right-6 -bottom-6 w-64 h-64 bg-veilo-purple/10 rounded-full filter blur-xl"></div>
@@ -84,7 +83,7 @@ const Index = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-white -mx-4 md:-mx-6 w-auto">
         <div className="container px-4 mx-auto">
           <h2 className="text-3xl font-bold text-center mb-12 text-gray-800">How Veilo Works</h2>
           
@@ -123,7 +122,7 @@ const Index = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-veilo-blue to-veilo-purple text-white">
+      <section className="py-20 bg-gradient-to-r from-veilo-blue to-veilo-purple text-white -mx-4 md:-mx-6 w-auto">
         <div className="container px-4 mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Begin Your Healing Journey?</h2>
           <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">

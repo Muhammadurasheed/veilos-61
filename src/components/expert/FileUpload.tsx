@@ -1,9 +1,10 @@
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Paperclip, Upload, X, Check, Loader2 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 interface FileUploadProps {
   label: string;
@@ -23,6 +24,16 @@ export const FileUpload = ({
   const [isUploaded, setIsUploaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [filename, setFilename] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      // Clean up any file references when component unmounts
+      if (file) {
+        URL.revokeObjectURL(URL.createObjectURL(file));
+      }
+    };
+  }, [file]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0] || null;
@@ -31,11 +42,12 @@ export const FileUpload = ({
     // Reset states
     setError(null);
     setIsUploaded(false);
+    setFilename(selectedFile.name);
     
     // Validate file type
     const fileType = selectedFile.type;
     const acceptedTypes = acceptedFileTypes.split(',').map(type => 
-      type.startsWith('.') ? type.substring(1) : type
+      type.trim().startsWith('.') ? type.trim().substring(1) : type.trim()
     );
     
     const isValidType = acceptedTypes.some(type => {
@@ -55,6 +67,7 @@ export const FileUpload = ({
     if (!isValidType) {
       setError(`Please upload a valid file type (${acceptedFileTypes})`);
       e.target.value = '';
+      setFile(null);
       return;
     }
     
@@ -62,23 +75,37 @@ export const FileUpload = ({
     if (selectedFile.size > 10 * 1024 * 1024) {
       setError('File size exceeds 10MB limit');
       e.target.value = '';
+      setFile(null);
       return;
     }
     
     setFile(selectedFile);
+    
+    // Auto-upload the file once it's selected and validated
+    uploadFile(selectedFile);
   };
 
-  const handleUpload = async () => {
-    if (!file) return;
+  const uploadFile = async (selectedFile: File) => {
+    if (!selectedFile) return;
     
     setIsUploading(true);
     setError(null);
     
     try {
-      await onUpload(file);
+      await onUpload(selectedFile);
       setIsUploaded(true);
+      toast({
+        title: "File uploaded successfully",
+        description: `${selectedFile.name} has been uploaded.`,
+      });
     } catch (error) {
+      console.error('Upload error:', error);
       setError(error instanceof Error ? error.message : 'Error uploading file');
+      toast({
+        variant: "destructive",
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : 'Error uploading file',
+      });
     } finally {
       setIsUploading(false);
     }
@@ -86,6 +113,7 @@ export const FileUpload = ({
 
   const clearFile = () => {
     setFile(null);
+    setFilename(null);
     setIsUploaded(false);
     setError(null);
     if (fileInputRef.current) {
@@ -130,7 +158,7 @@ export const FileUpload = ({
                 <Paperclip className="h-5 w-5 text-veilo-blue" />
               </div>
               <div>
-                <p className="text-sm font-medium">{file.name}</p>
+                <p className="text-sm font-medium">{filename || file.name}</p>
                 <p className="text-xs text-gray-500">
                   {(file.size / 1024).toFixed(1)} KB
                 </p>
@@ -139,32 +167,25 @@ export const FileUpload = ({
             <div className="flex items-center space-x-2">
               {!isUploaded ? (
                 <>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={handleUpload}
-                    disabled={isUploading}
-                    className="bg-veilo-blue hover:bg-veilo-blue-dark"
-                  >
-                    {isUploading ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                    ) : (
-                      <Upload className="h-4 w-4 mr-1" />
-                    )}
-                    Upload
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={clearFile}
-                    className="text-gray-500"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                  {isUploading ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="text-xs">Uploading...</span>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={clearFile}
+                      className="text-gray-500"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
                 </>
               ) : (
-                <div className="flex items-center text-veilo-green">
+                <div className="flex items-center text-green-600">
                   <Check className="h-5 w-5 mr-1" />
                   <span className="text-sm">Uploaded</span>
                 </div>

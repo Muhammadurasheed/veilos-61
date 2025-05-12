@@ -4,8 +4,6 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useUserContext } from '@/contexts/UserContext';
 import { 
-  ChevronLeft, 
-  ChevronRight,
   Home,
   MessageSquare,
   Calendar,
@@ -16,12 +14,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { UserRole } from '@/types';
-import {
-  Drawer,
-  DrawerContent,
-  DrawerOverlay,
-  DrawerTrigger,
-} from '@/components/ui/drawer';
 
 interface SidebarProps {
   className?: string;
@@ -31,16 +23,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
   const { user } = useUserContext();
   const location = useLocation();
   const isMobile = useIsMobile();
-  const [collapsed, setCollapsed] = useState(isMobile);
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    setCollapsed(isMobile);
-  }, [isMobile]);
-
-  const toggleCollapse = () => {
-    setCollapsed(!collapsed);
-  };
+  const [collapsed, setCollapsed] = useState(true);
 
   const navigationItems = [
     {
@@ -84,23 +67,22 @@ export const Sidebar = ({ className }: SidebarProps) => {
     });
   }
 
-  const SidebarContent = () => (
-    <div className="h-full flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
+  // Close sidebar on navigation on mobile
+  const handleNavigation = () => {
+    if (isMobile) {
+      // Dispatch an event to close the sidebar
+      window.dispatchEvent(new CustomEvent('toggle-sidebar'));
+    }
+  };
+
+  return (
+    <div className={cn(
+      "h-full w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800",
+      className
+    )}>
       {/* Logo */}
-      <div className={cn('flex items-center h-16 px-3',
-        collapsed ? 'justify-center' : 'justify-between'
-      )}>
-        {!collapsed && (
-          <div className="text-xl font-semibold text-veilo-blue">Veilo</div>
-        )}
-        <Button 
-          variant="ghost" 
-          size="icon"
-          onClick={toggleCollapse}
-          className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-        >
-          {collapsed ? <ChevronRight /> : <ChevronLeft />}
-        </Button>
+      <div className="flex items-center h-16 px-3 justify-between">
+        <div className="text-xl font-semibold text-veilo-blue">Veilo</div>
       </div>
 
       {/* Navigation Links */}
@@ -110,7 +92,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
             <li key={item.name}>
               <NavLink
                 to={item.href}
-                onClick={() => isMobile && setOpen(false)}
+                onClick={handleNavigation}
                 className={({ isActive }) => cn(
                   'flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors',
                   isActive 
@@ -135,51 +117,15 @@ export const Sidebar = ({ className }: SidebarProps) => {
         'p-3 mb-3',
         collapsed ? 'items-center justify-center' : ''
       )}>
-        {collapsed ? (
-          <NavLink to="/register-expert" onClick={() => isMobile && setOpen(false)}>
-            <Button 
-              variant="ghost"
-              size="icon"
-              className="bg-veilo-blue hover:bg-veilo-blue-dark text-white rounded-full w-10 h-10"
-            >
-              <Shield className="h-5 w-5" />
-            </Button>
-          </NavLink>
-        ) : (
-          <NavLink to="/register-expert" onClick={() => isMobile && setOpen(false)}>
-            <Button 
-              className="w-full bg-veilo-blue hover:bg-veilo-blue-dark text-white"
-            >
-              Become a Beacon
-            </Button>
-          </NavLink>
-        )}
+        <NavLink to="/register-expert" onClick={handleNavigation}>
+          <Button 
+            className="w-full bg-veilo-blue hover:bg-veilo-blue-dark text-white"
+          >
+            Become a Beacon
+          </Button>
+        </NavLink>
       </div>
     </div>
-  );
-
-  if (isMobile) {
-    return (
-      <Drawer open={open} onOpenChange={setOpen}>
-        <DrawerContent className="h-[90vh] p-0">
-          <div className="h-full">
-            <SidebarContent />
-          </div>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
-  return (
-    <aside 
-      className={cn(
-        'h-screen fixed left-0 top-0 z-30 flex flex-col transition-all duration-300 ease-in-out',
-        collapsed ? 'w-0 overflow-hidden' : 'w-64',
-        className
-      )}
-    >
-      <SidebarContent />
-    </aside>
   );
 };
 
