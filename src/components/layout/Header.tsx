@@ -1,78 +1,135 @@
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
+import { useUserContext } from '@/contexts/UserContext';
+import { Button } from '@/components/ui/button';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { generateAlias } from '@/lib/alias';
-import { useUserContext } from '@/contexts/UserContext';
+} from '@/components/ui/dropdown-menu';
+import { Menu, Bell, User, LogOut, Settings, Moon, Sun } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getBadgeImageForLevel } from '@/lib/utils';
 
 const Header = () => {
-  const { user, setUser, logout } = useUserContext();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, logout, isAuthenticated } = useUserContext();
+  const { theme, setTheme } = useTheme();
+  const [isScrolled, setIsScrolled] = useState(false);
 
-  const handleLogin = () => {
-    // Generate a new anonymous user
-    const alias = generateAlias();
-    const avatarIndex = Math.floor(Math.random() * 12) + 1;
-    
-    setUser({
-      id: crypto.randomUUID(),
-      alias,
-      avatarIndex,
-      loggedIn: true
-    });
+  // Toggle sidebar function
+  const toggleSidebar = () => {
+    window.dispatchEvent(new CustomEvent('toggle-sidebar'));
   };
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  const userLevel = user?.level || 1;
+  const userBadge = getBadgeImageForLevel(userLevel);
+
   return (
-    <header className="py-4 px-6 bg-white bg-opacity-80 backdrop-blur-md sticky top-0 z-10 shadow-sm">
-      <div className="container flex justify-between items-center">
-        <Link to="/" className="flex items-center space-x-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-veilo-blue to-veilo-purple-light flex items-center justify-center">
-            <span className="text-white font-bold">V</span>
-          </div>
-          <span className="text-xl font-semibold text-veilo-blue-dark">Veilo</span>
-        </Link>
-        
-        <nav className="hidden md:flex items-center space-x-8">
-          <Link to="/" className="text-gray-600 hover:text-veilo-blue transition-colors">Home</Link>
-          <Link to="/feed" className="text-gray-600 hover:text-veilo-blue transition-colors">Feed</Link>
-          <Link to="/beacons" className="text-gray-600 hover:text-veilo-blue transition-colors">Beacons</Link>
-        </nav>
-        
-        <div className="flex items-center space-x-4">
-          {user?.loggedIn ? (
-            <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+    <header
+      className={`sticky top-0 z-30 bg-white dark:bg-gray-900 w-full transition-all duration-300 ${
+        isScrolled ? 'shadow-sm border-b border-gray-200 dark:border-gray-800' : ''
+      }`}
+    >
+      <div className="container flex h-16 items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="md:hidden" 
+            onClick={toggleSidebar}
+          >
+            <Menu className="h-5 w-5" />
+            <span className="sr-only">Toggle sidebar</span>
+          </Button>
+          <Link to="/" className="flex items-center">
+            <span className="text-xl font-bold text-veilo-blue">Veilo</span>
+          </Link>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="rounded-full"
+            aria-label="Toggle theme"
+          >
+            {theme === 'dark' ? (
+              <Sun className="h-5 w-5" />
+            ) : (
+              <Moon className="h-5 w-5" />
+            )}
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full relative"
+            aria-label="Notifications"
+          >
+            <Bell className="h-5 w-5" />
+            <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500"></span>
+          </Button>
+
+          {isAuthenticated ? (
+            <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="rounded-full p-0 h-10 w-10">
-                  <Avatar className="h-9 w-9 transition-all hover:ring-2 hover:ring-veilo-blue">
-                    <AvatarImage src={`/avatars/avatar-${user.avatarIndex}.svg`} alt={user.alias} />
-                    <AvatarFallback className="bg-veilo-blue-light text-veilo-blue-dark">
-                      {user.alias.substring(0, 2).toUpperCase()}
-                    </AvatarFallback>
+                <Button
+                  variant="ghost"
+                  className="relative h-9 w-9 rounded-full"
+                >
+                  <Avatar className="h-9 w-9 border border-gray-200 dark:border-gray-700">
+                    <AvatarImage src={user?.avatarUrl || '/avatars/avatar-1.svg'} alt="User avatar" />
+                    <AvatarFallback>{user?.name?.charAt(0) || 'A'}</AvatarFallback>
                   </Avatar>
+                  {userBadge && (
+                    <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-2 border-white dark:border-gray-900 bg-white dark:bg-gray-900">
+                      <img src={userBadge} alt="Level badge" className="h-full w-full" />
+                    </div>
+                  )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <div className="px-2 py-1.5 text-sm font-medium text-muted-foreground">
-                  {user.alias}
-                </div>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/profile" className="cursor-pointer">Profile</Link>
+                  <Link to="/profile" className="flex items-center">
+                    <User className="mr-2 h-4 w-4" />
+                    Profile
+                  </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={logout} className="cursor-pointer text-red-500 hover:text-red-600">
-                  Logout
+                <DropdownMenuItem asChild>
+                  <Link to="/settings" className="flex items-center">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout} className="text-red-500">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button onClick={handleLogin} variant="outline" className="bg-white shadow-sm border-veilo-blue-light text-veilo-blue-dark hover:bg-veilo-blue hover:text-white">
-              Enter Anonymously
+            <Button asChild>
+              <Link to="/">Sign in</Link>
             </Button>
           )}
         </div>

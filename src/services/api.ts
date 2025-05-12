@@ -2,8 +2,8 @@
 import { ApiResponse, ApiPostRequest, ApiExpertRegisterRequest, ApiChatSessionRequest, Post, Expert, ApiVerificationRequest, Session, VerificationDocument } from '@/types';
 import axios from 'axios';
 
-// Base API URL
-const API_BASE_URL = 'http://localhost:3000/api';
+// Base API URL - Updated to use the render.com backend
+const API_BASE_URL = 'https://veilo-backend.onrender.com/api';
 
 // Create axios instance with base configuration
 const api = axios.create({
@@ -96,8 +96,8 @@ async function uploadFile(
 
 // User related API endpoints
 export const UserApi = {
-  register: () => 
-    apiRequest<{ token: string, user: any }>('POST', '/users/register'),
+  register: (userData) => 
+    apiRequest<{ token: string, user: any }>('POST', '/users/register', userData),
   
   authenticate: (token: string) =>
     apiRequest<{ user: any }>('POST', '/users/authenticate', { token }),

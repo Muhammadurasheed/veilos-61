@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useUserContext } from '@/contexts/UserContext';
@@ -25,7 +25,23 @@ export const Sidebar = ({ className }: SidebarProps) => {
   const { user } = useUserContext();
   const location = useLocation();
   const isMobile = useIsMobile();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(isMobile);
+  
+  // Effect to collapse sidebar on mobile by default
+  useEffect(() => {
+    setCollapsed(isMobile);
+    
+    // Listen for toggle-sidebar events
+    const handleToggleSidebar = () => {
+      setCollapsed(prev => !prev);
+    };
+    
+    window.addEventListener('toggle-sidebar', handleToggleSidebar);
+    
+    return () => {
+      window.removeEventListener('toggle-sidebar', handleToggleSidebar);
+    };
+  }, [isMobile]);
 
   const navigationItems = [
     {
@@ -93,8 +109,9 @@ export const Sidebar = ({ className }: SidebarProps) => {
 
   return (
     <div className={cn(
-      "h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 relative transition-all duration-300 flex flex-col",
-      collapsed ? "w-20" : "w-64",
+      "h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 fixed left-0 top-0 bottom-0 z-40 transition-all duration-300 shadow-md",
+      collapsed ? "w-16 translate-x-0" : "w-64 translate-x-0",
+      isMobile && collapsed && "-translate-x-full",
       className
     )}>
       {/* Logo and collapse button */}
