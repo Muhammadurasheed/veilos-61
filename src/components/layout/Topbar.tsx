@@ -77,13 +77,13 @@ const Topbar = ({ onToggleSidebar, sidebarOpen }: TopbarProps) => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => toggleTheme('light')}>
+                <DropdownMenuItem onClick={() => toggleTheme()}>
                   Light
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toggleTheme('dark')}>
+                <DropdownMenuItem onClick={() => toggleTheme()}>
                   Dark
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toggleTheme('system')}>
+                <DropdownMenuItem onClick={() => toggleTheme()}>
                   System
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -91,8 +91,11 @@ const Topbar = ({ onToggleSidebar, sidebarOpen }: TopbarProps) => {
             
             <Link to="/profile">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={user?.avatar || '/avatars/avatar-1.svg'} alt={user?.name || 'User'} />
-                <AvatarFallback>{user?.name?.charAt(0) || 'U'}</AvatarFallback>
+                <AvatarImage 
+                  src={`/avatars/avatar-${user?.avatarIndex || 1}.svg`} 
+                  alt={user?.alias || 'User'} 
+                />
+                <AvatarFallback>{user?.alias?.[0] || 'U'}</AvatarFallback>
               </Avatar>
             </Link>
           </nav>
