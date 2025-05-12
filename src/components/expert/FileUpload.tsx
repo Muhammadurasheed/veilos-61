@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Paperclip, Upload, X, Check, Loader2 } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 interface FileUploadProps {
   label: string;
@@ -25,6 +25,7 @@ export const FileUpload = ({
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [filename, setFilename] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     return () => {
@@ -80,23 +81,20 @@ export const FileUpload = ({
     }
     
     setFile(selectedFile);
-    
-    // Auto-upload the file once it's selected and validated
-    uploadFile(selectedFile);
   };
 
-  const uploadFile = async (selectedFile: File) => {
-    if (!selectedFile) return;
+  const uploadFile = async () => {
+    if (!file) return;
     
     setIsUploading(true);
     setError(null);
     
     try {
-      await onUpload(selectedFile);
+      await onUpload(file);
       setIsUploaded(true);
       toast({
         title: "File uploaded successfully",
-        description: `${selectedFile.name} has been uploaded.`,
+        description: `${file.name} has been uploaded.`,
       });
     } catch (error) {
       console.error('Upload error:', error);
@@ -173,15 +171,26 @@ export const FileUpload = ({
                       <span className="text-xs">Uploading...</span>
                     </div>
                   ) : (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={clearFile}
-                      className="text-gray-500"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="bg-veilo-blue hover:bg-veilo-blue-dark"
+                        onClick={uploadFile}
+                      >
+                        <Upload className="h-4 w-4 mr-1" />
+                        Upload
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={clearFile}
+                        className="text-gray-500"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   )}
                 </>
               ) : (

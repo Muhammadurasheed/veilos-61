@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useUserContext } from '@/contexts/UserContext';
@@ -23,7 +23,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
   const { user } = useUserContext();
   const location = useLocation();
   const isMobile = useIsMobile();
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
 
   const navigationItems = [
     {
@@ -97,15 +97,14 @@ export const Sidebar = ({ className }: SidebarProps) => {
                   'flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors',
                   isActive 
                     ? 'bg-veilo-blue-light text-veilo-blue-dark' 
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800',
-                  collapsed ? 'justify-center' : ''
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                 )}
               >
                 <item.icon className={cn(
                   'h-5 w-5',
                   location.pathname === item.href ? 'text-veilo-blue-dark' : ''
                 )} />
-                {!collapsed && <span>{item.name}</span>}
+                <span>{item.name}</span>
               </NavLink>
             </li>
           ))}
@@ -113,10 +112,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
       </nav>
 
       {/* Become a Beacon CTA */}
-      <div className={cn(
-        'p-3 mb-3',
-        collapsed ? 'items-center justify-center' : ''
-      )}>
+      <div className="p-3 mb-3">
         <NavLink to="/register-expert" onClick={handleNavigation}>
           <Button 
             className="w-full bg-veilo-blue hover:bg-veilo-blue-dark text-white"

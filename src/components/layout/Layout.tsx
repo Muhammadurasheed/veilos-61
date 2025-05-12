@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
-import { Drawer, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
 
 interface LayoutProps {
   children: React.ReactNode;

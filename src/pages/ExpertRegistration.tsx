@@ -47,7 +47,12 @@ const ExpertRegistration = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadedDocuments, setUploadedDocuments] = useState<string[]>([]);
+  const [uploadedDocuments, setUploadedDocuments] = useState<{[key: string]: boolean}>({
+    photo: false,
+    credential: false,
+    id: false,
+    other: false
+  });
   const [step, setStep] = useState<'details' | 'documents' | 'verification'>('details');
   const [expertId, setExpertId] = useState<string | null>(null);
 
@@ -91,7 +96,10 @@ const ExpertRegistration = () => {
 
       setExpertId(response.data.id);
       setStep('documents');
+      
+      console.log('Expert registered successfully with ID:', response.data.id);
     } catch (error) {
+      console.error('Registration error:', error);
       toast({
         variant: 'destructive',
         title: 'Registration failed',
@@ -109,22 +117,23 @@ const ExpertRegistration = () => {
     }
     
     try {
+      console.log(`Uploading ${type} document:`, file.name);
+      
       // Create FormData object
       const formData = new FormData();
       formData.append('file', file);
       formData.append('documentType', type);
       
-      console.log(`Uploading ${type} document:`, file.name);
-      
-      // Make the API call
+      // Make the API call to backend
       const uploadUrl = `https://veilo-backend.onrender.com/api/experts/${expertId || 'temp-id'}/document`;
+      
+      const token = localStorage.getItem('veilo-token');
       
       const response = await fetch(uploadUrl, {
         method: 'POST',
-        headers: {
-          // Don't set Content-Type for FormData requests
-          ...(localStorage.getItem('veilo-token') ? { 'x-auth-token': localStorage.getItem('veilo-token')! } : {})
-        },
+        headers: token ? {
+          'x-auth-token': token
+        } : {},
         body: formData
       });
       
@@ -139,22 +148,25 @@ const ExpertRegistration = () => {
         throw new Error(responseData.error || 'Upload failed on server');
       }
       
-      // Add to list of uploaded documents
-      setUploadedDocuments(prev => [...prev, file.name]);
+      // Mark this document type as uploaded
+      setUploadedDocuments(prev => ({
+        ...prev,
+        [type]: true
+      }));
       
-      toast({
-        title: 'Document uploaded',
-        description: 'Your verification document has been uploaded successfully.',
-      });
+      console.log('Upload successful:', responseData);
+      
+      return responseData.data;
     } catch (error) {
       console.error('Upload error:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Upload failed',
-        description: error instanceof Error ? error.message : 'An unexpected error occurred.',
-      });
       throw error; // Re-throw to be caught by the FileUpload component
     }
+  };
+
+  // Check if required documents are uploaded
+  const canProceedToVerification = () => {
+    // Require at least credential and ID to proceed
+    return uploadedDocuments.credential && uploadedDocuments.id;
   };
 
   const completeRegistration = () => {
@@ -350,6 +362,13 @@ const ExpertRegistration = () => {
                   />
                   
                   <FileUpload 
+                    label="Profile Photo" 
+                    description="Upload a professional headshot (JPG, PNG)" 
+                    acceptedFileTypes=".jpg,.jpeg,.png"
+                    onUpload={(file) => handleFileUpload(file, 'photo')}
+                  />
+                  
+                  <FileUpload 
                     label="Additional Supporting Document (Optional)" 
                     description="Any additional documents that support your expertise" 
                     acceptedFileTypes=".pdf,.jpg,.jpeg,.png,.doc,.docx"
@@ -367,7 +386,7 @@ const ExpertRegistration = () => {
                   <Button 
                     className="bg-veilo-blue hover:bg-veilo-blue-dark"
                     onClick={() => setStep('verification')}
-                    disabled={uploadedDocuments.length === 0}
+                    disabled={!canProceedToVerification()}
                   >
                     Continue
                   </Button>
