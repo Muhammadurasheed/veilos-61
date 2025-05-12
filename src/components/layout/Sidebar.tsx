@@ -61,7 +61,8 @@ export const Sidebar = ({ className }: SidebarProps) => {
   ];
 
   // Add expert dashboard for beacon users
-  if (user?.role === UserRole.BEACON || user?.expertId) {
+  // Check if user exists first, then check if user.role === BEACON or if expertId exists on user
+  if (user?.role === UserRole.BEACON || (user && 'expertId' in user)) {
     navigationItems.splice(4, 0, {
       name: 'Expert Dashboard',
       href: '/expert-dashboard',

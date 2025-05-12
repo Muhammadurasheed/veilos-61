@@ -11,6 +11,7 @@ const ExpertDashboard = () => {
   const { user } = useUserContext();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [currentView, setCurrentView] = useState('dashboard'); // Add a state variable to control views
 
   // Stats would normally come from API
   const stats = {
@@ -231,7 +232,7 @@ const ExpertDashboard = () => {
                     variant="ghost"
                     size="sm"
                     className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                    onClick={() => setStep('availabilityEdit')}
+                    onClick={() => setCurrentView('availabilityEdit')}
                   >
                     <Edit className="h-4 w-4 mr-1" /> Edit
                   </Button>
@@ -286,7 +287,7 @@ const ExpertDashboard = () => {
             <CardFooter className="pt-0">
               <Button 
                 className="w-full bg-veilo-blue hover:bg-veilo-blue-dark"
-                onClick={() => setStep('availability')}
+                onClick={() => setCurrentView('availability')}
               >
                 Edit Full Schedule
               </Button>
