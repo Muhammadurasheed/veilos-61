@@ -9,7 +9,9 @@ import {
   Calendar,
   User,
   Settings,
-  Shield
+  Shield,
+  Menu,
+  ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -58,6 +60,15 @@ export const Sidebar = ({ className }: SidebarProps) => {
     }
   ];
 
+  // Add expert dashboard for beacon users
+  if (user?.role === UserRole.BEACON || user?.expertId) {
+    navigationItems.splice(4, 0, {
+      name: 'Expert Dashboard',
+      href: '/expert-dashboard',
+      icon: Shield
+    });
+  }
+
   // Admin link for admin users
   if (user?.role === UserRole.ADMIN) {
     navigationItems.push({
@@ -75,14 +86,34 @@ export const Sidebar = ({ className }: SidebarProps) => {
     }
   };
 
+  const toggleCollapse = () => {
+    setCollapsed(!collapsed);
+  };
+
   return (
     <div className={cn(
-      "h-full w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800",
+      "h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 relative transition-all duration-300 flex flex-col",
+      collapsed ? "w-20" : "w-64",
       className
     )}>
-      {/* Logo */}
-      <div className="flex items-center h-16 px-3 justify-between">
-        <div className="text-xl font-semibold text-veilo-blue">Veilo</div>
+      {/* Logo and collapse button */}
+      <div className="flex items-center h-16 px-3 justify-between border-b border-gray-100 dark:border-gray-800">
+        <div className={cn(
+          "text-xl font-semibold text-veilo-blue transition-opacity",
+          collapsed ? "opacity-0 w-0" : "opacity-100"
+        )}>Veilo</div>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-8 w-8 rounded-full"
+          onClick={toggleCollapse}
+        >
+          {collapsed ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
+            <Menu className="h-4 w-4" />
+          )}
+        </Button>
       </div>
 
       {/* Navigation Links */}
@@ -94,10 +125,11 @@ export const Sidebar = ({ className }: SidebarProps) => {
                 to={item.href}
                 onClick={handleNavigation}
                 className={({ isActive }) => cn(
-                  'flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors',
+                  'flex items-center px-3 py-2 rounded-lg transition-all',
                   isActive 
-                    ? 'bg-veilo-blue-light text-veilo-blue-dark dark:bg-veilo-blue-dark/30 dark:text-veilo-blue-light' 
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    ? 'bg-veilo-blue-light text-veilo-blue-dark dark:bg-veilo-blue-dark/30 dark:text-veilo-blue-light'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800',
+                  collapsed ? 'justify-center' : 'space-x-3'
                 )}
               >
                 <item.icon className={cn(
@@ -106,7 +138,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
                     ? 'text-veilo-blue-dark dark:text-veilo-blue-light' 
                     : 'text-gray-500 dark:text-gray-400'
                 )} />
-                <span className="font-medium">{item.name}</span>
+                {!collapsed && <span className="font-medium truncate">{item.name}</span>}
               </NavLink>
             </li>
           ))}
@@ -114,12 +146,22 @@ export const Sidebar = ({ className }: SidebarProps) => {
       </nav>
 
       {/* Become a Beacon CTA */}
-      <div className="p-3 mb-3">
+      <div className={cn(
+        "p-3 mb-3 transition-all",
+        collapsed && "px-1"
+      )}>
         <NavLink to="/register-expert" onClick={handleNavigation}>
           <Button 
-            className="w-full bg-veilo-blue hover:bg-veilo-blue-dark text-white"
+            className={cn(
+              "bg-veilo-blue hover:bg-veilo-blue-dark text-white w-full transition-all",
+              collapsed && "w-full p-2"
+            )}
           >
-            Become a Beacon
+            {collapsed ? (
+              <Shield className="h-5 w-5" />
+            ) : (
+              "Become a Beacon"
+            )}
           </Button>
         </NavLink>
       </div>

@@ -10,13 +10,14 @@ import Index from '@/pages/Index';
 import Feed from '@/pages/Feed';
 import BeaconsList from '@/pages/BeaconsList';
 import ExpertProfile from '@/pages/ExpertProfile';
+import ExpertRegistration from '@/pages/ExpertRegistration';
+import ExpertDashboard from '@/pages/ExpertDashboard';
 import Chat from '@/pages/Chat';
 import Profile from '@/pages/Profile';
 import Settings from '@/pages/Settings';
 import SessionHub from '@/pages/SessionHub';
 import NotFound from '@/pages/NotFound';
 import AdminPanel from '@/pages/AdminPanel';
-import BeaconRegistration from '@/components/expert/BeaconRegistration';
 import { SessionProvider } from '@/contexts/SessionContext';
 
 import './App.css';
@@ -42,7 +43,8 @@ function App() {
               <Route path="/sessions" element={<SessionHub />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/settings" element={<Settings />} />
-              <Route path="/register-expert" element={<BeaconRegistration />} />
+              <Route path="/register-expert" element={<ExpertRegistration />} />
+              <Route path="/expert-dashboard" element={<ExpertDashboard />} />
               <Route path="/admin/*" element={<AdminPanel />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
