@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -29,6 +30,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { ExpertApi } from '@/services/api';
 import { useUserContext } from '@/contexts/UserContext';
+import { ApiExpertRegisterRequest } from '@/types';
 
 const expertFormSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -80,9 +82,10 @@ const BeaconRegistration = () => {
   // Load user data when component mounts
   useEffect(() => {
     if (user) {
-      // Use optional chaining to safely access potentially undefined properties
-      form.setValue('name', user?.alias || '');
-      form.setValue('email', user?.id ? `${user.id}@veilo.app` : '');
+      // Use alias for the name field
+      form.setValue('name', user.alias || '');
+      // Use user ID for the email field with a domain
+      form.setValue('email', user.id ? `${user.id}@veilo.app` : '');
     }
   }, [user, form]);
 
@@ -90,11 +93,19 @@ const BeaconRegistration = () => {
     setIsSubmitting(true);
 
     try {
+      // Create a proper ApiExpertRegisterRequest object ensuring all required fields are present
+      const expertData: ApiExpertRegisterRequest = {
+        name: values.name,
+        email: values.email,
+        specialization: values.specialization,
+        bio: values.bio,
+        pricingModel: values.pricingModel,
+        pricingDetails: values.pricingDetails || '',
+        phoneNumber: values.phoneNumber || '',
+      };
+
       // Send the expert registration data to the backend
-      const response = await ExpertApi.registerExpert({
-        ...values,
-        // Remove userId as it doesn't exist in ApiExpertRegisterRequest
-      });
+      const response = await ExpertApi.registerExpert(expertData);
 
       if (response.success && response.data) {
         toast({
