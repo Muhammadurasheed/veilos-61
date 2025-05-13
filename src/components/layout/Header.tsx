@@ -17,9 +17,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getBadgeImageForLevel } from '@/lib/utils';
 
 const Header = () => {
-  const { user, logout, isAuthenticated } = useUserContext();
-  const { theme, setTheme } = useTheme();
+  const { user, logout } = useUserContext();
+  const { theme, toggleTheme } = useTheme();
   const [isScrolled, setIsScrolled] = useState(false);
+  // Determine if user is authenticated based on user object existence
+  const isAuthenticated = !!user;
 
   // Toggle sidebar function
   const toggleSidebar = () => {
@@ -37,7 +39,8 @@ const Header = () => {
     };
   }, []);
 
-  const userLevel = user?.level || 1;
+  // Use a default level if user doesn't have one
+  const userLevel = 1;
   const userBadge = getBadgeImageForLevel(userLevel);
 
   return (
@@ -66,7 +69,7 @@ const Header = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            onClick={toggleTheme}
             className="rounded-full"
             aria-label="Toggle theme"
           >
@@ -95,8 +98,8 @@ const Header = () => {
                   className="relative h-9 w-9 rounded-full"
                 >
                   <Avatar className="h-9 w-9 border border-gray-200 dark:border-gray-700">
-                    <AvatarImage src={user?.avatarUrl || '/avatars/avatar-1.svg'} alt="User avatar" />
-                    <AvatarFallback>{user?.name?.charAt(0) || 'A'}</AvatarFallback>
+                    <AvatarImage src={`/avatars/avatar-${user?.avatarIndex || 1}.svg`} alt="User avatar" />
+                    <AvatarFallback>{user?.alias?.charAt(0) || 'A'}</AvatarFallback>
                   </Avatar>
                   {userBadge && (
                     <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-2 border-white dark:border-gray-900 bg-white dark:bg-gray-900">

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
@@ -66,8 +65,8 @@ const BeaconRegistration = () => {
   const form = useForm<ExpertFormValues>({
     resolver: zodResolver(expertFormSchema),
     defaultValues: {
-      name: user?.name || '',
-      email: user?.email || '',
+      name: '', // Default empty string
+      email: '', // Default empty string
       specialization: '',
       bio: '',
       pricingModel: 'free',
@@ -81,8 +80,9 @@ const BeaconRegistration = () => {
   // Load user data when component mounts
   useEffect(() => {
     if (user) {
-      form.setValue('name', user.name || '');
-      form.setValue('email', user.email || '');
+      // Use optional chaining to safely access potentially undefined properties
+      form.setValue('name', user?.alias || '');
+      form.setValue('email', user?.id ? `${user.id}@veilo.app` : '');
     }
   }, [user, form]);
 
@@ -93,7 +93,7 @@ const BeaconRegistration = () => {
       // Send the expert registration data to the backend
       const response = await ExpertApi.registerExpert({
         ...values,
-        userId: user?.id || ''
+        // Remove userId as it doesn't exist in ApiExpertRegisterRequest
       });
 
       if (response.success && response.data) {
@@ -193,7 +193,7 @@ const BeaconRegistration = () => {
       <div className="flex justify-center mb-10">
         <div className="flex items-center">
           {['details', 'documents', 'availability', 'preferences', 'verification'].map((stepName, index) => (
-            <React.Fragment key={stepName}>
+            <div key={stepName}>
               <div 
                 className={`w-10 h-10 rounded-full flex items-center justify-center ${
                   step === stepName 
@@ -217,7 +217,7 @@ const BeaconRegistration = () => {
                   }`}
                 ></div>
               )}
-            </React.Fragment>
+            </div>
           ))}
         </div>
       </div>

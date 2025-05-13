@@ -80,7 +80,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   // Register new anonymous user
   const registerNewUser = async () => {
     try {
-      const response = await UserApi.register();
+      const response = await UserApi.register("anonymous"); // Pass a string argument
       
       if (response.success && response.data) {
         // Save token
