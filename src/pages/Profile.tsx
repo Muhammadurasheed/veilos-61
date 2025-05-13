@@ -7,6 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/layout/Layout";
 import { useUserContext } from "@/contexts/UserContext";
+import { motion } from "framer-motion";
+import { RefreshCw, Shield, CalendarDays, MessageSquare } from "lucide-react";
 
 const Profile = () => {
   const { user, refreshIdentity, logout } = useUserContext();
@@ -29,8 +31,8 @@ const Profile = () => {
       setRotating(false);
       
       toast({
+        title: "Identity Refreshed",
         description: "Your identity has been refreshed. You now have a new alias and avatar.",
-        variant: "default",
       });
     }, 800);
   };
@@ -40,74 +42,144 @@ const Profile = () => {
     navigate('/');
     
     toast({
+      title: "Session Ended",
       description: "You have been logged out and your anonymous session has ended.",
-      variant: "default",
     });
   };
   
-  const avatarClasses = rotating 
-    ? "h-32 w-32 transition-transform duration-700 transform rotate-360" 
-    : "h-32 w-32 transition-transform duration-300";
+  // Animation variants for profile elements
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+  
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { 
+        type: "spring",
+        stiffness: 100
+      }
+    }
+  };
+  
+  // Mock user stats (for demonstration)
+  const userStats = {
+    sessionsJoined: 8,
+    postsCreated: 12,
+    daysSinceJoined: 15
+  };
   
   return (
     <Layout>
       <div className="container py-16">
-        <div className="max-w-lg mx-auto">
-          <Card className="glass">
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl text-veilo-blue-dark">Your Anonymous Profile</CardTitle>
-            </CardHeader>
+        <motion.div 
+          className="max-w-4xl mx-auto"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <Card className="glass overflow-hidden shadow-lg border border-gray-100 dark:border-gray-800">
+            <motion.div variants={itemVariants}>
+              <div className="h-32 bg-gradient-to-r from-veilo-blue to-veilo-purple" />
+            </motion.div>
             
-            <CardContent className="space-y-8">
-              <div className="flex flex-col items-center">
-                <Avatar className={avatarClasses + " mb-4 border-4 border-veilo-blue-light"}>
+            <CardHeader className="text-center relative pb-0">
+              <motion.div 
+                className="absolute -top-16 inset-x-0 flex justify-center"
+                variants={itemVariants}
+              >
+                <Avatar className={`h-32 w-32 border-4 border-white dark:border-gray-900 shadow-md ${rotating ? 'animate-spin' : ''}`}>
                   <AvatarImage src={`/avatars/avatar-${user.avatarIndex}.svg`} alt={user.alias} />
-                  <AvatarFallback className="text-xl bg-veilo-blue-light text-veilo-blue-dark">
+                  <AvatarFallback className="text-2xl bg-veilo-blue-light text-veilo-blue-dark">
                     {user.alias.substring(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
+              </motion.div>
+              
+              <motion.div className="mt-16" variants={itemVariants}>
+                <CardTitle className="text-2xl text-veilo-blue-dark dark:text-veilo-blue-light font-bold">
+                  {user.alias}
+                </CardTitle>
+                <p className="text-gray-500 mt-1">Anonymous User</p>
+              </motion.div>
+            </CardHeader>
+            
+            <CardContent className="space-y-8 mt-6">
+              <motion.div variants={itemVariants}>
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm">
+                    <div className="flex flex-col items-center">
+                      <MessageSquare className="h-6 w-6 text-veilo-purple mb-2" />
+                      <span className="text-xl font-bold text-gray-800 dark:text-gray-200">{userStats.postsCreated}</span>
+                      <span className="text-xs text-gray-500">Posts</span>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm">
+                    <div className="flex flex-col items-center">
+                      <Shield className="h-6 w-6 text-veilo-blue mb-2" />
+                      <span className="text-xl font-bold text-gray-800 dark:text-gray-200">{userStats.sessionsJoined}</span>
+                      <span className="text-xs text-gray-500">Sessions</span>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm">
+                    <div className="flex flex-col items-center">
+                      <CalendarDays className="h-6 w-6 text-veilo-green mb-2" />
+                      <span className="text-xl font-bold text-gray-800 dark:text-gray-200">{userStats.daysSinceJoined}</span>
+                      <span className="text-xs text-gray-500">Days</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
                 
-                <h2 className="text-xl font-semibold mb-1 text-veilo-blue-dark">{user.alias}</h2>
-                <p className="text-sm text-gray-500 mb-4">Anonymous User</p>
-                
+              <motion.div 
+                className="flex flex-col items-center space-y-4"
+                variants={itemVariants}
+              >
                 <div className="flex flex-col w-full max-w-xs space-y-4">
                   <Button 
                     onClick={handleRefreshIdentity}
                     variant="outline"
-                    className="border-veilo-blue text-veilo-blue hover:bg-veilo-blue hover:text-white"
+                    className="border-veilo-blue text-veilo-blue hover:bg-veilo-blue hover:text-white transition-colors"
                     disabled={rotating}
                   >
-                    <svg 
-                      xmlns="http://www.w3.org/2000/svg" 
+                    <RefreshCw 
                       className={`h-5 w-5 mr-2 ${rotating ? 'animate-spin' : ''}`} 
-                      fill="none" 
-                      viewBox="0 0 24 24" 
-                      stroke="currentColor"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
+                    />
                     Refresh Identity
                   </Button>
                   
                   <Button 
                     onClick={handleLogout}
                     variant="destructive"
+                    className="shadow-sm"
                   >
                     End Anonymous Session
                   </Button>
                 </div>
-              </div>
+              </motion.div>
               
-              <div className="bg-veilo-blue-light bg-opacity-30 rounded-lg p-4 text-sm">
-                <h3 className="font-medium mb-2 text-veilo-blue-dark">Identity Protection</h3>
-                <p className="text-gray-700">
-                  Refreshing your identity will give you a new alias and avatar. This helps maintain your anonymity while using Veilo. 
-                  Your previous posts and comments will remain, but won't be connected to your new identity.
-                </p>
-              </div>
+              <motion.div variants={itemVariants}>
+                <div className="bg-veilo-blue-light bg-opacity-30 rounded-xl p-5 text-sm shadow-inner">
+                  <h3 className="font-medium mb-2 text-veilo-blue-dark dark:text-veilo-blue">Identity Protection</h3>
+                  <p className="text-gray-700 dark:text-gray-300">
+                    Refreshing your identity will give you a new alias and avatar. This helps maintain your anonymity while using Veilo. 
+                    Your previous posts and comments will remain, but won't be connected to your new identity.
+                  </p>
+                </div>
+              </motion.div>
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
       </div>
     </Layout>
   );

@@ -1,8 +1,7 @@
+
 #root {
-  max-width: 1280px;
+  width: 100%;
   margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
 }
 
 .logo {
@@ -27,6 +26,19 @@
   }
 }
 
+@keyframes rotate-360 {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rotate-360 {
+  animation: rotate-360 1s linear infinite;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   a:nth-of-type(2) .logo {
     animation: logo-spin infinite 20s linear;
@@ -39,4 +51,45 @@
 
 .read-the-docs {
   color: #888;
+}
+
+/* Glass morphism effects */
+.glass {
+  @apply bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-white/20 dark:border-gray-800/30 rounded-2xl;
+}
+
+/* Additional animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(-10px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Button hover effects */
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  transition: transform 0.2s ease;
+}
+
+/* Focus styles */
+*:focus-visible {
+  outline: 2px solid rgba(14, 165, 233, 0.5);
+  outline-offset: 2px;
+}
+
+/* Smooth transitions */
+.transition-all {
+  transition: all 0.3s ease;
 }
