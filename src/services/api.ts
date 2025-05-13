@@ -1,5 +1,4 @@
-
-import { ApiResponse, ApiPostRequest, ApiExpertRegisterRequest, ApiChatSessionRequest, Post, Expert, ApiVerificationRequest, Session, VerificationDocument } from '@/types';
+import { ApiResponse, ApiPostRequest, ApiExpertRegisterRequest, ApiChatSessionRequest, Post, Expert, ApiVerificationRequest, Session, VerificationDocument, ApiSanctuaryCreateRequest, ApiSanctuaryJoinRequest, SanctuarySession } from '@/types';
 import axios from 'axios';
 
 // Base API URL - Updated to use the render.com backend
@@ -18,7 +17,8 @@ api.interceptors.request.use(config => {
   // Skip adding token for public endpoints
   const publicEndpoints = [
     '/experts/register',
-    '/users/register'
+    '/users/register',
+    '/sanctuary'
   ];
   
   // Check if the current request path is in the publicEndpoints list
@@ -207,4 +207,38 @@ export const AdminApi = {
     
   adminLogin: (email: string, password: string) =>
     apiRequest<{ token: string }>('POST', '/admin/login', { email, password }),
+};
+
+// Sanctuary Session API (new)
+export const SanctuaryApi = {
+  createSession: (sessionData: ApiSanctuaryCreateRequest) =>
+    apiRequest<{id: string, topic: string, description: string, emoji: string, expiresAt: string, hostToken?: string}>(
+      'POST', 
+      '/sanctuary', 
+      sessionData
+    ),
+    
+  getSession: (sessionId: string) =>
+    apiRequest<SanctuarySession>('GET', `/sanctuary/${sessionId}`),
+    
+  joinSession: (sessionId: string, joinData: ApiSanctuaryJoinRequest) =>
+    apiRequest<{
+      sessionId: string,
+      participantId: string,
+      participantAlias: string,
+      topic: string,
+      expiresAt: string
+    }>('POST', `/sanctuary/${sessionId}/join`, joinData),
+    
+  endSession: (sessionId: string, hostToken?: string) =>
+    apiRequest<{success: boolean}>('POST', `/sanctuary/${sessionId}/end`, { hostToken }),
+    
+  removeParticipant: (sessionId: string, participantId: string, hostToken?: string) =>
+    apiRequest<{success: boolean}>('POST', `/sanctuary/${sessionId}/remove-participant`, { 
+      hostToken, 
+      participantId 
+    }),
+    
+  flagSession: (sessionId: string, reason: string) =>
+    apiRequest<{success: boolean}>('POST', `/sanctuary/${sessionId}/flag`, { reason }),
 };

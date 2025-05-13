@@ -9,6 +9,7 @@ const postRoutes = require('./routes/postRoutes');
 const sessionRoutes = require('./routes/sessionRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const ratingRoutes = require('./routes/ratingRoutes');
+const sanctuaryRoutes = require('./routes/sanctuaryRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -32,6 +33,7 @@ app.use('/api/posts', postRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ratings', ratingRoutes);
+app.use('/api/sanctuary', sanctuaryRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

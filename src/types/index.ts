@@ -98,6 +98,32 @@ export interface Session {
   createdAt: string;
 }
 
+// Sanctuary Session types (new)
+export interface SanctuarySession {
+  id: string;
+  topic: string;
+  description?: string;
+  emoji?: string;
+  expiresAt: string;
+  participantCount: number;
+  isActive: boolean;
+}
+
+export interface SanctuaryParticipant {
+  id: string;
+  alias: string;
+  joinedAt: string;
+}
+
+export interface SanctuaryMessage {
+  id: string;
+  participantId: string;
+  participantAlias: string;
+  content: string;
+  timestamp: string;
+  type: "text" | "system" | "emoji-reaction";
+}
+
 // API request types
 export interface ApiPostRequest {
   content: string;
@@ -133,6 +159,18 @@ export interface ApiVerificationRequest {
   verificationLevel: "blue" | "gold" | "platinum" | "none";
   status: "approved" | "rejected";
   feedback?: string;
+}
+
+// Sanctuary API request types (new)
+export interface ApiSanctuaryCreateRequest {
+  topic: string;
+  description?: string;
+  emoji?: string;
+  expireHours?: number;
+}
+
+export interface ApiSanctuaryJoinRequest {
+  alias?: string;
 }
 
 // API response type

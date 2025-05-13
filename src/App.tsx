@@ -18,6 +18,7 @@ import Settings from '@/pages/Settings';
 import SessionHub from '@/pages/SessionHub';
 import NotFound from '@/pages/NotFound';
 import AdminPanel from '@/pages/AdminPanel';
+import Sanctuary from '@/pages/Sanctuary';
 import { SessionProvider } from '@/contexts/SessionContext';
 
 import './App.css';
@@ -46,6 +47,9 @@ function App() {
               <Route path="/register-expert" element={<ExpertRegistration />} />
               <Route path="/expert-dashboard" element={<ExpertDashboard />} />
               <Route path="/admin/*" element={<AdminPanel />} />
+              <Route path="/sanctuary" element={<Sanctuary />} />
+              <Route path="/sanctuary/:id" element={<Sanctuary />} />
+              <Route path="/sanctuary/:id/:role" element={<Sanctuary />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <Toaster />

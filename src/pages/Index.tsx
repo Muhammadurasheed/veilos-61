@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import Layout from '@/components/layout/Layout';
 import { useUserContext } from '@/contexts/UserContext';
-import { Shield, MessageSquare, Heart } from 'lucide-react';
+import { Shield, MessageSquare, Heart, Users } from 'lucide-react';
 
 const Index = () => {
   const { user } = useUserContext();
@@ -77,6 +77,56 @@ const Index = () => {
                   </div>
                 </Card>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* New Sanctuary Section */}
+      <section className="py-16 bg-gradient-to-r from-veilo-purple/10 to-veilo-blue/10 -mx-4 md:-mx-6 w-auto">
+        <div className="container px-4 mx-auto text-center">
+          <div className="inline-block mb-6 bg-veilo-purple/20 rounded-full p-2">
+            <Users className="h-10 w-10 text-veilo-purple" />
+          </div>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Introducing Veilo Sanctuary Spaces</h2>
+          <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
+            Create anonymous, ephemeral spaces for group support around specific topics.
+            No login required, completely private, and automatically expiring.
+          </p>
+          <Button 
+            size="lg"
+            onClick={() => navigate('/sanctuary')}
+            className="bg-veilo-purple hover:bg-veilo-purple-dark text-white"
+          >
+            Create a Sanctuary Space
+          </Button>
+          <div className="mt-12 grid md:grid-cols-3 gap-6">
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <div className="h-12 w-12 rounded-full bg-veilo-purple/20 mb-4 flex items-center justify-center mx-auto">
+                <Shield className="h-6 w-6 text-veilo-purple" />
+              </div>
+              <h3 className="font-semibold text-lg mb-2">Anonymous & Secure</h3>
+              <p className="text-gray-600">
+                Join without an account. Messages are encrypted and disappear after the session expires.
+              </p>
+            </div>
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <div className="h-12 w-12 rounded-full bg-veilo-blue/20 mb-4 flex items-center justify-center mx-auto">
+                <Users className="h-6 w-6 text-veilo-blue" />
+              </div>
+              <h3 className="font-semibold text-lg mb-2">Group Support</h3>
+              <p className="text-gray-600">
+                Connect with others around specific topics in a moderated, safe environment.
+              </p>
+            </div>
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <div className="h-12 w-12 rounded-full bg-green-100 mb-4 flex items-center justify-center mx-auto">
+                <MessageSquare className="h-6 w-6 text-green-600" />
+              </div>
+              <h3 className="font-semibold text-lg mb-2">Shareable Links</h3>
+              <p className="text-gray-600">
+                Generate unique links to invite friends or communities to your support space.
+              </p>
             </div>
           </div>
         </div>
