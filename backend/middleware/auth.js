@@ -37,6 +37,30 @@ exports.authMiddleware = async (req, res, next) => {
   }
 };
 
+// Optional auth middleware that doesn't require authentication
+exports.optionalAuthMiddleware = async (req, res, next) => {
+  try {
+    // Extract token from header
+    const token = req.header('x-auth-token');
+    
+    if (!token) {
+      // Continue without setting user
+      return next();
+    }
+
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Add user from payload if available
+    req.user = await User.findById(decoded.user.id).select('-password');
+    
+    next();
+  } catch (err) {
+    // Continue without setting user on error
+    next();
+  }
+};
+
 // Middleware to verify admin role
 exports.adminMiddleware = async (req, res, next) => {
   try {

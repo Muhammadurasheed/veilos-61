@@ -3,14 +3,14 @@ const express = require('express');
 const router = express.Router();
 const Expert = require('../models/Expert');
 const User = require('../models/User');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, optionalAuthMiddleware } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 const path = require('path');
 const fs = require('fs');
 
 // Register expert
 // POST /api/experts/register
-router.post('/register', authMiddleware, async (req, res) => {
+router.post('/register', optionalAuthMiddleware, async (req, res) => {
   try {
     const {
       name,
@@ -39,9 +39,9 @@ router.post('/register', authMiddleware, async (req, res) => {
       });
     }
     
-    // Create expert
+    // Create expert - if user is authenticated, link to their account
     const expert = new Expert({
-      userId: req.user.id,
+      userId: req.user ? req.user.id : null,
       name,
       email,
       specialization,
@@ -55,14 +55,16 @@ router.post('/register', authMiddleware, async (req, res) => {
     
     await expert.save();
     
-    // Update user role
-    await User.findOneAndUpdate(
-      { id: req.user.id },
-      { 
-        role: 'beacon',
-        expertId: expert.id
-      }
-    );
+    // Update user role if user is authenticated
+    if (req.user) {
+      await User.findOneAndUpdate(
+        { id: req.user.id },
+        { 
+          role: 'beacon',
+          expertId: expert.id
+        }
+      );
+    }
     
     res.json({
       success: true,
@@ -79,7 +81,7 @@ router.post('/register', authMiddleware, async (req, res) => {
 
 // Upload verification document
 // POST /api/experts/:id/document
-router.post('/:id/document', authMiddleware, upload.single('file'), async (req, res) => {
+router.post('/:id/document', optionalAuthMiddleware, upload.single('file'), async (req, res) => {
   try {
     const expert = await Expert.findOne({ id: req.params.id });
     
@@ -90,8 +92,8 @@ router.post('/:id/document', authMiddleware, upload.single('file'), async (req, 
       });
     }
     
-    // Check if user is the expert or an admin
-    if (expert.userId !== req.user.id && req.user.role !== 'admin') {
+    // Check if user is the expert or an admin (skip check if no user is set)
+    if (req.user && expert.userId !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
         error: 'Not authorized'

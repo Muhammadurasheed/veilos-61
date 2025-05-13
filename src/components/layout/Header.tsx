@@ -14,7 +14,13 @@ import {
 import { Menu, Bell, User, LogOut, Settings, Moon, Sun } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { getBadgeImageForLevel } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+
+// Utility function for getting badge image based on level
+const getBadgeImageForLevel = (level: number) => {
+  // Simple implementation - can be expanded with actual badge images
+  return `/badges/level-${level}.svg`;
+};
 
 const Header = () => {
   const { user, logout } = useUserContext();
@@ -40,7 +46,7 @@ const Header = () => {
   }, []);
 
   // Use a default level if user doesn't have one
-  const userLevel = 1;
+  const userLevel = user?.level || 1;
   const userBadge = getBadgeImageForLevel(userLevel);
 
   return (
@@ -69,7 +75,7 @@ const Header = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={toggleTheme}
+            onClick={() => toggleTheme()}
             className="rounded-full"
             aria-label="Toggle theme"
           >
@@ -98,7 +104,7 @@ const Header = () => {
                   className="relative h-9 w-9 rounded-full"
                 >
                   <Avatar className="h-9 w-9 border border-gray-200 dark:border-gray-700">
-                    <AvatarImage src={`/avatars/avatar-${user?.avatarIndex || 1}.svg`} alt="User avatar" />
+                    <AvatarImage src={`/avatars/avatar-${user?.avatarIndex || 1}.svg`} alt={cn('User avatar', user?.alias)} />
                     <AvatarFallback>{user?.alias?.charAt(0) || 'A'}</AvatarFallback>
                   </Avatar>
                   {userBadge && (

@@ -67,8 +67,8 @@ const BeaconRegistration = () => {
   const form = useForm<ExpertFormValues>({
     resolver: zodResolver(expertFormSchema),
     defaultValues: {
-      name: '', // Default empty string
-      email: '', // Default empty string
+      name: '', 
+      email: '', 
       specialization: '',
       bio: '',
       pricingModel: 'free',
@@ -91,6 +91,7 @@ const BeaconRegistration = () => {
 
   const onSubmit = async (values: ExpertFormValues) => {
     setIsSubmitting(true);
+    console.log('Submitting expert registration with values:', values);
 
     try {
       // Create a proper ApiExpertRegisterRequest object ensuring all required fields are present
@@ -104,8 +105,10 @@ const BeaconRegistration = () => {
         phoneNumber: values.phoneNumber || '',
       };
 
+      console.log('Sending expert data to API:', expertData);
       // Send the expert registration data to the backend
       const response = await ExpertApi.registerExpert(expertData);
+      console.log('Expert registration response:', response);
 
       if (response.success && response.data) {
         toast({
@@ -204,7 +207,7 @@ const BeaconRegistration = () => {
       <div className="flex justify-center mb-10">
         <div className="flex items-center">
           {['details', 'documents', 'availability', 'preferences', 'verification'].map((stepName, index) => (
-            <div key={stepName}>
+            <div key={stepName} className="flex items-center">
               <div 
                 className={`w-10 h-10 rounded-full flex items-center justify-center ${
                   step === stepName 
@@ -224,7 +227,7 @@ const BeaconRegistration = () => {
                   className={`h-1 w-12 ${
                     ['documents', 'availability', 'preferences', 'verification'].indexOf(step as string) > index
                       ? 'bg-veilo-blue' 
-                      : 'bg-veilo-blue-light'
+                      : 'bg-gray-200 dark:bg-gray-700'
                   }`}
                 ></div>
               )}

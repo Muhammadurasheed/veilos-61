@@ -25,12 +25,11 @@ export const Sidebar = ({ className }: SidebarProps) => {
   const { user } = useUserContext();
   const location = useLocation();
   const isMobile = useIsMobile();
-  const [collapsed, setCollapsed] = useState(isMobile);
+  // Set collapsed to true by default for all devices
+  const [collapsed, setCollapsed] = useState(true);
   
   // Effect to collapse sidebar on mobile by default
   useEffect(() => {
-    setCollapsed(isMobile);
-    
     // Listen for toggle-sidebar events
     const handleToggleSidebar = () => {
       setCollapsed(prev => !prev);
@@ -41,7 +40,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
     return () => {
       window.removeEventListener('toggle-sidebar', handleToggleSidebar);
     };
-  }, [isMobile]);
+  }, []);
 
   const navigationItems = [
     {
@@ -77,7 +76,6 @@ export const Sidebar = ({ className }: SidebarProps) => {
   ];
 
   // Add expert dashboard for beacon users
-  // Check if user exists first, then check if user.role === BEACON or if expertId exists on user
   if (user?.role === UserRole.BEACON || (user && 'expertId' in user)) {
     navigationItems.splice(4, 0, {
       name: 'Expert Dashboard',
@@ -110,8 +108,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
   return (
     <div className={cn(
       "h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 fixed left-0 top-0 bottom-0 z-40 transition-all duration-300 shadow-md",
-      collapsed ? "w-16 translate-x-0" : "w-64 translate-x-0",
-      isMobile && collapsed && "-translate-x-full",
+      collapsed ? "w-16 -translate-x-full md:translate-x-0" : "w-64 translate-x-0",
       className
     )}>
       {/* Logo and collapse button */}

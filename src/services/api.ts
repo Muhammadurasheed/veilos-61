@@ -15,10 +15,25 @@ const api = axios.create({
 
 // Add auth token to requests if available
 api.interceptors.request.use(config => {
-  const token = localStorage.getItem('veilo-token');
-  if (token) {
-    config.headers['x-auth-token'] = token;
+  // Skip adding token for public endpoints
+  const publicEndpoints = [
+    '/experts/register',
+    '/users/register'
+  ];
+  
+  // Check if the current request path is in the publicEndpoints list
+  const isPublicEndpoint = publicEndpoints.some(endpoint => 
+    config.url && config.url.includes(endpoint)
+  );
+  
+  // Only add token if it's not a public endpoint
+  if (!isPublicEndpoint) {
+    const token = localStorage.getItem('veilo-token');
+    if (token) {
+      config.headers['x-auth-token'] = token;
+    }
   }
+  
   return config;
 });
 
@@ -96,7 +111,7 @@ async function uploadFile(
 
 // User related API endpoints
 export const UserApi = {
-  register: (userData) => 
+  register: (userData: string = "anonymous") => 
     apiRequest<{ token: string, user: any }>('POST', '/users/register', userData),
   
   authenticate: (token: string) =>
@@ -192,13 +207,4 @@ export const AdminApi = {
     
   adminLogin: (email: string, password: string) =>
     apiRequest<{ token: string }>('POST', '/admin/login', { email, password }),
-};
-
-// Ratings related API endpoints
-export const RatingApi = {
-  rateExpert: (expertId: string, rating: number) =>
-    apiRequest<{ rating: number }>('POST', '/ratings', { expertId, rating }),
-    
-  addTestimonial: (expertId: string, text: string) =>
-    apiRequest<any>('POST', '/ratings/testimonial', { expertId, text }),
 };
