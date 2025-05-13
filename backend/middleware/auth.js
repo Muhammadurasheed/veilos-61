@@ -18,8 +18,8 @@ exports.authMiddleware = async (req, res, next) => {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Add user from payload
-    req.user = await User.findById(decoded.user.id).select('-password');
+    // Add user from payload - Fixed to use id field instead of _id
+    req.user = await User.findOne({ id: decoded.user.id });
     
     if (!req.user) {
       return res.status(401).json({
@@ -51,8 +51,8 @@ exports.optionalAuthMiddleware = async (req, res, next) => {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Add user from payload if available
-    req.user = await User.findById(decoded.user.id).select('-password');
+    // Add user from payload if available - Fixed to use id field instead of _id
+    req.user = await User.findOne({ id: decoded.user.id });
     
     next();
   } catch (err) {

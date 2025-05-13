@@ -1,3 +1,4 @@
+
 import { ApiResponse, ApiPostRequest, ApiExpertRegisterRequest, ApiChatSessionRequest, Post, Expert, ApiVerificationRequest, Session, VerificationDocument, ApiSanctuaryCreateRequest, ApiSanctuaryJoinRequest, SanctuarySession } from '@/types';
 import axios from 'axios';
 
@@ -111,8 +112,9 @@ async function uploadFile(
 
 // User related API endpoints
 export const UserApi = {
-  register: (userData: string = "anonymous") => 
-    apiRequest<{ token: string, user: any }>('POST', '/users/register', userData),
+  // Fixed register endpoint to properly send JSON data instead of a string
+  register: () => 
+    apiRequest<{ token: string, user: any }>('POST', '/users/register'),
   
   authenticate: (token: string) =>
     apiRequest<{ user: any }>('POST', '/users/authenticate', { token }),

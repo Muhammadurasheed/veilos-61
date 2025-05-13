@@ -80,7 +80,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   // Register new anonymous user
   const registerNewUser = async () => {
     try {
-      const response = await UserApi.register("anonymous"); // Pass a string argument
+      // Fix: Pass proper empty object instead of string to match backend expectations
+      const response = await UserApi.register();
       
       if (response.success && response.data) {
         // Save token
@@ -90,6 +91,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         setUser({
           ...response.data.user,
           loggedIn: true
+        });
+        
+        toast({
+          title: "Welcome to Veilo",
+          description: "Your anonymous account has been created successfully.",
         });
       } else {
         // Failed to register, use fallback
@@ -113,6 +119,12 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     };
     
     setUser(fallbackUser);
+    
+    toast({
+      title: "Offline Mode",
+      description: "Using local profile. Some features may be limited.",
+      variant: "destructive"
+    });
   };
 
   const logout = () => {

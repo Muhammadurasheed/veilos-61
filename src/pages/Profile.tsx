@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,18 +8,52 @@ import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/layout/Layout";
 import { useUserContext } from "@/contexts/UserContext";
 import { motion } from "framer-motion";
-import { RefreshCw, Shield, CalendarDays, MessageSquare } from "lucide-react";
+import { RefreshCw, Shield, CalendarDays, MessageSquare, Loader2 } from "lucide-react";
 
 const Profile = () => {
-  const { user, refreshIdentity, logout } = useUserContext();
+  const { user, refreshIdentity, logout, isLoading } = useUserContext();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [rotating, setRotating] = useState(false);
   
-  // If there's no logged in user, redirect to home
-  if (!user?.loggedIn) {
-    navigate('/');
-    return null;
+  // Show loading state while user context is initializing
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="container h-[70vh] flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-12 w-12 text-veilo-blue animate-spin" />
+            <p className="text-lg text-gray-600 dark:text-gray-400">Loading your profile...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+  
+  // If there's no logged in user, show sign-in prompt
+  if (!user) {
+    return (
+      <Layout>
+        <div className="container py-16">
+          <Card className="max-w-md mx-auto">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl text-veilo-blue-dark">Sign In Required</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 text-center">
+              <p>You need to sign in or create an anonymous account to view your profile.</p>
+              <div className="flex flex-col gap-3 mt-6">
+                <Button onClick={() => refreshIdentity()} className="bg-veilo-blue hover:bg-veilo-blue-dark text-white">
+                  Create Anonymous Account
+                </Button>
+                <Button variant="outline" onClick={() => navigate('/')}>
+                  Return to Home
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </Layout>
+    );
   }
   
   const handleRefreshIdentity = () => {

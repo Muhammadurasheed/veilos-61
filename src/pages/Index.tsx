@@ -1,192 +1,238 @@
 
-import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import Layout from '@/components/layout/Layout';
 import { useUserContext } from '@/contexts/UserContext';
-import { Shield, MessageSquare, Heart, Users } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { motion } from 'framer-motion';
+import Layout from '@/components/layout/Layout';
 
 const Index = () => {
-  const { user } = useUserContext();
-  const navigate = useNavigate();
+  const { user, refreshIdentity } = useUserContext();
+  const { toast } = useToast();
+  
+  // Create anonymous account handler
+  const handleCreateAnonymousAccount = async () => {
+    toast({
+      title: "Creating account",
+      description: "Setting up your anonymous identity...",
+    });
+    
+    await refreshIdentity();
+    
+    toast({
+      title: "Account created",
+      description: "Your anonymous profile is ready to use. Welcome to Veilo!",
+    });
+  };
+
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.2
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 100
+      }
+    }
+  };
 
   return (
     <Layout>
-      {/* Hero Section */}
-      <section className="bg-gradient-to-b from-veilo-blue-light/20 to-veilo-purple-light/20 py-10 md:py-20 -mx-4 md:-mx-6">
-        <div className="container px-4 mx-auto max-w-full">
-          <div className="flex flex-col md:flex-row items-center">
-            <div className="md:w-1/2 mb-10 md:mb-0">
-              <h1 className="text-4xl md:text-5xl font-bold mb-6 text-veilo-blue-dark">
-                A Safe Space for <span className="text-veilo-purple">Anonymous</span> Emotional Support
-              </h1>
-              <p className="text-lg mb-8 text-gray-600">
-                Veilo connects you with verified support specialists in a completely anonymous environment. 
-                Share your feelings, get expert advice, and heal without judgment or exposure.
-              </p>
-              <div className="flex flex-wrap gap-4">
-                <Button 
-                  className="bg-veilo-blue hover:bg-veilo-blue-dark text-white px-6"
-                  onClick={() => navigate('/feed')}
-                >
-                  Join the Community
-                </Button>
-                <Button 
-                  variant="outline"
-                  className="border-veilo-purple text-veilo-purple hover:bg-veilo-purple hover:text-white"
-                  onClick={() => navigate('/beacons')}
-                >
-                  Find Support Beacons
-                </Button>
-              </div>
-            </div>
-            <div className="md:w-1/2 md:pl-10 w-full">
-              <div className="relative">
-                <div className="absolute -left-6 -top-6 w-64 h-64 bg-veilo-blue/10 rounded-full filter blur-xl"></div>
-                <div className="absolute -right-6 -bottom-6 w-64 h-64 bg-veilo-purple/10 rounded-full filter blur-xl"></div>
-                <Card className="bg-white/80 backdrop-blur-sm p-6 relative z-10">
-                  <div className="space-y-4">
-                    <div className="flex items-start space-x-3">
-                      <div className="h-10 w-10 rounded-full bg-veilo-blue-light/30 flex items-center justify-center">
-                        <span className="text-veilo-blue-dark font-bold">A</span>
-                      </div>
-                      <div className="bg-gray-100 rounded-lg p-3 flex-1">
-                        <p className="text-gray-700">
-                          I've been feeling so disconnected lately. It's like there's this wall between me and everyone else.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-3 ml-12">
-                      <div className="h-10 w-10 rounded-full bg-veilo-purple-light/30 flex items-center justify-center">
-                        <span className="text-veilo-purple-dark font-bold">B</span>
-                      </div>
-                      <div className="bg-gray-100 rounded-lg p-3 flex-1">
-                        <p className="text-gray-700">
-                          I understand that feeling. I've found that small moments of connection help break through that wall.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex justify-end">
-                      <div className="flex space-x-3">
-                        <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center">
-                          <Shield className="h-3 w-3 text-blue-600" />
-                        </div>
-                        <span className="text-sm text-blue-600 font-medium">Verified Expert</span>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* New Sanctuary Section */}
-      <section className="py-16 bg-gradient-to-r from-veilo-purple/10 to-veilo-blue/10 -mx-4 md:-mx-6 w-auto">
-        <div className="container px-4 mx-auto text-center">
-          <div className="inline-block mb-6 bg-veilo-purple/20 rounded-full p-2">
-            <Users className="h-10 w-10 text-veilo-purple" />
-          </div>
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Introducing Veilo Sanctuary Spaces</h2>
-          <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
-            Create anonymous, ephemeral spaces for group support around specific topics.
-            No login required, completely private, and automatically expiring.
-          </p>
-          <Button 
-            size="lg"
-            onClick={() => navigate('/sanctuary')}
-            className="bg-veilo-purple hover:bg-veilo-purple-dark text-white"
+      <div className="container px-4 py-12 md:py-24">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 items-center">
+          {/* Hero content - shifted to the right with proper spacing */}
+          <motion.div 
+            className="flex flex-col space-y-6 md:pr-12 lg:ml-8"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
           >
-            Create a Sanctuary Space
-          </Button>
-          <div className="mt-12 grid md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <div className="h-12 w-12 rounded-full bg-veilo-purple/20 mb-4 flex items-center justify-center mx-auto">
-                <Shield className="h-6 w-6 text-veilo-purple" />
+            <motion.h1 
+              variants={itemVariants} 
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-gray-900 dark:text-white"
+            >
+              <span className="block bg-gradient-to-r from-veilo-blue to-veilo-purple bg-clip-text text-transparent">
+                Safe Space for
+              </span>
+              <span className="block mt-1">
+                Mental Wellness
+              </span>
+            </motion.h1>
+            
+            <motion.p 
+              variants={itemVariants} 
+              className="mt-6 text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-2xl"
+            >
+              Veilo provides a completely anonymous platform to share, connect, and heal together. 
+              Get support from verified experts or join community discussions without revealing your identity.
+            </motion.p>
+            
+            <motion.div 
+              variants={itemVariants}
+              className="flex flex-col sm:flex-row gap-4 mt-8"
+            >
+              <Button 
+                size="lg" 
+                onClick={handleCreateAnonymousAccount}
+                className="bg-veilo-green hover:bg-veilo-green-dark text-white font-medium text-lg px-8 py-6"
+              >
+                Create Anonymous Account
+              </Button>
+              
+              <Button 
+                asChild 
+                variant="outline" 
+                size="lg"
+                className="border-veilo-blue text-veilo-blue hover:bg-veilo-blue hover:text-white font-medium text-lg px-8 py-6"
+              >
+                <Link to="/feed">
+                  Browse Community
+                </Link>
+              </Button>
+            </motion.div>
+            
+            <motion.div
+              variants={itemVariants}
+              className="mt-8 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-100 dark:border-gray-700 flex items-center"
+            >
+              <div className="font-medium text-sm text-gray-600 dark:text-gray-300">
+                Already have an account? 
+                <Button variant="link" asChild className="text-veilo-blue ml-2">
+                  <Link to="/profile">Sign in</Link>
+                </Button>
               </div>
-              <h3 className="font-semibold text-lg mb-2">Anonymous & Secure</h3>
-              <p className="text-gray-600">
-                Join without an account. Messages are encrypted and disappear after the session expires.
-              </p>
-            </div>
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <div className="h-12 w-12 rounded-full bg-veilo-blue/20 mb-4 flex items-center justify-center mx-auto">
-                <Users className="h-6 w-6 text-veilo-blue" />
-              </div>
-              <h3 className="font-semibold text-lg mb-2">Group Support</h3>
-              <p className="text-gray-600">
-                Connect with others around specific topics in a moderated, safe environment.
-              </p>
-            </div>
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <div className="h-12 w-12 rounded-full bg-green-100 mb-4 flex items-center justify-center mx-auto">
-                <MessageSquare className="h-6 w-6 text-green-600" />
-              </div>
-              <h3 className="font-semibold text-lg mb-2">Shareable Links</h3>
-              <p className="text-gray-600">
-                Generate unique links to invite friends or communities to your support space.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-16 bg-white -mx-4 md:-mx-6 w-auto">
-        <div className="container px-4 mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12 text-gray-800">How Veilo Works</h2>
+            </motion.div>
+          </motion.div>
           
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card className="p-6 hover:shadow-md transition-shadow">
-              <div className="h-12 w-12 rounded-full bg-veilo-blue-light/30 mb-4 flex items-center justify-center">
-                <MessageSquare className="h-6 w-6 text-veilo-blue" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Anonymous Expression</h3>
-              <p className="text-gray-600">
-                Share your thoughts and feelings in our safe community without revealing your identity.
-              </p>
-            </Card>
-            
-            <Card className="p-6 hover:shadow-md transition-shadow">
-              <div className="h-12 w-12 rounded-full bg-veilo-purple-light/30 mb-4 flex items-center justify-center">
-                <Shield className="h-6 w-6 text-veilo-purple" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Verified Support Beacons</h3>
-              <p className="text-gray-600">
-                Connect with professionally verified experts who specialize in emotional support and guidance.
-              </p>
-            </Card>
-            
-            <Card className="p-6 hover:shadow-md transition-shadow">
-              <div className="h-12 w-12 rounded-full bg-green-100 mb-4 flex items-center justify-center">
-                <Heart className="h-6 w-6 text-green-600" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Healing Together</h3>
-              <p className="text-gray-600">
-                Find comfort in community responses or book private sessions with experts for deeper support.
-              </p>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-veilo-blue to-veilo-purple text-white -mx-4 md:-mx-6 w-auto">
-        <div className="container px-4 mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Begin Your Healing Journey?</h2>
-          <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
-            Join our anonymous community where you can safely express yourself and connect with others who understand.
-          </p>
-          <Button 
-            size="lg"
-            className="bg-white text-veilo-blue hover:bg-gray-100"
-            onClick={() => navigate(user?.loggedIn ? '/feed' : '/register')}
+          {/* Hero image or illustration */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ 
+              duration: 0.5,
+              delay: 0.4,
+              type: "spring",
+              stiffness: 100
+            }}
+            className="flex justify-center items-center order-first lg:order-last"
           >
-            {user?.loggedIn ? 'View Community Feed' : 'Create Anonymous Account'}
-          </Button>
+            <div className="relative w-full max-w-lg aspect-square">
+              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-veilo-blue-light to-veilo-purple opacity-20 blur-3xl"></div>
+              <div className="relative shadow-xl rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 h-full">
+                <div className="h-full flex flex-col justify-center items-center space-y-8 p-4">
+                  <div className="h-32 w-32 relative">
+                    <img 
+                      src="/favicon.ico" 
+                      alt="Veilo Logo" 
+                      className="w-full h-full object-contain"
+                    />
+                    <div className="absolute top-0 right-0 h-full w-full bg-gradient-to-br from-transparent to-white dark:to-gray-800 opacity-40"></div>
+                  </div>
+                  
+                  <div className="space-y-4 text-center">
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Mental Health Support</h2>
+                    <p className="text-gray-600 dark:text-gray-300">Anonymous, Secure, Supportive</p>
+                  </div>
+                  
+                  <div className="flex justify-center space-x-6">
+                    <span className="flex flex-col items-center">
+                      <span className="text-2xl font-bold text-veilo-blue">100%</span>
+                      <span className="text-xs text-gray-500">Anonymous</span>
+                    </span>
+                    <span className="flex flex-col items-center">
+                      <span className="text-2xl font-bold text-veilo-green">24/7</span>
+                      <span className="text-xs text-gray-500">Support</span>
+                    </span>
+                    <span className="flex flex-col items-center">
+                      <span className="text-2xl font-bold text-veilo-purple">Free</span>
+                      <span className="text-xs text-gray-500">Access</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
         </div>
-      </section>
+        
+        {/* Features section */}
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.8 }}
+          className="mt-24 text-center"
+        >
+          <h2 className="text-3xl font-bold mb-12">How Veilo Works</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-gray-100 dark:border-gray-700">
+              <div className="h-12 w-12 bg-veilo-blue-light rounded-lg text-veilo-blue flex items-center justify-center mx-auto mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Anonymous Identity</h3>
+              <p className="text-gray-600 dark:text-gray-300">Create an anonymous profile with just one click. No email, phone, or personal details required.</p>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-gray-100 dark:border-gray-700">
+              <div className="h-12 w-12 bg-veilo-green-light rounded-lg text-veilo-green flex items-center justify-center mx-auto mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Community Support</h3>
+              <p className="text-gray-600 dark:text-gray-300">Connect with others facing similar challenges in moderated group spaces.</p>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-gray-100 dark:border-gray-700">
+              <div className="h-12 w-12 bg-veilo-purple-light rounded-lg text-veilo-purple flex items-center justify-center mx-auto mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Expert Guidance</h3>
+              <p className="text-gray-600 dark:text-gray-300">Access verified mental health professionals for personalized advice and support.</p>
+            </div>
+          </div>
+        </motion.div>
+        
+        {/* Call to action */}
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 1 }}
+          className="mt-24 text-center"
+        >
+          <div className="bg-gradient-to-r from-veilo-blue to-veilo-purple p-10 rounded-2xl shadow-xl">
+            <h2 className="text-3xl font-bold text-white mb-4">Begin Your Healing Journey Today</h2>
+            <p className="text-white/90 mb-8 max-w-2xl mx-auto">
+              Join thousands who've found support, understanding, and growth in our anonymous community.
+            </p>
+            <Button 
+              onClick={handleCreateAnonymousAccount} 
+              size="lg" 
+              variant="secondary"
+              className="bg-white text-veilo-blue hover:bg-gray-100"
+            >
+              Get Started Now
+            </Button>
+          </div>
+        </motion.div>
+      </div>
     </Layout>
   );
 };

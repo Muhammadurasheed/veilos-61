@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useUserContext } from '@/contexts/UserContext';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,9 +19,10 @@ import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 
 const Header = () => {
-  const { user, logout } = useUserContext();
+  const { user, logout, refreshIdentity } = useUserContext();
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   // Determine if user is authenticated based on user object existence
   const isAuthenticated = !!user?.loggedIn;
@@ -48,6 +49,16 @@ const Header = () => {
       title: "Signed out",
       description: "You have been successfully signed out.",
     });
+  };
+
+  const handleCreateAnonymousAccount = async () => {
+    toast({
+      title: "Creating account",
+      description: "Setting up your anonymous identity...",
+    });
+    
+    await refreshIdentity();
+    navigate('/profile');
   };
 
   // Use a default level (1) if user doesn't have a level property
@@ -156,9 +167,18 @@ const Header = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button asChild className="bg-veilo-blue hover:bg-veilo-blue-dark text-white font-medium">
-              <Link to="/">Sign in</Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button onClick={handleCreateAnonymousAccount} className="bg-veilo-green hover:bg-veilo-green-dark text-white font-medium">
+                Create Anonymous Account
+              </Button>
+              <Button 
+                asChild 
+                variant="outline" 
+                className="border-veilo-blue text-veilo-blue hover:bg-veilo-blue hover:text-white"
+              >
+                <Link to="/">Sign in</Link>
+              </Button>
+            </div>
           )}
         </div>
       </div>
