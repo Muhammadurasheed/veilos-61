@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -14,6 +13,7 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { SanctuaryApi } from '@/services/api';
+import { ApiSanctuaryCreateRequest } from '@/types'; // Add this import for the type
 
 // Define form schema
 const formSchema = z.object({
