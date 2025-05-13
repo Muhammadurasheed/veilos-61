@@ -94,8 +94,16 @@ const CreateSanctuary: React.FC = () => {
         return;
       }
       
-      // Create sanctuary session
-      const response = await SanctuaryApi.createSession(values);
+      // Create sanctuary session with the required topic
+      // Make sure topic is always defined (which it should be based on form validation)
+      const sanctuaryData: ApiSanctuaryCreateRequest = {
+        topic: values.topic, // Ensuring topic is always passed
+        description: values.description,
+        emoji: values.emoji,
+        expireHours: values.expireHours
+      };
+      
+      const response = await SanctuaryApi.createSession(sanctuaryData);
       
       if (response.success && response.data) {
         // Store host token in localStorage if this is an anonymous host

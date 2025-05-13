@@ -1,4 +1,3 @@
-
 // User-related types
 export enum UserRole {
   SHADOW = "shadow",
@@ -163,7 +162,7 @@ export interface ApiVerificationRequest {
 
 // Sanctuary API request types (new)
 export interface ApiSanctuaryCreateRequest {
-  topic: string;
+  topic: string; // This remains required
   description?: string;
   emoji?: string;
   expireHours?: number;
