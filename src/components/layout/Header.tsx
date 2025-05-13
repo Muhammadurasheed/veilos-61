@@ -14,13 +14,7 @@ import {
 import { Menu, Bell, User, LogOut, Settings, Moon, Sun } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { cn } from '@/lib/utils';
-
-// Utility function for getting badge image based on level
-const getBadgeImageForLevel = (level: number) => {
-  // Simple implementation - can be expanded with actual badge images
-  return `/badges/level-${level}.svg`;
-};
+import { cn, getBadgeImageForLevel } from '@/lib/utils';
 
 const Header = () => {
   const { user, logout } = useUserContext();
@@ -45,8 +39,8 @@ const Header = () => {
     };
   }, []);
 
-  // Use a default level if user doesn't have one
-  const userLevel = user?.level || 1;
+  // Use a default level (1) if user doesn't have a level property
+  const userLevel = 1; // Default to level 1 as level doesn't exist on User type
   const userBadge = getBadgeImageForLevel(userLevel);
 
   return (

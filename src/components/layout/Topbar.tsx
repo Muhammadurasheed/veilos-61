@@ -23,7 +23,7 @@ interface TopbarProps {
 
 const Topbar = ({ onToggleSidebar, sidebarOpen }: TopbarProps) => {
   const { user, logout } = useUserContext();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -105,13 +105,13 @@ const Topbar = ({ onToggleSidebar, sidebarOpen }: TopbarProps) => {
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Theme</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => toggleTheme('light')}>
+                <DropdownMenuItem onClick={() => setTheme('light')}>
                   Light
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toggleTheme('dark')}>
+                <DropdownMenuItem onClick={() => setTheme('dark')}>
                   Dark
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toggleTheme('system')}>
+                <DropdownMenuItem onClick={() => setTheme('system')}>
                   System
                 </DropdownMenuItem>
               </DropdownMenuContent>
