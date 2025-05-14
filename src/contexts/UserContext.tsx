@@ -11,7 +11,10 @@ export interface User {
   alias: string;
   avatarIndex: number;
   loggedIn: boolean;
-  role?: UserRole; // Add role to match what's used in AdminPanel.tsx
+  role?: UserRole;
+  isAnonymous?: boolean;
+  expertId?: string;
+  avatarUrl?: string;
 }
 
 // Define the context type
@@ -20,7 +23,9 @@ interface UserContextType {
   setUser: (user: User | null) => void;
   logout: () => void;
   refreshIdentity: () => void;
+  createAnonymousAccount: () => Promise<void>;
   isLoading: boolean;
+  updateAvatar: (avatarUrl: string) => Promise<void>;
 }
 
 // Create context with default values
@@ -29,7 +34,9 @@ const UserContext = createContext<UserContextType>({
   setUser: () => {},
   logout: () => {},
   refreshIdentity: () => {},
+  createAnonymousAccount: async () => {},
   isLoading: false,
+  updateAvatar: async () => {},
 });
 
 // Custom hook to use the UserContext
@@ -58,20 +65,19 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           } else {
             // Invalid token, clear it
             localStorage.removeItem('veilo-token');
-            // Register as new user
-            await registerNewUser();
+            // Automatically create a new anonymous account
+            await createNewAnonymousUser();
           }
         } catch (error) {
           console.error('Authentication error:', error);
-          // Register as new user on error
-          await registerNewUser();
+          // Create new anonymous user on error
+          await createNewAnonymousUser();
         }
       } else {
-        // No token found, register new user
-        await registerNewUser();
+        // No token found, but don't auto-create anonymous user
+        // Just set loading to false and let the user decide
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     };
     
     initializeUser();
@@ -80,7 +86,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   // Register new anonymous user
   const registerNewUser = async () => {
     try {
-      // Fix: Pass proper empty object instead of string to match backend expectations
       const response = await UserApi.register();
       
       if (response.success && response.data) {
@@ -97,14 +102,52 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           title: "Welcome to Veilo",
           description: "Your anonymous account has been created successfully.",
         });
+        
+        return response.data.user;
       } else {
         // Failed to register, use fallback
         console.error('Registration failed:', response.error);
         useFallbackUser();
+        return null;
       }
     } catch (error) {
       console.error('Registration error:', error);
       useFallbackUser();
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Create new anonymous user specifically for the anonymous flow
+  const createNewAnonymousUser = async () => {
+    try {
+      const response = await UserApi.createAnonymousUser();
+      
+      if (response.success && response.data) {
+        // Save token
+        localStorage.setItem('veilo-token', response.data.token);
+        
+        // Set user
+        setUser({
+          ...response.data.user,
+          loggedIn: true,
+          isAnonymous: true
+        });
+        
+        toast({
+          title: "Welcome to Veilo",
+          description: "Your anonymous identity has been created.",
+        });
+      } else {
+        // Failed to register, fall back to original registration
+        await registerNewUser();
+      }
+    } catch (error) {
+      console.error('Anonymous registration error:', error);
+      await registerNewUser();
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -115,7 +158,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       alias: generateAlias(),
       avatarIndex: Math.floor(Math.random() * 12) + 1,
       loggedIn: false,
-      role: UserRole.SHADOW // Using the enum value instead of the string literal
+      role: UserRole.SHADOW,
+      isAnonymous: true
     };
     
     setUser(fallbackUser);
@@ -131,12 +175,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem('veilo-token');
     setUser(null);
     
-    // Register as new anonymous user after logout
-    registerNewUser();
-    
     toast({
       title: 'Logged out',
-      description: 'You have been logged out. A new anonymous identity has been created.',
+      description: 'You have been logged out successfully.',
     });
   };
 
@@ -180,9 +221,55 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       }
     }
   };
+  
+  const createAnonymousAccount = async () => {
+    setIsLoading(true);
+    await createNewAnonymousUser();
+  };
+  
+  const updateAvatar = async (avatarUrl: string) => {
+    if (!user) return;
+    
+    try {
+      const response = await UserApi.updateAvatar(avatarUrl);
+      
+      if (response.success && response.data?.user) {
+        setUser({
+          ...user,
+          avatarUrl: response.data.user.avatarUrl
+        });
+        
+        toast({
+          title: 'Avatar updated',
+          description: 'Your profile avatar has been updated successfully.',
+        });
+      } else {
+        toast({
+          title: 'Avatar update failed',
+          description: response.error || 'An error occurred while updating your avatar.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Avatar update error:', error);
+      toast({
+        title: 'Avatar update failed',
+        description: 'An error occurred while updating your avatar.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   return (
-    <UserContext.Provider value={{ user, setUser, logout, refreshIdentity, isLoading }}>
+    <UserContext.Provider value={{ 
+      user, 
+      setUser, 
+      logout, 
+      refreshIdentity, 
+      createAnonymousAccount, 
+      isLoading,
+      updateAvatar 
+    }}>
       {children}
     </UserContext.Provider>
   );

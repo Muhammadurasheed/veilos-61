@@ -28,7 +28,7 @@ import { FileUpload } from '@/components/expert/FileUpload';
 import { Calendar, Check, ChevronRight, Shield, Upload, MessageSquare, Video, Loader2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { ExpertApi } from '@/services/api';
+import { ExpertApi, UserApi } from '@/services/api';
 import { useUserContext } from '@/contexts/UserContext';
 import { ApiExpertRegisterRequest } from '@/types';
 
@@ -53,7 +53,8 @@ const BeaconRegistration = () => {
   const [documents, setDocuments] = useState<File[]>([]);
   const [step, setStep] = useState<'details' | 'documents' | 'availability' | 'preferences' | 'verification'>('details');
   const [expertId, setExpertId] = useState<string | null>(null);
-  const { user } = useUserContext();
+  const [userId, setUserId] = useState<string | null>(null);
+  const { user, setUser } = useUserContext();
   const [availabilitySchedule, setAvailabilitySchedule] = useState<Record<string, string[]>>({
     monday: [],
     tuesday: [],
@@ -67,7 +68,7 @@ const BeaconRegistration = () => {
   const form = useForm<ExpertFormValues>({
     resolver: zodResolver(expertFormSchema),
     defaultValues: {
-      name: '', 
+      name: user?.alias || '', 
       email: '', 
       specialization: '',
       bio: '',
@@ -94,7 +95,31 @@ const BeaconRegistration = () => {
     console.log('Submitting expert registration with values:', values);
 
     try {
-      // Create a proper ApiExpertRegisterRequest object ensuring all required fields are present
+      // Step 1: Register the expert account (creates new user)
+      const registerResponse = await UserApi.registerExpertAccount(values);
+      console.log('Expert account registration response:', registerResponse);
+      
+      if (!registerResponse.success || !registerResponse.data) {
+        throw new Error(registerResponse.error || 'Failed to register expert account');
+      }
+      
+      // Save the user ID and token
+      const { userId, token, user: userData } = registerResponse.data;
+      setUserId(userId);
+      
+      // Set the token in localStorage
+      localStorage.setItem('veilo-token', token);
+      
+      // Update the user context
+      if (userData) {
+        setUser({
+          ...userData,
+          loggedIn: true,
+          isAnonymous: false
+        });
+      }
+      
+      // Step 2: Now register the expert profile using the user ID
       const expertData: ApiExpertRegisterRequest = {
         name: values.name,
         email: values.email,
@@ -104,23 +129,22 @@ const BeaconRegistration = () => {
         pricingDetails: values.pricingDetails || '',
         phoneNumber: values.phoneNumber || '',
       };
-
+      
       console.log('Sending expert data to API:', expertData);
-      // Send the expert registration data to the backend
-      const response = await ExpertApi.registerExpert(expertData);
-      console.log('Expert registration response:', response);
-
-      if (response.success && response.data) {
+      const expertResponse = await ExpertApi.registerExpert(expertData);
+      console.log('Expert registration response:', expertResponse);
+      
+      if (expertResponse.success && expertResponse.data) {
         toast({
           title: 'Registration submitted!',
           description: 'Please continue with document verification.',
         });
-
+        
         // Save the expert ID for the next steps
-        setExpertId(response.data.id);
+        setExpertId(expertResponse.data.id);
         setStep('documents');
       } else {
-        throw new Error(response.error || 'Failed to register as an expert');
+        throw new Error(expertResponse.error || 'Failed to register as an expert');
       }
     } catch (error) {
       console.error('Expert registration error:', error);

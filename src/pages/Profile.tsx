@@ -8,13 +8,19 @@ import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/layout/Layout";
 import { useUserContext } from "@/contexts/UserContext";
 import { motion } from "framer-motion";
-import { RefreshCw, Shield, CalendarDays, MessageSquare, Loader2 } from "lucide-react";
+import { RefreshCw, Shield, CalendarDays, MessageSquare, Loader2, Upload, User, Camera } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const Profile = () => {
-  const { user, refreshIdentity, logout, isLoading } = useUserContext();
+  const { user, refreshIdentity, logout, isLoading, updateAvatar } = useUserContext();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [rotating, setRotating] = useState(false);
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
   
   // Show loading state while user context is initializing
   if (isLoading) {
@@ -42,10 +48,7 @@ const Profile = () => {
             <CardContent className="space-y-4 text-center">
               <p>You need to sign in or create an anonymous account to view your profile.</p>
               <div className="flex flex-col gap-3 mt-6">
-                <Button onClick={() => refreshIdentity()} className="bg-veilo-blue hover:bg-veilo-blue-dark text-white">
-                  Create Anonymous Account
-                </Button>
-                <Button variant="outline" onClick={() => navigate('/')}>
+                <Button onClick={() => navigate('/')} className="bg-veilo-blue hover:bg-veilo-blue-dark text-white">
                   Return to Home
                 </Button>
               </div>
@@ -79,6 +82,28 @@ const Profile = () => {
       title: "Session Ended",
       description: "You have been logged out and your anonymous session has ended.",
     });
+  };
+  
+  const handleAvatarChange = async () => {
+    if (!avatarUrl) {
+      toast({
+        title: "Avatar URL Required",
+        description: "Please enter a valid URL for your avatar.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      setIsUploading(true);
+      await updateAvatar(avatarUrl);
+      setIsUploadDialogOpen(false);
+      setAvatarUrl("");
+    } catch (error) {
+      console.error('Avatar update error:', error);
+    } finally {
+      setIsUploading(false);
+    }
   };
   
   // Animation variants for profile elements
@@ -130,19 +155,36 @@ const Profile = () => {
                 className="absolute -top-16 inset-x-0 flex justify-center"
                 variants={itemVariants}
               >
-                <Avatar className={`h-32 w-32 border-4 border-white dark:border-gray-900 shadow-md ${rotating ? 'animate-spin' : ''}`}>
-                  <AvatarImage src={`/avatars/avatar-${user.avatarIndex}.svg`} alt={user.alias} />
-                  <AvatarFallback className="text-2xl bg-veilo-blue-light text-veilo-blue-dark">
-                    {user.alias.substring(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative group">
+                  <Avatar className={`h-32 w-32 border-4 border-white dark:border-gray-900 shadow-md ${rotating ? 'animate-spin' : ''}`}>
+                    {user.avatarUrl ? (
+                      <AvatarImage src={user.avatarUrl} alt={user.alias} />
+                    ) : (
+                      <AvatarImage src={`/avatars/avatar-${user.avatarIndex}.svg`} alt={user.alias} />
+                    )}
+                    <AvatarFallback className="text-2xl bg-veilo-blue-light text-veilo-blue-dark">
+                      {user.alias.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  <Button 
+                    size="icon"
+                    variant="secondary"
+                    className="absolute bottom-0 right-0 rounded-full shadow-md opacity-75 hover:opacity-100"
+                    onClick={() => setIsUploadDialogOpen(true)}
+                  >
+                    <Camera className="h-4 w-4" />
+                  </Button>
+                </div>
               </motion.div>
               
               <motion.div className="mt-16" variants={itemVariants}>
                 <CardTitle className="text-2xl text-veilo-blue-dark dark:text-veilo-blue-light font-bold">
                   {user.alias}
                 </CardTitle>
-                <p className="text-gray-500 mt-1">Anonymous User</p>
+                <p className="text-gray-500 mt-1">
+                  {user.isAnonymous ? 'Anonymous User' : user.role === 'beacon' ? 'Expert' : 'Registered User'}
+                </p>
               </motion.div>
             </CardHeader>
             
@@ -180,41 +222,108 @@ const Profile = () => {
                 variants={itemVariants}
               >
                 <div className="flex flex-col w-full max-w-xs space-y-4">
-                  <Button 
-                    onClick={handleRefreshIdentity}
-                    variant="outline"
-                    className="border-veilo-blue text-veilo-blue hover:bg-veilo-blue hover:text-white transition-colors"
-                    disabled={rotating}
-                  >
-                    <RefreshCw 
-                      className={`h-5 w-5 mr-2 ${rotating ? 'animate-spin' : ''}`} 
-                    />
-                    Refresh Identity
-                  </Button>
+                  {user.isAnonymous && (
+                    <Button 
+                      onClick={handleRefreshIdentity}
+                      variant="outline"
+                      className="border-veilo-blue text-veilo-blue hover:bg-veilo-blue hover:text-white transition-colors"
+                      disabled={rotating}
+                    >
+                      <RefreshCw 
+                        className={`h-5 w-5 mr-2 ${rotating ? 'animate-spin' : ''}`} 
+                      />
+                      Refresh Identity
+                    </Button>
+                  )}
                   
                   <Button 
                     onClick={handleLogout}
                     variant="destructive"
                     className="shadow-sm"
                   >
-                    End Anonymous Session
+                    End {user.isAnonymous ? 'Anonymous' : ''} Session
                   </Button>
                 </div>
               </motion.div>
               
-              <motion.div variants={itemVariants}>
-                <div className="bg-veilo-blue-light bg-opacity-30 rounded-xl p-5 text-sm shadow-inner">
-                  <h3 className="font-medium mb-2 text-veilo-blue-dark dark:text-veilo-blue">Identity Protection</h3>
-                  <p className="text-gray-700 dark:text-gray-300">
-                    Refreshing your identity will give you a new alias and avatar. This helps maintain your anonymity while using Veilo. 
-                    Your previous posts and comments will remain, but won't be connected to your new identity.
-                  </p>
-                </div>
-              </motion.div>
+              {user.isAnonymous && (
+                <motion.div variants={itemVariants}>
+                  <div className="bg-veilo-blue-light bg-opacity-30 rounded-xl p-5 text-sm shadow-inner">
+                    <h3 className="font-medium mb-2 text-veilo-blue-dark dark:text-veilo-blue">Identity Protection</h3>
+                    <p className="text-gray-700 dark:text-gray-300">
+                      Refreshing your identity will give you a new alias and avatar. This helps maintain your anonymity while using Veilo. 
+                      Your previous posts and comments will remain, but won't be connected to your new identity.
+                    </p>
+                  </div>
+                </motion.div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
       </div>
+      
+      <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Avatar</DialogTitle>
+            <DialogDescription>
+              Enter the URL of your new avatar image.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="flex items-center space-x-4">
+              <div className="flex-shrink-0">
+                <Avatar className="h-20 w-20">
+                  {avatarUrl ? (
+                    <AvatarImage src={avatarUrl} alt="New avatar preview" />
+                  ) : user?.avatarUrl ? (
+                    <AvatarImage src={user.avatarUrl} alt={user.alias} />
+                  ) : (
+                    <AvatarImage src={`/avatars/avatar-${user?.avatarIndex || 1}.svg`} alt={user?.alias} />
+                  )}
+                  <AvatarFallback>
+                    <User className="h-10 w-10" />
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+              
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="avatar-url">Image URL</Label>
+                <Input
+                  id="avatar-url"
+                  placeholder="https://example.com/avatar.jpg"
+                  value={avatarUrl}
+                  onChange={(e) => setAvatarUrl(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsUploadDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAvatarChange} 
+              disabled={isUploading}
+              className="bg-veilo-blue hover:bg-veilo-blue-dark"
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };

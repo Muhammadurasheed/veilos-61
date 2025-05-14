@@ -1,3 +1,4 @@
+
 // User-related types
 export enum UserRole {
   SHADOW = "shadow",
@@ -11,7 +12,9 @@ export interface User {
   avatarIndex: number;
   loggedIn: boolean;
   role?: UserRole;
+  isAnonymous?: boolean;
   expertId?: string;
+  avatarUrl?: string;
 }
 
 // Post-related types
@@ -97,7 +100,7 @@ export interface Session {
   createdAt: string;
 }
 
-// Sanctuary Session types (new)
+// Sanctuary Session types
 export interface SanctuarySession {
   id: string;
   topic: string;
@@ -106,12 +109,16 @@ export interface SanctuarySession {
   expiresAt: string;
   participantCount: number;
   isActive: boolean;
+  allowAnonymous?: boolean;
+  hostId?: string;
 }
 
 export interface SanctuaryParticipant {
   id: string;
   alias: string;
   joinedAt: string;
+  isAnonymous?: boolean;
+  isHost?: boolean;
 }
 
 export interface SanctuaryMessage {
@@ -160,16 +167,18 @@ export interface ApiVerificationRequest {
   feedback?: string;
 }
 
-// Sanctuary API request types (new)
+// Sanctuary API request types
 export interface ApiSanctuaryCreateRequest {
-  topic: string; // This remains required
+  topic: string;
   description?: string;
   emoji?: string;
   expireHours?: number;
+  allowAnonymous?: boolean;
 }
 
 export interface ApiSanctuaryJoinRequest {
   alias?: string;
+  isAnonymous?: boolean;
 }
 
 // API response type
@@ -178,3 +187,17 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
 }
+
+// Gemini API request types
+export interface ApiGeminiModerateRequest {
+  content: string;
+}
+
+export interface ApiGeminiImproveRequest {
+  content: string;
+}
+
+export interface ApiGeminiModerateImageRequest {
+  imageUrl: string;
+}
+

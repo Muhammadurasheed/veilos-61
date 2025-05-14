@@ -1,4 +1,3 @@
-
 import { ApiResponse, ApiPostRequest, ApiExpertRegisterRequest, ApiChatSessionRequest, Post, Expert, ApiVerificationRequest, Session, VerificationDocument, ApiSanctuaryCreateRequest, ApiSanctuaryJoinRequest, SanctuarySession } from '@/types';
 import axios from 'axios';
 
@@ -19,6 +18,8 @@ api.interceptors.request.use(config => {
   const publicEndpoints = [
     '/experts/register',
     '/users/register',
+    '/users/auth/anonymous',
+    '/users/register-expert-account',
     '/sanctuary'
   ];
   
@@ -112,9 +113,17 @@ async function uploadFile(
 
 // User related API endpoints
 export const UserApi = {
-  // Fixed register endpoint to properly send JSON data instead of a string
+  // Register standard user (shadow)
   register: () => 
     apiRequest<{ token: string, user: any }>('POST', '/users/register'),
+  
+  // Create anonymous user specifically for joining sessions
+  createAnonymousUser: () =>
+    apiRequest<{ token: string, user: any }>('POST', '/users/auth/anonymous'),
+  
+  // Register expert account (first step of expert registration)
+  registerExpertAccount: (userData: Partial<ApiExpertRegisterRequest>) =>
+    apiRequest<{ token: string, userId: string, user: any }>('POST', '/users/register-expert-account', userData),
   
   authenticate: (token: string) =>
     apiRequest<{ user: any }>('POST', '/users/authenticate', { token }),
@@ -124,6 +133,9 @@ export const UserApi = {
   
   refreshIdentity: () =>
     apiRequest<{ user: any }>('POST', '/users/refresh-identity'),
+    
+  updateAvatar: (avatarUrl: string) =>
+    apiRequest<{ user: any }>('POST', '/users/avatar', { avatarUrl }),
 };
 
 // Post related API endpoints
@@ -243,4 +255,16 @@ export const SanctuaryApi = {
     
   flagSession: (sessionId: string, reason: string) =>
     apiRequest<{success: boolean}>('POST', `/sanctuary/${sessionId}/flag`, { reason }),
+};
+
+// Gemini AI API for content moderation and improvement
+export const GeminiApi = {
+  moderateContent: (content: string) =>
+    apiRequest<{ isAppropriate: boolean, feedback?: string }>('POST', '/gemini/moderate', { content }),
+    
+  improveContent: (content: string) =>
+    apiRequest<{ improvedContent: string }>('POST', '/gemini/improve', { content }),
+    
+  moderateImage: (imageUrl: string) =>
+    apiRequest<{ isAppropriate: boolean, feedback?: string }>('POST', '/gemini/moderate-image', { imageUrl }),
 };

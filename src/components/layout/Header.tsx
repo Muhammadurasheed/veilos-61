@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Menu, Bell, User, LogOut, Settings, Moon, Sun, Shield } from 'lucide-react';
+import { Menu, Bell, User, LogOut, Settings, Moon, Sun, Shield, Loader2 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn, getBadgeImageForLevel } from '@/lib/utils';
@@ -19,11 +19,13 @@ import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 
 const Header = () => {
-  const { user, logout, refreshIdentity } = useUserContext();
+  const { user, logout, isLoading, createAnonymousAccount } = useUserContext();
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+  
   // Determine if user is authenticated based on user object existence
   const isAuthenticated = !!user?.loggedIn;
 
@@ -52,13 +54,25 @@ const Header = () => {
   };
 
   const handleCreateAnonymousAccount = async () => {
-    toast({
-      title: "Creating account",
-      description: "Setting up your anonymous identity...",
-    });
-    
-    await refreshIdentity();
-    navigate('/profile');
+    try {
+      setIsCreatingAccount(true);
+      toast({
+        title: "Creating account",
+        description: "Setting up your anonymous identity...",
+      });
+      
+      await createAnonymousAccount();
+      navigate('/profile');
+    } catch (error) {
+      console.error('Error creating anonymous account:', error);
+      toast({
+        title: "Account creation failed",
+        description: "There was an error creating your anonymous account. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCreatingAccount(false);
+    }
   };
 
   // Use a default level (1) if user doesn't have a level property
@@ -118,7 +132,12 @@ const Header = () => {
             <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500"></span>
           </Button>
 
-          {isAuthenticated ? (
+          {isLoading ? (
+            <Button variant="outline" disabled>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Loading...
+            </Button>
+          ) : isAuthenticated ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -126,8 +145,12 @@ const Header = () => {
                   className="relative h-9 w-9 rounded-full overflow-hidden"
                 >
                   <Avatar className="h-9 w-9 border border-gray-200 dark:border-gray-700">
-                    <AvatarImage src={`/avatars/avatar-${user?.avatarIndex || 1}.svg`} alt={cn('User avatar', user?.alias)} />
-                    <AvatarFallback>{user?.alias?.charAt(0) || 'A'}</AvatarFallback>
+                    {user.avatarUrl ? (
+                      <AvatarImage src={user.avatarUrl} alt={user.alias} />
+                    ) : (
+                      <AvatarImage src={`/avatars/avatar-${user.avatarIndex || 1}.svg`} alt={user.alias} />
+                    )}
+                    <AvatarFallback>{user.alias?.charAt(0) || 'A'}</AvatarFallback>
                   </Avatar>
                   {userBadge && (
                     <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-2 border-white dark:border-gray-900 bg-white dark:bg-gray-900">
@@ -137,7 +160,14 @@ const Header = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuLabel>
+                  <div className="flex flex-col">
+                    <span>{user.alias}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {user.isAnonymous ? 'Anonymous User' : 'Registered User'}
+                    </span>
+                  </div>
+                </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link to="/profile" className="flex items-center cursor-pointer">
@@ -151,7 +181,7 @@ const Header = () => {
                     Settings
                   </Link>
                 </DropdownMenuItem>
-                {user?.role === 'beacon' && (
+                {user.role === 'beacon' && (
                   <DropdownMenuItem asChild>
                     <Link to="/expert-dashboard" className="flex items-center cursor-pointer">
                       <Shield className="mr-2 h-4 w-4" />
@@ -168,8 +198,19 @@ const Header = () => {
             </DropdownMenu>
           ) : (
             <div className="flex items-center gap-2">
-              <Button onClick={handleCreateAnonymousAccount} className="bg-veilo-green hover:bg-veilo-green-dark text-white font-medium">
-                Create Anonymous Account
+              <Button 
+                onClick={handleCreateAnonymousAccount} 
+                className="bg-veilo-green hover:bg-veilo-green-dark text-white font-medium"
+                disabled={isCreatingAccount}
+              >
+                {isCreatingAccount ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create Anonymous Account'
+                )}
               </Button>
               <Button 
                 asChild 

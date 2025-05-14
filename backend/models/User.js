@@ -22,9 +22,17 @@ const userSchema = new mongoose.Schema({
     enum: ['shadow', 'beacon', 'admin'],
     default: 'shadow'
   },
+  isAnonymous: {
+    type: Boolean,
+    default: true
+  },
   registeredAt: {
     type: Date,
     default: Date.now
+  },
+  avatarUrl: {
+    type: String,
+    sparse: true
   },
   // Optional fields for authenticated users
   email: {
