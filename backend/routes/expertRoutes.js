@@ -1,3 +1,4 @@
+
 const express = require('express');
 const router = express.Router();
 const Expert = require('../models/Expert');
@@ -76,69 +77,81 @@ router.post('/register', authMiddleware, async (req, res) => {
   }
 });
 
-// Upload verification document
+// Upload verification document - IMPROVED WITH ERROR HANDLING
 // POST /api/experts/:id/document
-router.post('/:id/document', authMiddleware, upload.single('file'), async (req, res) => {
-  try {
-    const expert = await Expert.findOne({ id: req.params.id });
-    
-    if (!expert) {
-      return res.status(404).json({
-        success: false,
-        error: 'Expert not found'
-      });
-    }
-    
-    // Check if user is the expert or an admin
-    if (expert.userId !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        error: 'Not authorized'
-      });
-    }
-    
-    if (!req.file) {
+router.post('/:id/document', authMiddleware, async (req, res) => {
+  // Use multer middleware here, but handle any errors properly
+  upload.single('file')(req, res, async (err) => {
+    // Handle multer errors
+    if (err) {
+      console.error('Multer error:', err.message);
       return res.status(400).json({
         success: false,
-        error: 'No file uploaded'
+        error: err.message
       });
     }
     
-    const { documentType } = req.body;
-    
-    if (!documentType) {
-      return res.status(400).json({
-        success: false,
-        error: 'Document type is required'
-      });
-    }
-    
-    // Create file URL (relative path)
-    const fileUrl = `/uploads/${req.file.filename}`;
-    
-    // Add document to expert
-    expert.verificationDocuments.push({
-      type: documentType,
-      fileUrl,
-      fileName: req.file.originalname,
-      status: 'pending'
-    });
-    
-    await expert.save();
-    
-    res.json({
-      success: true,
-      data: {
-        fileUrl
+    try {
+      const expert = await Expert.findOne({ id: req.params.id });
+      
+      if (!expert) {
+        return res.status(404).json({
+          success: false,
+          error: 'Expert not found'
+        });
       }
-    });
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({
-      success: false,
-      error: 'Server error'
-    });
-  }
+      
+      // Check if user is the expert or an admin
+      if (expert.userId !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          error: 'Not authorized'
+        });
+      }
+      
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: 'No file uploaded'
+        });
+      }
+      
+      const { documentType } = req.body;
+      
+      if (!documentType) {
+        return res.status(400).json({
+          success: false,
+          error: 'Document type is required'
+        });
+      }
+      
+      // Create file URL (relative path)
+      const fileUrl = `/uploads/${req.file.filename}`;
+      
+      // Add document to expert
+      expert.verificationDocuments.push({
+        type: documentType,
+        fileUrl,
+        fileName: req.file.originalname,
+        status: 'pending'
+      });
+      
+      await expert.save();
+      
+      res.json({
+        success: true,
+        data: {
+          fileUrl
+        }
+      });
+    } catch (err) {
+      console.error('Document upload error:', err.message);
+      res.status(500).json({
+        success: false,
+        error: 'Server error'
+      });
+    }
+  });
 });
 
 // Get all experts

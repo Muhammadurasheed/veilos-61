@@ -1,4 +1,3 @@
-
 import { ApiResponse, ApiPostRequest, ApiExpertRegisterRequest, ApiChatSessionRequest, Post, Expert, ApiVerificationRequest, Session, VerificationDocument, ApiSanctuaryCreateRequest, ApiSanctuaryJoinRequest, SanctuarySession } from '@/types';
 import axios from 'axios';
 import { toast } from '@/hooks/use-toast';
@@ -199,7 +198,7 @@ async function apiRequest<T>(
   };
 }
 
-// File upload helper with progress and retry
+// File upload helper with progress and retry - IMPROVED ERROR HANDLING
 async function uploadFile(
   endpoint: string,
   file: File,
@@ -215,9 +214,13 @@ async function uploadFile(
       formData.append(key, value.toString());
     });
     
+    console.log('Uploading file to endpoint:', API_BASE_URL + endpoint);
+    console.log('File details:', file.name, file.type, file.size);
+    
+    // Explicitly set content type to undefined so browser can set correct boundary
     const response = await api.post(endpoint, formData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        'Content-Type': undefined, // Let browser set the correct content type with boundary
       },
       onUploadProgress: (progressEvent) => {
         if (onProgress && progressEvent.total) {
@@ -227,6 +230,7 @@ async function uploadFile(
       }
     });
 
+    console.log('Upload response:', response.data);
     return {
       success: true,
       data: response.data.data,
@@ -322,8 +326,10 @@ export const ExpertApi = {
   registerExpert: (expertData: ApiExpertRegisterRequest) =>
     apiRequest<Expert>('POST', '/experts/register', expertData),
     
-  uploadVerificationDocument: (expertId: string, file: File, documentType: string) =>
-    uploadFile(`/experts/${expertId}/document`, file, { documentType }),
+  uploadVerificationDocument: (expertId: string, file: File, documentType: string, onProgress?: (percentage: number) => void) => {
+    console.log(`Uploading verification document for expert ${expertId}, type: ${documentType}`);
+    return uploadFile(`/experts/${expertId}/document`, file, { documentType }, onProgress);
+  },
     
   getExpertDocuments: (expertId: string) =>
     apiRequest<VerificationDocument[]>('GET', `/experts/${expertId}/documents`),
@@ -453,4 +459,3 @@ export const GeminiApi = {
   refinePost: (content: string) =>
     apiRequest<{ refinedText: string, violation?: boolean, reason?: string }>('POST', '/gemini/refine-post', { content }),
 };
-

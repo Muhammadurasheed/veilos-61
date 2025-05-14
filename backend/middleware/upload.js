@@ -33,7 +33,7 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Upload middleware
+// Upload middleware with proper error handling
 const upload = multer({ 
   storage: storage,
   limits: {

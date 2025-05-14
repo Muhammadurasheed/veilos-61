@@ -187,18 +187,41 @@ const BeaconRegistration = () => {
     }
   };
 
+  // Improved file upload handler with better error handling
   const handleFileUpload = async (file: File, type: string) => {
     if (!userId) {
-      // If no user ID yet, we're in development/testing mode
-      // Mock the upload and consider it successful
-      setDocuments(prev => [...prev, file]);
-      return Promise.resolve();
+      toast({
+        variant: 'destructive',
+        title: 'Upload error',
+        description: 'User ID is missing. Please complete step 1 first.',
+      });
+      return Promise.reject(new Error('User ID missing'));
     }
     
+    setIsSubmitting(true);
     try {
-      // For now, just track the documents locally
-      // We'll upload them when the expert ID is available
+      console.log(`Uploading ${type} document:`, file.name);
+      
+      // Track the document locally for UI display
       setDocuments(prev => [...prev, file]);
+      
+      // If we have an expert ID, actually upload the document
+      if (expertId) {
+        const uploadResponse = await ExpertApi.uploadVerificationDocument(
+          expertId, 
+          file, 
+          type, 
+          (progress) => console.log(`Upload progress: ${progress}%`)
+        );
+        
+        if (!uploadResponse.success) {
+          throw new Error(uploadResponse.error || 'File upload failed');
+        }
+        
+        console.log('Document successfully uploaded:', uploadResponse.data);
+      } else {
+        console.log('Expert ID not available yet, document will be uploaded later');
+      }
       
       toast({
         title: 'Document added',
@@ -207,13 +230,15 @@ const BeaconRegistration = () => {
       
       return Promise.resolve();
     } catch (error) {
-      console.error('Document handling error:', error);
+      console.error('Document upload error:', error);
       toast({
         variant: 'destructive',
         title: 'Upload failed',
         description: error instanceof Error ? error.message : 'An unexpected error occurred.',
       });
       throw error;
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
