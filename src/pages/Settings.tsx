@@ -181,7 +181,7 @@ const Settings = () => {
                   
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" value={user.email || 'Anonymous User'} readOnly className="bg-muted" />
+                    <Input id="email" value="Anonymous User" readOnly className="bg-muted" />
                   </div>
                   
                   <div className="space-y-2">
