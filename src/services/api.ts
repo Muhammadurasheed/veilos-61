@@ -1,8 +1,9 @@
+
 import { ApiResponse, ApiPostRequest, ApiExpertRegisterRequest, ApiChatSessionRequest, Post, Expert, ApiVerificationRequest, Session, VerificationDocument, ApiSanctuaryCreateRequest, ApiSanctuaryJoinRequest, SanctuarySession } from '@/types';
 import axios from 'axios';
 
 // Base API URL - Updated to use the render.com backend
-const API_BASE_URL = 'https://veilo-backend.onrender.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://veilo-backend.onrender.com/api';
 
 // Create axios instance with base configuration
 const api = axios.create({
@@ -223,7 +224,7 @@ export const AdminApi = {
     apiRequest<{ token: string }>('POST', '/admin/login', { email, password }),
 };
 
-// Sanctuary Session API (new)
+// Sanctuary Session API
 export const SanctuaryApi = {
   createSession: (sessionData: ApiSanctuaryCreateRequest) =>
     apiRequest<{id: string, topic: string, description: string, emoji: string, expiresAt: string, hostToken?: string}>(
@@ -266,5 +267,9 @@ export const GeminiApi = {
     apiRequest<{ improvedContent: string }>('POST', '/gemini/improve', { content }),
     
   moderateImage: (imageUrl: string) =>
-    apiRequest<{ isAppropriate: boolean, feedback?: string }>('POST', '/gemini/moderate-image', { imageUrl }),
+    apiRequest<{ violation: boolean, reason?: string }>('POST', '/gemini/moderate-image', { imageUrl }),
+    
+  // New: Refine post using Gemini
+  refinePost: (content: string) =>
+    apiRequest<{ refinedText: string, violation?: boolean, reason?: string }>('POST', '/gemini/refine-post', { content }),
 };
