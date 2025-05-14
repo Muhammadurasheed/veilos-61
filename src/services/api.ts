@@ -1,6 +1,6 @@
-
 import { ApiResponse, ApiPostRequest, ApiExpertRegisterRequest, ApiChatSessionRequest, Post, Expert, ApiVerificationRequest, Session, VerificationDocument, ApiSanctuaryCreateRequest, ApiSanctuaryJoinRequest, SanctuarySession } from '@/types';
 import axios from 'axios';
+import { toast } from '@/hooks/use-toast';
 
 // Base API URL - Updated to use the render.com backend
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://veilo-backend.onrender.com/api';
@@ -10,7 +10,9 @@ const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
-  }
+  },
+  // Add timeout to prevent hanging requests
+  timeout: 10000,
 });
 
 // Add auth token to requests if available
@@ -40,44 +42,153 @@ api.interceptors.request.use(config => {
   return config;
 });
 
-// Generic API request wrapper
-async function apiRequest<T>(
-  method: string,
-  endpoint: string,
-  data?: any,
-  options?: any
-): Promise<ApiResponse<T>> {
-  try {
-    const response = await api.request({
-      method,
-      url: endpoint,
-      data,
-      ...options
-    });
-
-    return {
-      success: true,
-      data: response.data.data as T,
-    };
-  } catch (error: any) {
-    console.error('API request failed:', error);
+// Add global error handler
+api.interceptors.response.use(
+  response => response,
+  error => {
+    // Extract error message
     const errorMessage = 
       error.response?.data?.error || 
       error.message || 
       'An unexpected error occurred';
     
-    return {
-      success: false,
-      error: errorMessage,
-    };
+    // Handle specific status codes
+    if (error.response) {
+      switch (error.response.status) {
+        case 401:
+          toast({
+            title: "Authentication Error",
+            description: "Please sign in again to continue.",
+            variant: "destructive",
+          });
+          
+          // Clear token if authentication failed
+          localStorage.removeItem('veilo-token');
+          break;
+          
+        case 403:
+          toast({
+            title: "Access Denied",
+            description: "You don't have permission to access this resource.",
+            variant: "destructive",
+          });
+          break;
+          
+        case 404:
+          toast({
+            title: "Resource Not Found",
+            description: "The requested resource could not be found.",
+            variant: "destructive",
+          });
+          break;
+          
+        case 429:
+          toast({
+            title: "Too Many Requests",
+            description: "Please slow down and try again later.",
+            variant: "destructive",
+          });
+          break;
+          
+        case 500:
+          toast({
+            title: "Server Error",
+            description: "Something went wrong on our end. Please try again later.",
+            variant: "destructive",
+          });
+          break;
+          
+        default:
+          // Only show toast for non-canceled requests
+          if (!axios.isCancel(error)) {
+            toast({
+              title: "Error",
+              description: errorMessage,
+              variant: "destructive",
+            });
+          }
+      }
+    } else if (error.request) {
+      // Network error (no response received)
+      toast({
+        title: "Network Error",
+        description: "Unable to connect to the server. Please check your connection.",
+        variant: "destructive",
+      });
+    }
+    
+    return Promise.reject(error);
   }
+);
+
+// Generic API request wrapper with retry capabilities
+async function apiRequest<T>(
+  method: string,
+  endpoint: string,
+  data?: any,
+  options: any = {}
+): Promise<ApiResponse<T>> {
+  // Default retry options
+  const retryOptions = {
+    retries: options.retries || 1,
+    retryDelay: options.retryDelay || 1000,
+    retryableStatus: options.retryableStatus || [408, 429, 500, 502, 503, 504],
+    ...options
+  };
+  
+  let attempts = 0;
+  let lastError: any;
+  
+  while (attempts <= retryOptions.retries) {
+    try {
+      const response = await api.request({
+        method,
+        url: endpoint,
+        data,
+        ...options
+      });
+
+      return {
+        success: true,
+        data: response.data.data as T,
+      };
+    } catch (error: any) {
+      lastError = error;
+      
+      // Only retry if status is in retryable list
+      const shouldRetry = 
+        attempts < retryOptions.retries && 
+        error.response && 
+        retryOptions.retryableStatus.includes(error.response.status);
+      
+      if (!shouldRetry) break;
+      
+      // Exponential backoff
+      const delay = retryOptions.retryDelay * Math.pow(2, attempts);
+      console.log(`Request failed. Retrying in ${delay}ms... (${attempts + 1}/${retryOptions.retries})`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      attempts++;
+    }
+  }
+  
+  console.error('API request failed after retries:', lastError);
+  const errorMessage = 
+    lastError.response?.data?.error || 
+    lastError.message || 
+    'An unexpected error occurred';
+  
+  return {
+    success: false,
+    error: errorMessage,
+  };
 }
 
-// File upload helper
+// File upload helper with progress and retry
 async function uploadFile(
   endpoint: string,
   file: File,
-  additionalData: Record<string, any> = {}
+  additionalData: Record<string, any> = {},
+  onProgress?: (percentage: number) => void
 ): Promise<ApiResponse<{ fileUrl: string }>> {
   try {
     const formData = new FormData();
@@ -91,6 +202,12 @@ async function uploadFile(
     const response = await api.post(endpoint, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const percentage = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress(percentage);
+        }
       }
     });
 
@@ -256,6 +373,33 @@ export const SanctuaryApi = {
     
   flagSession: (sessionId: string, reason: string) =>
     apiRequest<{success: boolean}>('POST', `/sanctuary/${sessionId}/flag`, { reason }),
+};
+
+// Chat API for expert messaging
+export const ChatApi = {
+  sendMessage: (sessionId: string, content: string, messageType: 'text' | 'image' | 'voice' = 'text') =>
+    apiRequest<{ message: any }>('POST', `/chat/${sessionId}/message`, { content, messageType }),
+    
+  getMessages: (sessionId: string, limit: number = 50, before?: string) =>
+    apiRequest<{ messages: any[] }>('GET', `/chat/${sessionId}/messages`, { 
+      params: { limit, before } 
+    }),
+    
+  uploadMedia: (sessionId: string, file: File, mediaType: string, onProgress?: (percentage: number) => void) =>
+    uploadFile(`/chat/${sessionId}/media`, file, { mediaType }, onProgress),
+    
+  createVoiceCall: (sessionId: string) =>
+    apiRequest<{ callToken: string, roomId: string }>('POST', `/chat/${sessionId}/call/voice`),
+    
+  createVideoCall: (sessionId: string) =>
+    apiRequest<{ callToken: string, roomId: string }>('POST', `/chat/${sessionId}/call/video`),
+    
+  scheduleMeeting: (expertId: string, date: Date, agenda: string) =>
+    apiRequest<{ meetingId: string }>('POST', `/chat/schedule`, { 
+      expertId, 
+      date: date.toISOString(), 
+      agenda 
+    }),
 };
 
 // Gemini AI API for content moderation and improvement

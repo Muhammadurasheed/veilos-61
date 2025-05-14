@@ -112,7 +112,8 @@ router.post('/register-expert-account', async (req, res) => {
               id: user.id,
               alias: user.alias,
               avatarIndex: user.avatarIndex,
-              role: user.role
+              role: user.role,
+              email: user.email
             }
           }
         });
@@ -159,7 +160,8 @@ router.post('/authenticate', async (req, res) => {
           avatarIndex: user.avatarIndex,
           role: user.role,
           isAnonymous: user.isAnonymous,
-          expertId: user.expertId
+          expertId: user.expertId,
+          email: user.email
         }
       }
     });

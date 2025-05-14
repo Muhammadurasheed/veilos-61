@@ -1,6 +1,6 @@
 
 import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useUserContext } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
@@ -8,8 +8,9 @@ import { motion } from 'framer-motion';
 import Layout from '@/components/layout/Layout';
 
 const Index = () => {
-  const { user, refreshIdentity } = useUserContext();
+  const { user, createAnonymousAccount, isLoading } = useUserContext();
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   // Create anonymous account handler
   const handleCreateAnonymousAccount = async () => {
@@ -18,12 +19,21 @@ const Index = () => {
       description: "Setting up your anonymous identity...",
     });
     
-    await refreshIdentity();
+    await createAnonymousAccount();
     
-    toast({
-      title: "Account created",
-      description: "Your anonymous profile is ready to use. Welcome to Veilo!",
-    });
+    // Navigate to sanctuary space after account creation
+    navigate('/sanctuary');
+  };
+
+  // Handle entering sanctuary space
+  const handleEnterSanctuary = () => {
+    if (!user) {
+      // If no user, create anonymous account first
+      handleCreateAnonymousAccount();
+    } else {
+      // User exists, navigate directly to sanctuary
+      navigate('/sanctuary');
+    }
   };
 
   // Animation variants
@@ -89,8 +99,9 @@ const Index = () => {
                 size="lg" 
                 onClick={handleCreateAnonymousAccount}
                 className="bg-veilo-green hover:bg-veilo-green-dark text-white font-medium text-lg px-8 py-6"
+                disabled={isLoading}
               >
-                Create Anonymous Account
+                {isLoading ? 'Creating Account...' : 'Create Anonymous Account'}
               </Button>
               
               <Button 
@@ -102,6 +113,29 @@ const Index = () => {
                 <Link to="/feed">
                   Browse Community
                 </Link>
+              </Button>
+            </motion.div>
+            
+            <motion.div
+              variants={itemVariants}
+              className="mt-8"
+            >
+              <Button
+                onClick={handleEnterSanctuary}
+                variant="ghost"
+                size="lg"
+                className="group relative overflow-hidden rounded-full bg-gradient-to-r from-veilo-blue/10 to-veilo-purple/10 hover:from-veilo-blue/20 hover:to-veilo-purple/20 text-veilo-blue border border-veilo-blue/30 px-8 py-6 w-full sm:w-auto"
+              >
+                <span className="absolute inset-0 bg-gradient-to-r from-veilo-blue/5 to-veilo-purple/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-30">
+                  <span className="w-64 h-64 rounded-full bg-veilo-blue/10 animate-pulse"></span>
+                </span>
+                <span className="relative flex items-center justify-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  </svg>
+                  <span className="text-lg font-medium">🕊️ Enter Sanctuary Space</span>
+                </span>
               </Button>
             </motion.div>
             

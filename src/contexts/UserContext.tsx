@@ -15,6 +15,7 @@ export interface User {
   isAnonymous?: boolean;
   expertId?: string;
   avatarUrl?: string;
+  email?: string; // Added email field
 }
 
 // Define the context type
@@ -72,6 +73,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           console.error('Authentication error:', error);
           // Create new anonymous user on error
           await createNewAnonymousUser();
+        } finally {
+          setIsLoading(false);
         }
       } else {
         // No token found, but don't auto-create anonymous user
@@ -121,8 +124,23 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   
   // Create new anonymous user specifically for the anonymous flow
   const createNewAnonymousUser = async () => {
+    setIsLoading(true);
+    
+    // Set a timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      setIsLoading(false);
+      toast({
+        title: "Connection Timeout",
+        description: "Unable to create an anonymous account. Please try again.",
+        variant: "destructive"
+      });
+    }, 5000);
+    
     try {
       const response = await UserApi.createAnonymousUser();
+      
+      // Clear the timeout as we got a response
+      clearTimeout(timeoutId);
       
       if (response.success && response.data) {
         // Save token
@@ -139,11 +157,16 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           title: "Welcome to Veilo",
           description: "Your anonymous identity has been created.",
         });
+        
+        // Navigate to sanctuary space - will be handled by the component that calls this function
       } else {
         // Failed to register, fall back to original registration
         await registerNewUser();
       }
     } catch (error) {
+      // Clear the timeout as we got a response (error)
+      clearTimeout(timeoutId);
+      
       console.error('Anonymous registration error:', error);
       await registerNewUser();
     } finally {
