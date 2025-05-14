@@ -1,3 +1,4 @@
+
 import { ApiResponse, ApiPostRequest, ApiExpertRegisterRequest, ApiChatSessionRequest, Post, Expert, ApiVerificationRequest, Session, VerificationDocument, ApiSanctuaryCreateRequest, ApiSanctuaryJoinRequest, SanctuarySession } from '@/types';
 import axios from 'axios';
 import { toast } from '@/hooks/use-toast';
@@ -23,6 +24,7 @@ api.interceptors.request.use(config => {
     '/users/register',
     '/users/auth/anonymous',
     '/users/register-expert-account',
+    '/users/expert-onboarding-start',
     '/sanctuary'
   ];
   
@@ -120,6 +122,20 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Helper function to handle API errors
+const handleApiError = (error: any): ApiResponse<any> => {
+  console.error('API error:', error);
+  const errorMessage = 
+    error.response?.data?.error || 
+    error.message || 
+    'An unexpected error occurred';
+  
+  return {
+    success: false,
+    error: errorMessage,
+  };
+};
 
 // Generic API request wrapper with retry capabilities
 async function apiRequest<T>(
@@ -297,7 +313,6 @@ export const ExpertApi = {
         data: response.data.data
       };
     } catch (error) {
-      console.error('Expert onboarding start error:', error);
       return handleApiError(error);
     }
   },
@@ -438,3 +453,4 @@ export const GeminiApi = {
   refinePost: (content: string) =>
     apiRequest<{ refinedText: string, violation?: boolean, reason?: string }>('POST', '/gemini/refine-post', { content }),
 };
+
