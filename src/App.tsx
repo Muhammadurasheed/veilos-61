@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { UserProvider } from '@/contexts/UserContext';
@@ -23,7 +23,7 @@ import { SessionProvider } from '@/contexts/SessionContext';
 
 import './App.css';
 
-function App() {
+const App: React.FC = () => {
   // Initialize i18n and other global services
   useEffect(() => {
     // Set up any additional initialization here
