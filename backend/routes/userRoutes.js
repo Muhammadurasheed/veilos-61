@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
@@ -121,6 +120,86 @@ router.post('/register-expert-account', async (req, res) => {
     );
   } catch (err) {
     console.error(err.message);
+    res.status(500).json({
+      success: false,
+      error: 'Server error'
+    });
+  }
+});
+
+// Expert onboarding start - No auth required
+// POST /api/users/expert-onboarding-start
+router.post('/expert-onboarding-start', async (req, res) => {
+  try {
+    const { name, email, specialization, bio, pricingModel, pricingDetails } = req.body;
+    
+    // Validation
+    if (!name || !email || !specialization || !bio) {
+      return res.status(400).json({
+        success: false,
+        error: 'Required fields missing'
+      });
+    }
+    
+    // Check if email already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email already exists'
+      });
+    }
+    
+    // Create user with expert information
+    const alias = name; // Use name as alias for expert accounts
+    const avatarIndex = Math.floor(Math.random() * 12) + 1;
+    
+    const user = new User({
+      alias,
+      name,
+      email,
+      avatarIndex,
+      role: 'shadow', // Will be updated to 'beacon' after verification
+      bio,
+      isAnonymous: false,
+      areasOfExpertise: [specialization],
+      isExpert: false // Will be set to true after verification
+    });
+    
+    await user.save();
+    
+    // Generate token
+    const payload = {
+      user: {
+        id: user.id
+      }
+    };
+    
+    jwt.sign(
+      payload,
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' },
+      (err, token) => {
+        if (err) throw err;
+        res.json({
+          success: true,
+          data: {
+            token,
+            userId: user.id,
+            user: {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              alias: user.alias,
+              avatarIndex: user.avatarIndex,
+              role: user.role
+            }
+          }
+        });
+      }
+    );
+  } catch (err) {
+    console.error('Expert onboarding error:', err);
     res.status(500).json({
       success: false,
       error: 'Server error'

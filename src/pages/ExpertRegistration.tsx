@@ -31,6 +31,7 @@ import { FileUpload } from '@/components/expert/FileUpload';
 import { Calendar, Check, ChevronRight, Shield, User, MessageSquare, Video } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import axios from 'axios';
 
 const expertFormSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -60,7 +61,9 @@ const ExpertRegistration = () => {
   });
   const [step, setStep] = useState<'details' | 'documents' | 'availability' | 'preferences' | 'verification'>('details');
   const [expertId, setExpertId] = useState<string | null>(null);
-  const [apiBaseUrl, setApiBaseUrl] = useState('https://veilo-backend.onrender.com');
+  const [apiBaseUrl, setApiBaseUrl] = useState(() => {
+    return import.meta.env.VITE_API_BASE_URL || 'https://veilo-backend.onrender.com/api';
+  });
   const [availabilitySchedule, setAvailabilitySchedule] = useState<Record<string, string[]>>({
     monday: [],
     tuesday: [],
@@ -95,35 +98,40 @@ const ExpertRegistration = () => {
     setIsSubmitting(true);
 
     try {
-      const expertData: ApiExpertRegisterRequest = {
+      console.log('Submitting expert registration:', values);
+      
+      // Step 1: Create user account first using the new expert-onboarding-start endpoint
+      const response = await axios.post(`${apiBaseUrl}/users/expert-onboarding-start`, {
         name: values.name,
         email: values.email,
         specialization: values.specialization,
         bio: values.bio,
         pricingModel: values.pricingModel,
-        pricingDetails: values.pricingDetails,
-        phoneNumber: values.phoneNumber,
-      };
-
-      console.log('Submitting expert registration:', expertData);
-      
-      const response = await ExpertApi.registerExpert(expertData);
+        pricingDetails: values.pricingDetails
+      });
       
       console.log('Registration response:', response);
       
-      if (!response.success || !response.data) {
-        throw new Error(response.error || 'Failed to register. Please try again.');
+      if (!response.data.success || !response.data.data) {
+        throw new Error(response.data.error || 'Failed to register. Please try again.');
       }
+      
+      // Save the token and user ID
+      localStorage.setItem('veilo-token', response.data.data.token);
+      axios.defaults.headers.common['x-auth-token'] = response.data.data.token;
+      
+      // Set the expert ID
+      setExpertId(response.data.data.userId);
 
       toast({
         title: 'Registration submitted!',
         description: 'Please continue with document verification.',
       });
 
-      setExpertId(response.data.id);
+      // Now we have a token, move to the next step
       setStep('documents');
       
-      console.log('Expert registered successfully with ID:', response.data.id);
+      console.log('Expert registered successfully with ID:', response.data.data.userId);
     } catch (error) {
       console.error('Registration error:', error);
       toast({

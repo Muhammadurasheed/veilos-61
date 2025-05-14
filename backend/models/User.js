@@ -46,6 +46,23 @@ const userSchema = new mongoose.Schema({
   expertId: {
     type: String,
     sparse: true
+  },
+  // Expert fields
+  name: {
+    type: String,
+    sparse: true
+  },
+  bio: {
+    type: String,
+    sparse: true
+  },
+  areasOfExpertise: {
+    type: [String],
+    default: []
+  },
+  isExpert: {
+    type: Boolean,
+    default: false
   }
 });
 

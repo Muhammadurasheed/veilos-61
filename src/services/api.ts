@@ -281,6 +281,27 @@ export const PostApi = {
 
 // Expert related API endpoints
 export const ExpertApi = {
+  // Expert registration first step (no auth required)
+  registerExpertOnboardingStart: async (data: {
+    name: string;
+    email: string;
+    specialization: string;
+    bio: string;
+    pricingModel: string;
+    pricingDetails?: string;
+  }) => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/users/expert-onboarding-start`, data);
+      return {
+        success: true,
+        data: response.data.data
+      };
+    } catch (error) {
+      console.error('Expert onboarding start error:', error);
+      return handleApiError(error);
+    }
+  },
+  
   getExperts: () => apiRequest<Expert[]>('GET', '/experts'),
   
   registerExpert: (expertData: ApiExpertRegisterRequest) =>
