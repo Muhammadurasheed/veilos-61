@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import Layout from '@/components/layout/Layout';
-import LanguageSelector from '@/components/settings/LanguageSelector';
+import { LanguageSelector } from '@/components/settings/LanguageSelector';
 import { useUserContext } from '@/contexts/UserContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
