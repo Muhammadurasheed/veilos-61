@@ -24,7 +24,8 @@ api.interceptors.request.use(config => {
     '/users/auth/anonymous',
     '/users/register-expert-account',
     '/users/expert-onboarding-start',
-    '/sanctuary'
+    '/sanctuary',
+    '/gemini/refine-post'
   ];
   
   // Check if the current request path is in the publicEndpoints list
@@ -186,16 +187,7 @@ async function apiRequest<T>(
     }
   }
   
-  console.error('API request failed after retries:', lastError);
-  const errorMessage = 
-    lastError.response?.data?.error || 
-    lastError.message || 
-    'An unexpected error occurred';
-  
-  return {
-    success: false,
-    error: errorMessage,
-  };
+  return handleApiError(lastError);
 }
 
 // File upload helper with progress and retry - IMPROVED ERROR HANDLING
@@ -455,7 +447,7 @@ export const GeminiApi = {
   moderateImage: (imageUrl: string) =>
     apiRequest<{ violation: boolean, reason?: string }>('POST', '/gemini/moderate-image', { imageUrl }),
     
-  // New: Refine post using Gemini
+  // Refine post using Gemini
   refinePost: (content: string) =>
     apiRequest<{ refinedText: string, violation?: boolean, reason?: string }>('POST', '/gemini/refine-post', { content }),
 };

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,8 +25,14 @@ const GeminiRefinement: React.FC<GeminiRefinementProps> = ({
   const [violation, setViolation] = useState<{reason: string} | null>(null);
   const [editingRefined, setEditingRefined] = useState(false);
 
+  useEffect(() => {
+    // Auto-start refinement when component mounts
+    handleRefine();
+  }, []);
+
   const handleRefine = async () => {
     setIsLoading(true);
+    setViolation(null);
     
     try {
       const response = await GeminiApi.refinePost(originalContent);
@@ -45,6 +51,11 @@ const GeminiRefinement: React.FC<GeminiRefinementProps> = ({
       }
       
       setRefinedContent(response.data.refinedText);
+      toast({
+        title: "Content refined",
+        description: "Gemini has polished your post.",
+        variant: "default",
+      });
     } catch (error) {
       console.error('Content refinement error:', error);
       toast({
@@ -71,7 +82,7 @@ const GeminiRefinement: React.FC<GeminiRefinementProps> = ({
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
+    <Card className="w-full max-w-2xl mx-auto animate-scale-in">
       <CardHeader>
         <CardTitle className="flex items-center">
           <Sparkles className="h-5 w-5 mr-2 text-purple-500" />
@@ -88,36 +99,25 @@ const GeminiRefinement: React.FC<GeminiRefinementProps> = ({
               {violation.reason}
             </AlertDescription>
           </Alert>
+        ) : isLoading ? (
+          <div className="flex flex-col items-center justify-center p-8 space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+            <p className="text-sm text-gray-500">Gemini is refining your post...</p>
+            <div className="text-xs text-gray-400 max-w-md text-center">
+              We're enhancing clarity, fixing grammar, and improving the tone while preserving your original meaning.
+            </div>
+          </div>
         ) : (
           <>
-            {!refinedContent ? (
-              <>
-                <div className="text-sm text-gray-500 mb-2">
-                  Gemini AI can help improve your writing by enhancing clarity, tone, and engagement without changing the core meaning.
-                </div>
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-medium mb-1">Original Content:</h3>
                 <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
-                  <p className="whitespace-pre-wrap">{originalContent}</p>
+                  <p className="whitespace-pre-wrap text-sm">{originalContent}</p>
                 </div>
-                <Button
-                  className="w-full"
-                  onClick={handleRefine}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Refining...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Refine with Gemini
-                    </>
-                  )}
-                </Button>
-              </>
-            ) : (
-              <div className="space-y-4">
+              </div>
+              
+              <div>
                 <div className="flex items-center justify-between mb-1">
                   <h3 className="text-sm font-medium">Refined Content:</h3>
                   <Button 
@@ -137,28 +137,31 @@ const GeminiRefinement: React.FC<GeminiRefinementProps> = ({
                     className="min-h-[120px]"
                   />
                 ) : (
-                  <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
-                    <p className="whitespace-pre-wrap">{refinedContent}</p>
+                  <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-md border border-purple-100 dark:border-purple-800/30">
+                    <p className="whitespace-pre-wrap text-sm">{refinedContent}</p>
                   </div>
                 )}
               </div>
-            )}
+            </div>
           </>
         )}
       </CardContent>
       
       <CardFooter className="flex justify-between">
-        <Button variant="outline" onClick={onCancel}>
+        <Button variant="outline" onClick={onCancel} disabled={isLoading}>
           Cancel
         </Button>
         
-        {refinedContent && !violation && (
+        {refinedContent && !violation && !isLoading && (
           <div className="flex space-x-2">
             <Button variant="outline" onClick={handleRevert} disabled={editingRefined}>
               <RotateCcw className="mr-2 h-4 w-4" />
               Revert to Original
             </Button>
-            <Button onClick={handleAcceptRefinement}>
+            <Button 
+              onClick={handleAcceptRefinement}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
               <Check className="mr-2 h-4 w-4" />
               Use Refined Content
             </Button>
