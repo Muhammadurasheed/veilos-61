@@ -60,6 +60,7 @@ app.use('/api/session-notes', sessionNotesRoutes);
 app.use('/api/session-ratings', sessionRatingRoutes);
 app.use('/api/recommendations', require('./routes/recommendationRoutes'));
 app.use('/api/appeals', require('./routes/appealRoutes'));
+app.use('/api/analytics', require('./routes/analyticsRoutes'));
 
 // Health check endpoint
 app.get('/health', (req, res) => {

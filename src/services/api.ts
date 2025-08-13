@@ -439,21 +439,36 @@ export const ChatApi = {
     }),
 };
 
-// Gemini AI API for content moderation and improvement
+export const GeminiApi = {
+  moderateContent: (content: string): Promise<ApiResponse<{ flagged: boolean; reason?: string; confidence: number }>> => 
+    apiRequest('POST', '/api/gemini/moderate', { content }),
+  
+  improveContent: (content: string, type: string): Promise<ApiResponse<{ improvedContent: string; suggestions: string[] }>> => 
+    apiRequest('POST', '/api/gemini/improve', { content, type }),
+  
+  moderateImage: (imageUrl: string): Promise<ApiResponse<{ flagged: boolean; reason?: string; confidence: number }>> => 
+    apiRequest('POST', '/api/gemini/moderate-image', { imageUrl }),
+  
+  refinePost: (content: string, tone: string): Promise<ApiResponse<{ refinedContent: string; improvements: string[] }>> => 
+    apiRequest('POST', '/api/gemini/refine-post', { content, tone })
+};
+
+export const AnalyticsApi = {
+  getExpertAnalytics: (expertId: string, timeframe: string = '30d'): Promise<ApiResponse<any>> => 
+    apiRequest('GET', `/api/analytics/expert/${expertId}?timeframe=${timeframe}`),
+  
+  getPlatformAnalytics: (timeframe: string = '30d'): Promise<ApiResponse<any>> => 
+    apiRequest('GET', `/api/analytics/platform?timeframe=${timeframe}`),
+  
+  recordSessionMetric: (data: any): Promise<ApiResponse<any>> => 
+    apiRequest('POST', '/api/analytics/session-metric', data),
+  
+  getExpertRankings: (sortBy: string = 'rating', limit: number = 10): Promise<ApiResponse<any>> => 
+    apiRequest('GET', `/api/analytics/rankings?sortBy=${sortBy}&limit=${limit}`),
+  
+  updatePlatformHealth: (data: any): Promise<ApiResponse<any>> => 
+    apiRequest('POST', '/api/analytics/platform-health', data)
+};
+
 // Export the recommendation and appeal APIs
 export { RecommendationApi, AppealApi } from './recommendationApi';
-
-export const GeminiApi = {
-  moderateContent: (content: string) =>
-    apiRequest<{ isAppropriate: boolean, feedback?: string }>('POST', '/gemini/moderate', { content }),
-    
-  improveContent: (content: string) =>
-    apiRequest<{ improvedContent: string }>('POST', '/gemini/improve', { content }),
-    
-  moderateImage: (imageUrl: string) =>
-    apiRequest<{ violation: boolean, reason?: string }>('POST', '/gemini/moderate-image', { imageUrl }),
-    
-  // Refine post using Gemini
-  refinePost: (content: string) =>
-    apiRequest<{ refinedText: string, violation?: boolean, reason?: string }>('POST', '/gemini/refine-post', { content }),
-};

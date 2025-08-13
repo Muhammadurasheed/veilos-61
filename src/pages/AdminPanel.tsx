@@ -10,6 +10,7 @@ import AdminLogin from '@/components/admin/AdminLogin';
 import ExpertVerification from '@/components/admin/ExpertVerification';
 import ContentModeration from '@/components/admin/ContentModeration';
 import AdminDashboard from '@/components/admin/AdminDashboard';
+import UserSafetyMonitor from '@/components/admin/UserSafetyMonitor';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Shield } from 'lucide-react';
@@ -29,6 +30,7 @@ const AdminPanel = () => {
     const path = location.pathname;
     if (path.includes('/experts')) return 'experts';
     if (path.includes('/content')) return 'content';
+    if (path.includes('/safety')) return 'safety';
     return 'dashboard';
   };
 
@@ -42,6 +44,9 @@ const AdminPanel = () => {
         break;
       case 'content':
         navigate('/admin/content');
+        break;
+      case 'safety':
+        navigate('/admin/safety');
         break;
       default:
         navigate('/admin');
@@ -63,10 +68,11 @@ const AdminPanel = () => {
               onValueChange={handleTabChange}
               className="w-full"
             >
-              <TabsList className="grid grid-cols-3 w-full">
+              <TabsList className="grid grid-cols-4 w-full">
                 <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
                 <TabsTrigger value="experts">Expert Verification</TabsTrigger>
                 <TabsTrigger value="content">Content Moderation</TabsTrigger>
+                <TabsTrigger value="safety">User Safety</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -76,6 +82,7 @@ const AdminPanel = () => {
           <Route path="/" element={<AdminDashboard />} />
           <Route path="/experts" element={<ExpertVerification />} />
           <Route path="/content" element={<ContentModeration />} />
+          <Route path="/safety" element={<UserSafetyMonitor />} />
         </Routes>
       </div>
     </Layout>
