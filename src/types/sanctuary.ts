@@ -81,13 +81,21 @@ export interface BreakoutRoom {
   id: string;
   parentSessionId: string;
   name: string;
-  participants: string[]; // participant IDs
-  maxParticipants: number;
-  isActive: boolean;
-  createdBy: string;
-  createdAt: string;
   topic?: string;
+  description?: string;
+  createdBy: string;
+  facilitatorId: string;
+  agoraChannelName: string;
+  agoraToken: string;
+  maxParticipants: number;
+  currentParticipants: number;
   isPrivate: boolean;
+  requiresApproval: boolean;
+  isActive: boolean;
+  createdAt: string;
+  startedAt?: string;
+  endedAt?: string;
+  expiresAt: string;
 }
 
 export interface ModerationAction {
@@ -127,8 +135,23 @@ export interface SessionRecording {
   fileUrl?: string;
   transcriptUrl?: string;
   retentionPolicy: 'delete_after_session' | 'keep_24h' | 'keep_7d' | 'keep_30d';
+  processingStatus: 'recording' | 'processing' | 'completed' | 'failed' | 'deleted';
   consentGiven: boolean;
   encryptionKey: string;
+}
+
+export interface AIModerationLog {
+  id: string;
+  sessionId: string;
+  participantId: string;
+  participantAlias: string;
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  categories: string[];
+  confidence: number;
+  flaggedContent: string;
+  actionTaken: string;
+  resolved: boolean;
+  timestamp: string;
 }
 
 // API Request Types for Live Sanctuary
