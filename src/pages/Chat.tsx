@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Textarea } from '@/components/ui/textarea';
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 import { Label } from '@/components/ui/label';
 
 // Message type
