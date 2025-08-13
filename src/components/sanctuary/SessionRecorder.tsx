@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { useToast } from '@/hooks/use-toast';
 import { 
   Play, 
-  Stop, 
+  Square, 
   Pause, 
   Download, 
   Shield, 
@@ -301,7 +301,7 @@ const SessionRecorder = ({ sessionId, sessionType, isHost, participantCount, onC
               onClick={stopRecording}
               className="bg-gray-600 hover:bg-gray-700 text-white"
             >
-              <Stop className="h-4 w-4 mr-2" />
+              <Square className="h-4 w-4 mr-2" />
               Stop Recording
             </Button>
           )}
