@@ -458,17 +458,31 @@ const SanctuarySpace: React.FC<SanctuarySpaceProps> = ({ isHost = false }) => {
             description: session.description,
             emoji: session.emoji,
             hostId: 'host-id', // Temporary for now
+            hostAlias: 'Host',
+            hostToken: undefined,
             agoraChannelName: session.agoraChannelName || `sanctuary-${session.id}`,
             agoraToken: session.agoraToken || 'temp-token',
             expiresAt: session.expiresAt,
+            isActive: true,
+            participants: [],
             maxParticipants: 50,
             currentParticipants: 0,
             allowAnonymous: true,
             audioOnly: true,
             moderationEnabled: true,
             emergencyContactEnabled: true,
-            isActive: true,
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            startTime: new Date().toISOString(),
+            isRecorded: false,
+            recordingConsent: [],
+            breakoutRooms: [],
+            moderationLevel: 'medium',
+            emergencyProtocols: true,
+            aiMonitoring: true,
+            estimatedDuration: undefined,
+            tags: [],
+            language: 'en',
+            status: 'active'
           }}
           participant={{
             id: participant.id,
