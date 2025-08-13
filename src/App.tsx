@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import { UserProvider } from '@/contexts/UserContext';
 import { VeiloDataProvider } from '@/contexts/VeiloDataContext';
 import { Toaster } from '@/components/ui/toaster';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 
 import Index from '@/pages/Index';
 import Feed from '@/pages/Feed';
@@ -32,33 +33,39 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <ThemeProvider>
-      <UserProvider>
-        <VeiloDataProvider>
-          <SessionProvider>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/feed" element={<Feed />} />
-              <Route path="/beacons" element={<BeaconsList />} />
-              <Route path="/expert/:expertId" element={<ExpertProfile />} />
-              <Route path="/chat/:sessionId?" element={<Chat />} />
-              <Route path="/sessions" element={<SessionHub />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/register-expert" element={<ExpertRegistration />} />
-              <Route path="/expert-dashboard" element={<ExpertDashboard />} />
-              <Route path="/admin/*" element={<AdminPanel />} />
-              <Route path="/sanctuary" element={<Sanctuary />} />
-              <Route path="/sanctuary/:id" element={<Sanctuary />} />
-              <Route path="/sanctuary/:id/:role" element={<Sanctuary />} />
-              <Route path="/phase4-test" element={<Phase4Test />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <Toaster />
-          </SessionProvider>
-        </VeiloDataProvider>
-      </UserProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <UserProvider>
+          <ErrorBoundary fallback={<div className="min-h-screen flex items-center justify-center"><p>Unable to load user data. Please refresh the page.</p></div>}>
+            <VeiloDataProvider>
+              <ErrorBoundary fallback={<div className="min-h-screen flex items-center justify-center"><p>Unable to load application data. Please refresh the page.</p></div>}>
+                <SessionProvider>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/feed" element={<Feed />} />
+                    <Route path="/beacons" element={<BeaconsList />} />
+                    <Route path="/expert/:expertId" element={<ExpertProfile />} />
+                    <Route path="/chat/:sessionId?" element={<Chat />} />
+                    <Route path="/sessions" element={<SessionHub />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/register-expert" element={<ExpertRegistration />} />
+                    <Route path="/expert-dashboard" element={<ExpertDashboard />} />
+                    <Route path="/admin/*" element={<AdminPanel />} />
+                    <Route path="/sanctuary" element={<Sanctuary />} />
+                    <Route path="/sanctuary/:id" element={<Sanctuary />} />
+                    <Route path="/sanctuary/:id/:role" element={<Sanctuary />} />
+                    <Route path="/phase4-test" element={<Phase4Test />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                  <Toaster />
+                </SessionProvider>
+              </ErrorBoundary>
+            </VeiloDataProvider>
+          </ErrorBoundary>
+        </UserProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

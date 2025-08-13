@@ -28,20 +28,26 @@ const PORT = process.env.PORT || 3000;
 // Initialize Socket.io
 const io = initializeSocket(server);
 
+// Import middleware
+const responseHandler = require('./middleware/responseHandler');
+const { connectDB } = require('./config/database');
+
+// Initialize database connection
+connectDB();
+
 // Middleware
-app.use(cors());
-app.use(express.json());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true
+}));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(responseHandler);
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/veilo', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => console.log('MongoDB connected'))
-.catch(err => console.log('MongoDB connection error:', err));
+// Database connection is now handled by config/database.js
 
 // Routes
 app.use('/api/users', userRoutes);
@@ -69,11 +75,44 @@ app.get('/health', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    success: false,
-    error: err.message || 'An unexpected error occurred'
-  });
+  console.error('Error:', err);
+  
+  // Multer errors
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.error('File too large. Maximum size is 5MB.', 400);
+  }
+  
+  if (err.code === 'LIMIT_FILE_COUNT') {
+    return res.error('Too many files. Maximum 5 files allowed.', 400);
+  }
+  
+  // JWT errors
+  if (err.name === 'JsonWebTokenError') {
+    return res.error('Invalid token', 401);
+  }
+  
+  if (err.name === 'TokenExpiredError') {
+    return res.error('Token expired', 401);
+  }
+  
+  // MongoDB errors
+  if (err.name === 'ValidationError') {
+    const errors = Object.values(err.errors).map(e => e.message);
+    return res.error('Validation failed', 400, errors);
+  }
+  
+  if (err.code === 11000) {
+    return res.error('Duplicate entry', 409);
+  }
+  
+  // Default error
+  res.error(
+    process.env.NODE_ENV === 'production' 
+      ? 'An unexpected error occurred' 
+      : err.message,
+    err.statusCode || 500,
+    process.env.NODE_ENV === 'development' ? err.stack : null
+  );
 });
 
 server.listen(PORT, () => {
