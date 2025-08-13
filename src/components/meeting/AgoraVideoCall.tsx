@@ -237,7 +237,7 @@ export const AgoraVideoCall: React.FC<AgoraVideoCallProps> = ({
 
     try {
       if (!isScreenSharing) {
-        const screenTrack = await AgoraRTC.createScreenVideoTrack();
+        const screenTrack = await AgoraRTC.createScreenVideoTrack({}, "auto");
         
         if (localVideoTrack) {
           await client.unpublish(localVideoTrack);
