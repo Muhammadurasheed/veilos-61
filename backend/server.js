@@ -20,6 +20,7 @@ const geminiRoutes = require('./routes/geminiRoutes');
 const meetingRoutes = require('./routes/meetingRoutes');
 const sessionNotesRoutes = require('./routes/sessionNotesRoutes');
 const sessionRatingRoutes = require('./routes/sessionRatingRoutes');
+const aiRoutes = require('./routes/aiRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -65,6 +66,7 @@ app.use('/api/gemini', geminiRoutes);
 app.use('/api/meetings', meetingRoutes);
 app.use('/api/session-notes', sessionNotesRoutes);
 app.use('/api/session-ratings', sessionRatingRoutes);
+app.use('/api/ai', aiRoutes);
 app.use('/api/recommendations', require('./routes/recommendationRoutes'));
 app.use('/api/appeals', require('./routes/appealRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));

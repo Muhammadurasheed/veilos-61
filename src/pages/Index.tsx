@@ -170,7 +170,7 @@ const Index = () => {
                 <div className="h-full flex flex-col justify-center items-center space-y-8 p-4">
                   <div className="h-32 w-32 relative">
                     <img 
-                      src="/favicon.ico" 
+                      src="/veilo-logo.png" 
                       alt="Veilo Logo" 
                       className="w-full h-full object-contain"
                     />
