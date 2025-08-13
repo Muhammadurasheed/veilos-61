@@ -33,6 +33,7 @@ export interface Post {
   languageCode: string;
   flagged?: boolean;
   flagReason?: string;
+  status?: 'active' | 'flagged' | 'hidden';
 }
 
 export interface Comment {

@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import CreatePostForm from '@/components/post/CreatePostForm';
 import PostCard from '@/components/post/PostCard';
 import Layout from '@/components/layout/Layout';
+import { SmartRecommendations } from '@/components/recommendations/SmartRecommendations';
 import { useVeiloData } from '@/contexts/VeiloDataContext';
 import { useUserContext } from '@/contexts/UserContext';
 import { Post } from '@/types';
@@ -57,6 +58,13 @@ const Feed = () => {
         
         <div className="max-w-3xl mx-auto">
           <CreatePostForm />
+          
+          {/* Smart Recommendations Section */}
+          {user?.loggedIn && (
+            <div className="mb-8">
+              <SmartRecommendations userId={user.id} />
+            </div>
+          )}
           
           <div className="mb-8 flex flex-col md:flex-row gap-4">
             <div className="flex-1">

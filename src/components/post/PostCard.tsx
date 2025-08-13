@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { Heart, MessageSquare, Flag, Send } from 'lucide-react';
 import { Post, Comment } from '@/types';
+import { ContentAppeal } from '@/components/post/ContentAppeal';
 
 interface PostCardProps {
   post: Post;
@@ -24,6 +25,7 @@ const PostCard = ({ post }: PostCardProps) => {
   const [loading, setLoading] = useState(false);
   const [flagReason, setFlagReason] = useState('');
   const [flagDialogOpen, setFlagDialogOpen] = useState(false);
+  const [showAppeal, setShowAppeal] = useState(false);
 
   const isLiked = user ? post.likes.includes(user.id) : false;
 
@@ -96,8 +98,30 @@ const PostCard = ({ post }: PostCardProps) => {
                 Seeking Help
               </Badge>
             )}
+            {post.status === 'flagged' && (
+              <Badge variant="destructive" className="text-xs">
+                Content Under Review
+              </Badge>
+            )}
           </div>
         </div>
+        
+        {/* Show flagged post message and appeal option */}
+        {post.status === 'flagged' && (
+          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-700 mb-2">
+              This post has been flagged for review and is currently hidden from other users.
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowAppeal(true)}
+              className="text-red-600 border-red-300 hover:bg-red-50"
+            >
+              Appeal This Decision
+            </Button>
+          </div>
+        )}
         
         <p className="my-2 whitespace-pre-wrap">{post.content}</p>
         
@@ -222,6 +246,19 @@ const PostCard = ({ post }: PostCardProps) => {
             </div>
           ))}
         </div>
+      )}
+      
+      {/* Content Appeal Dialog */}
+      {showAppeal && (
+        <ContentAppeal 
+          postId={post.id}
+          postContent={post.content}
+          flagReason={post.flagReason || 'Content flagged for review'}
+          onSubmit={() => {
+            setShowAppeal(false);
+            // Optionally refresh post data
+          }}
+        />
       )}
     </Card>
   );

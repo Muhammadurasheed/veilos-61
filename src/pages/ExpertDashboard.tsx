@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { useUserContext } from '@/contexts/UserContext';
 import { Calendar, User, MessageSquare, Video, Clock, Edit, Settings } from 'lucide-react';
+import { ExpertMatcher } from '@/components/recommendations/ExpertMatcher';
 
 const ExpertDashboard = () => {
   const { user } = useUserContext();
@@ -137,6 +138,11 @@ const ExpertDashboard = () => {
               </div>
             </CardContent>
           </Card>
+        </div>
+        
+        {/* Expert Matcher Section */}
+        <div className="mb-8">
+          <ExpertMatcher />
         </div>
         
         {/* Main Content Grid */}
