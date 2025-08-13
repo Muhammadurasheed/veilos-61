@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { format } from 'date-fns/format';
-import { addDays } from 'date-fns/addDays';
-import { setHours } from 'date-fns/setHours';
-import { setMinutes } from 'date-fns/setMinutes';
-import { toZonedTime, fromZonedTime } from 'date-fns-tz';
+import { format, addDays, setHours, setMinutes } from 'date-fns';
+import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
