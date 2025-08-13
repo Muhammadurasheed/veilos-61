@@ -1,9 +1,10 @@
 
-import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
+import { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import { generateAlias } from '@/lib/alias';
 import { UserRole } from '@/types';
 import { UserApi } from '@/services/api';
 import { toast } from '@/hooks/use-toast';
+import useLocalStorage from '@/hooks/useLocalStorage';
 
 // Define the user type
 export interface User {
@@ -47,44 +48,43 @@ export const useUserContext = () => useContext(UserContext);
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [token, setToken, removeToken] = useLocalStorage<string | null>('veilo-token', null);
 
   // Initialize user from token on mount
-  useEffect(() => {
-    const initializeUser = async () => {
-      const token = localStorage.getItem('veilo-token');
-      
-      if (token) {
-        try {
-          // Attempt to authenticate with saved token
-          const response = await UserApi.authenticate(token);
-          
-          if (response.success && response.data?.user) {
-            setUser({
-              ...response.data.user,
-              loggedIn: true
-            });
-          } else {
-            // Invalid token, clear it
-            localStorage.removeItem('veilo-token');
-            // Automatically create a new anonymous account
-            await createNewAnonymousUser();
-          }
-        } catch (error) {
-          console.error('Authentication error:', error);
-          // Create new anonymous user on error
+  const initializeUser = useCallback(async () => {
+    if (token) {
+      try {
+        // Attempt to authenticate with saved token
+        const response = await UserApi.authenticate(token);
+        
+        if (response.success && response.data?.user) {
+          setUser({
+            ...response.data.user,
+            loggedIn: true
+          });
+        } else {
+          // Invalid token, clear it
+          removeToken();
+          // Automatically create a new anonymous account
           await createNewAnonymousUser();
-        } finally {
-          setIsLoading(false);
         }
-      } else {
-        // No token found, but don't auto-create anonymous user
-        // Just set loading to false and let the user decide
+      } catch (error) {
+        console.error('Authentication error:', error);
+        // Create new anonymous user on error
+        await createNewAnonymousUser();
+      } finally {
         setIsLoading(false);
       }
-    };
-    
+    } else {
+      // No token found, but don't auto-create anonymous user
+      // Just set loading to false and let the user decide
+      setIsLoading(false);
+    }
+  }, [token, removeToken]);
+
+  useEffect(() => {
     initializeUser();
-  }, []);
+  }, [initializeUser]);
 
   // Register new anonymous user
   const registerNewUser = async () => {
@@ -93,7 +93,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       
       if (response.success && response.data) {
         // Save token
-        localStorage.setItem('veilo-token', response.data.token);
+        setToken(response.data.token);
         
         // Set user
         setUser({
@@ -144,7 +144,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       
       if (response.success && response.data) {
         // Save token
-        localStorage.setItem('veilo-token', response.data.token);
+        setToken(response.data.token);
         
         // Set user
         setUser({
@@ -194,15 +194,15 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const logout = () => {
-    localStorage.removeItem('veilo-token');
+  const logout = useCallback(() => {
+    removeToken();
     setUser(null);
     
     toast({
       title: 'Logged out',
       description: 'You have been logged out successfully.',
     });
-  };
+  }, [removeToken]);
 
   const refreshIdentity = async () => {
     if (user) {

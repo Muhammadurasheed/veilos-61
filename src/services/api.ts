@@ -246,9 +246,12 @@ async function uploadFile(
 
 // User related API endpoints
 export const UserApi = {
-  // Register standard user (shadow)
-  register: () => 
-    apiRequest<{ token: string, user: any }>('POST', '/users/register'),
+  // Enhanced authentication methods for Phase 2
+  login: (credentials: { email: string; password: string }) => 
+    apiRequest<{ token: string; refreshToken: string; user: any }>('POST', '/auth/login', credentials),
+
+  register: (userData?: { email?: string; password?: string; alias?: string }) => 
+    apiRequest<{ token: string; refreshToken: string; user: any }>('POST', '/auth/register', userData || {}),
   
   // Create anonymous user specifically for joining sessions
   createAnonymousUser: () =>
@@ -259,7 +262,13 @@ export const UserApi = {
     apiRequest<{ token: string, userId: string, user: any }>('POST', '/users/register-expert-account', userData),
   
   authenticate: (token: string) =>
-    apiRequest<{ user: any }>('POST', '/users/authenticate', { token }),
+    apiRequest<{ user: any }>('GET', '/auth/verify'),
+
+  refreshToken: (refreshToken: string) =>
+    apiRequest<{ token: string; refreshToken: string }>('POST', '/auth/refresh-token', { refreshToken }),
+
+  updateProfile: (updates: any) =>
+    apiRequest<{ user: any }>('PUT', '/auth/profile', updates),
   
   getCurrentUser: () =>
     apiRequest<{ user: any }>('GET', '/users/me'),

@@ -50,6 +50,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Database connection is now handled by config/database.js
 
 // Routes
+app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/users', userRoutes);
 app.use('/api/experts', expertRoutes);
 app.use('/api/posts', postRoutes);
