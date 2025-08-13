@@ -74,10 +74,10 @@ const EnhancedAdminDashboard = () => {
         AnalyticsApi.getGrowthMetrics(timeframe)
       ]);
 
-      if (healthResponse.success) setSystemHealth(healthResponse.data);
-      if (analyticsResponse.success) setPlatformAnalytics(analyticsResponse.data);
-      if (alertsResponse.success) setSafetyAlerts(alertsResponse.data);
-      if (moderationResponse.success) setModerationQueue(moderationResponse.data);
+      if (healthResponse.success) setSystemHealth(healthResponse.data as SystemHealth);
+      if (analyticsResponse.success) setPlatformAnalytics(analyticsResponse.data as PlatformAnalytics);
+      if (alertsResponse.success) setSafetyAlerts(alertsResponse.data as UserSafetyAlert[]);
+      if (moderationResponse.success) setModerationQueue(moderationResponse.data as ContentModerationItem[]);
       if (revenueResponse.success) setRevenueData(revenueResponse.data);
       if (growthResponse.success) setGrowthMetrics(growthResponse.data);
       

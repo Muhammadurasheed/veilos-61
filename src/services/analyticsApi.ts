@@ -1,4 +1,4 @@
-import api from './api';
+import { apiRequest } from './api';
 
 export interface ExpertMetrics {
   expertId: string;
@@ -128,102 +128,84 @@ export interface SystemAlert {
 
 class AnalyticsApi {
   // Expert Analytics
-  async getExpertAnalytics(expertId: string, timeframe: string = '30d'): Promise<{ success: boolean; data: ExpertMetrics }> {
-    const response = await api.get(`/analytics/expert/${expertId}?timeframe=${timeframe}`);
-    return response.data;
+  async getExpertAnalytics(expertId: string, timeframe: string = '30d') {
+    return await apiRequest('GET', `/analytics/expert/${expertId}?timeframe=${timeframe}`);
   }
 
-  async getExpertRankings(sortBy: string = 'rating', limit: number = 10): Promise<{ success: boolean; data: ExpertRanking[] }> {
-    const response = await api.get(`/analytics/rankings?sortBy=${sortBy}&limit=${limit}`);
-    return response.data;
+  async getExpertRankings(sortBy: string = 'rating', limit: number = 10) {
+    return await apiRequest('GET', `/analytics/rankings?sortBy=${sortBy}&limit=${limit}`);
   }
 
-  async recordSessionMetric(metric: Partial<SessionMetric>): Promise<{ success: boolean; data: SessionMetric }> {
-    const response = await api.post('/analytics/session-metric', metric);
-    return response.data;
+  async recordSessionMetric(metric: Partial<SessionMetric>) {
+    return await apiRequest('POST', '/analytics/session-metric', metric);
   }
 
   // Platform Analytics
-  async getPlatformAnalytics(timeframe: string = '30d'): Promise<{ success: boolean; data: PlatformAnalytics }> {
-    const response = await api.get(`/analytics/platform?timeframe=${timeframe}`);
-    return response.data;
+  async getPlatformAnalytics(timeframe: string = '30d') {
+    return await apiRequest('GET', `/analytics/platform?timeframe=${timeframe}`);
   }
 
-  async updatePlatformHealth(metrics: Partial<PlatformHealthMetric>): Promise<{ success: boolean; data: PlatformHealthMetric }> {
-    const response = await api.post('/analytics/platform-health', metrics);
-    return response.data;
+  async updatePlatformHealth(metrics: Partial<PlatformHealthMetric>) {
+    return await apiRequest('POST', '/analytics/platform-health', metrics);
   }
 
   // User Safety & Monitoring
-  async getUserSafetyAlerts(status?: string): Promise<{ success: boolean; data: UserSafetyAlert[] }> {
+  async getUserSafetyAlerts(status?: string) {
     const params = status ? `?status=${status}` : '';
-    const response = await api.get(`/admin/safety-alerts${params}`);
-    return response.data;
+    return await apiRequest('GET', `/admin/safety-alerts${params}`);
   }
 
-  async createSafetyAlert(alert: Partial<UserSafetyAlert>): Promise<{ success: boolean; data: UserSafetyAlert }> {
-    const response = await api.post('/admin/safety-alerts', alert);
-    return response.data;
+  async createSafetyAlert(alert: Partial<UserSafetyAlert>) {
+    return await apiRequest('POST', '/admin/safety-alerts', alert);
   }
 
-  async updateSafetyAlert(alertId: string, updates: Partial<UserSafetyAlert>): Promise<{ success: boolean; data: UserSafetyAlert }> {
-    const response = await api.patch(`/admin/safety-alerts/${alertId}`, updates);
-    return response.data;
+  async updateSafetyAlert(alertId: string, updates: Partial<UserSafetyAlert>) {
+    return await apiRequest('PATCH', `/admin/safety-alerts/${alertId}`, updates);
   }
 
   // Content Moderation
-  async getModerationQueue(status?: string): Promise<{ success: boolean; data: ContentModerationItem[] }> {
+  async getModerationQueue(status?: string) {
     const params = status ? `?status=${status}` : '';
-    const response = await api.get(`/admin/moderation${params}`);
-    return response.data;
+    return await apiRequest('GET', `/admin/moderation${params}`);
   }
 
-  async moderateContent(contentId: string, action: 'approve' | 'reject', notes?: string): Promise<{ success: boolean }> {
-    const response = await api.post(`/admin/moderation/${contentId}`, { action, notes });
-    return response.data;
+  async moderateContent(contentId: string, action: 'approve' | 'reject', notes?: string) {
+    return await apiRequest('POST', `/admin/moderation/${contentId}`, { action, notes });
   }
 
-  async bulkModerationAction(contentIds: string[], action: 'approve' | 'reject'): Promise<{ success: boolean }> {
-    const response = await api.post('/admin/moderation/bulk', { contentIds, action });
-    return response.data;
+  async bulkModerationAction(contentIds: string[], action: 'approve' | 'reject') {
+    return await apiRequest('POST', '/admin/moderation/bulk', { contentIds, action });
   }
 
   // System Health Monitoring
-  async getSystemHealth(): Promise<{ success: boolean; data: SystemHealth }> {
-    const response = await api.get('/admin/system-health');
-    return response.data;
+  async getSystemHealth() {
+    return await apiRequest('GET', '/admin/system-health');
   }
 
-  async acknowledgeAlert(alertId: string): Promise<{ success: boolean }> {
-    const response = await api.post(`/admin/system-alerts/${alertId}/acknowledge`);
-    return response.data;
+  async acknowledgeAlert(alertId: string) {
+    return await apiRequest('POST', `/admin/system-alerts/${alertId}/acknowledge`);
   }
 
   // Risk Assessment & Predictive Analytics
-  async getUserRiskScore(userId: string): Promise<{ success: boolean; data: { score: number; factors: string[]; recommendations: string[] } }> {
-    const response = await api.get(`/analytics/risk-assessment/${userId}`);
-    return response.data;
+  async getUserRiskScore(userId: string) {
+    return await apiRequest('GET', `/analytics/risk-assessment/${userId}`);
   }
 
-  async getPredictiveInsights(type: 'churn' | 'escalation' | 'engagement'): Promise<{ success: boolean; data: any }> {
-    const response = await api.get(`/analytics/predictions/${type}`);
-    return response.data;
+  async getPredictiveInsights(type: 'churn' | 'escalation' | 'engagement') {
+    return await apiRequest('GET', `/analytics/predictions/${type}`);
   }
 
   // Revenue & Business Intelligence
-  async getRevenueAnalytics(timeframe: string = '30d'): Promise<{ success: boolean; data: any }> {
-    const response = await api.get(`/analytics/revenue?timeframe=${timeframe}`);
-    return response.data;
+  async getRevenueAnalytics(timeframe: string = '30d') {
+    return await apiRequest('GET', `/analytics/revenue?timeframe=${timeframe}`);
   }
 
-  async getGrowthMetrics(timeframe: string = '30d'): Promise<{ success: boolean; data: any }> {
-    const response = await api.get(`/analytics/growth?timeframe=${timeframe}`);
-    return response.data;
+  async getGrowthMetrics(timeframe: string = '30d') {
+    return await apiRequest('GET', `/analytics/growth?timeframe=${timeframe}`);
   }
 
-  async getRetentionAnalysis(cohortType: 'weekly' | 'monthly' = 'monthly'): Promise<{ success: boolean; data: any }> {
-    const response = await api.get(`/analytics/retention?cohortType=${cohortType}`);
-    return response.data;
+  async getRetentionAnalysis(cohortType: 'weekly' | 'monthly' = 'monthly') {
+    return await apiRequest('GET', `/analytics/retention?cohortType=${cohortType}`);
   }
 }
 
