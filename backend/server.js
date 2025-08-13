@@ -4,6 +4,8 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const path = require('path');
+const http = require('http');
+const { initializeSocket } = require('./socket/socketHandler');
 const userRoutes = require('./routes/userRoutes');
 const expertRoutes = require('./routes/expertRoutes');
 const postRoutes = require('./routes/postRoutes');
@@ -14,7 +16,11 @@ const sanctuaryRoutes = require('./routes/sanctuaryRoutes');
 const geminiRoutes = require('./routes/geminiRoutes');
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
+
+// Initialize Socket.io
+const io = initializeSocket(server);
 
 // Middleware
 app.use(cors());
@@ -55,8 +61,9 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`Socket.io server initialized`);
 });
 
 module.exports = app;
