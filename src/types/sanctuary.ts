@@ -6,11 +6,13 @@ export interface LiveSanctuarySession {
   description?: string;
   emoji?: string;
   hostId: string;
+  hostAlias: string;
   hostToken?: string;
   agoraChannelName: string;
   agoraToken: string;
   expiresAt: string;
   isActive: boolean;
+  participants: LiveParticipant[];
   maxParticipants: number;
   currentParticipants: number;
   allowAnonymous: boolean;
@@ -18,6 +20,17 @@ export interface LiveSanctuarySession {
   moderationEnabled: boolean;
   emergencyContactEnabled: boolean;
   createdAt: string;
+  startTime: string;
+  isRecorded: boolean;
+  recordingConsent: string[];
+  breakoutRooms: BreakoutRoom[];
+  moderationLevel: 'low' | 'medium' | 'high';
+  emergencyProtocols: boolean;
+  aiMonitoring: boolean;
+  estimatedDuration?: number;
+  tags: string[];
+  language: string;
+  status: 'waiting' | 'active' | 'ended';
 }
 
 export interface LiveParticipant {

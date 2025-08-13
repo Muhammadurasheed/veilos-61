@@ -52,11 +52,11 @@ const LiveAudioRoom = ({ session, participant }: LiveAudioRoomProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   
-  // Agora Audio Hook
+  // Agora Audio Hook with proper environment variable
   const agoraConfig = {
-    appId: process.env.REACT_APP_AGORA_APP_ID || '', // You'll set this
+    appId: import.meta.env.VITE_AGORA_APP_ID || '895482a8e89f4b2280281d87b8b09861',
     channel: session.agoraChannelName,
-    token: session.agoraToken,
+    token: session.agoraToken || '',
     uid: participant.id
   };
   
