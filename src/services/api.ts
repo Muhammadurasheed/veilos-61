@@ -1,4 +1,7 @@
 import { ApiResponse, ApiPostRequest, ApiExpertRegisterRequest, ApiChatSessionRequest, Post, Expert, ApiVerificationRequest, Session, VerificationDocument, ApiSanctuaryCreateRequest, ApiSanctuaryJoinRequest, SanctuarySession } from '@/types';
+
+// Re-export ApiResponse for other modules
+export type { ApiResponse };
 import axios from 'axios';
 import { toast } from '@/hooks/use-toast';
 
@@ -138,7 +141,7 @@ const handleApiError = (error: any): ApiResponse<any> => {
 };
 
 // Generic API request wrapper with retry capabilities
-async function apiRequest<T>(
+export async function apiRequest<T>(
   method: string,
   endpoint: string,
   data?: any,

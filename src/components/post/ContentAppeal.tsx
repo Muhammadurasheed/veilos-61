@@ -13,7 +13,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { AlertTriangle, Send, Clock, CheckCircle, XCircle } from 'lucide-react';
-import { ApiResponse, AppealApi } from '@/services/api';
+import { AppealApi } from '@/services/recommendationApi';
+import type { ApiResponse } from '@/services/api';
 
 interface ContentAppealProps {
   postId: string;
