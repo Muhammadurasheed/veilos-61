@@ -437,6 +437,9 @@ export const ChatApi = {
 };
 
 // Gemini AI API for content moderation and improvement
+// Export the recommendation and appeal APIs
+export { RecommendationApi, AppealApi } from './recommendationApi';
+
 export const GeminiApi = {
   moderateContent: (content: string) =>
     apiRequest<{ isAppropriate: boolean, feedback?: string }>('POST', '/gemini/moderate', { content }),

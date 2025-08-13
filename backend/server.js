@@ -52,6 +52,8 @@ app.use('/api/gemini', geminiRoutes);
 app.use('/api/meetings', meetingRoutes);
 app.use('/api/session-notes', sessionNotesRoutes);
 app.use('/api/session-ratings', sessionRatingRoutes);
+app.use('/api/recommendations', require('./routes/recommendationRoutes'));
+app.use('/api/appeals', require('./routes/appealRoutes'));
 
 // Health check endpoint
 app.get('/health', (req, res) => {

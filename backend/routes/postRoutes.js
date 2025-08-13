@@ -4,10 +4,11 @@ const router = express.Router();
 const Post = require('../models/Post');
 const { authMiddleware } = require('../middleware/auth');
 const { moderateContent } = require('../middleware/contentModeration');
+const { aiModerateContent } = require('../middleware/aiContentModeration');
 
 // Create post
 // POST /api/posts
-router.post('/', authMiddleware, moderateContent, async (req, res) => {
+router.post('/', authMiddleware, aiModerateContent, moderateContent, async (req, res) => {
   try {
     const {
       content,
@@ -37,10 +38,23 @@ router.post('/', authMiddleware, moderateContent, async (req, res) => {
       comments: []
     });
     
-    // Check if content was flagged by moderation
-    if (req.contentModeration && req.contentModeration.flagged) {
+    // Check if content was flagged by AI moderation (priority)
+    if (req.aiModeration?.flagged || req.aiModeration?.recommendedAction === 'flag') {
+      post.flagged = true;
+      post.flagReason = req.aiModeration.flagReason || 'ai_flagged_content';
+    }
+    // Fallback to basic moderation if AI didn't flag
+    else if (req.contentModeration?.flagged) {
       post.flagged = true;
       post.flagReason = req.contentModeration.flagReason;
+    }
+    
+    // Handle urgent cases
+    if (req.urgentFlag || req.aiModeration?.severity === 'urgent') {
+      post.flagged = true;
+      post.flagReason = 'urgent_review_needed';
+      // In production, trigger immediate alert to moderation team
+      console.log('URGENT: Post requires immediate review:', post.id);
     }
     
     await post.save();
@@ -200,7 +214,7 @@ router.post('/:id/unlike', authMiddleware, async (req, res) => {
 
 // Add comment to post
 // POST /api/posts/:id/comment
-router.post('/:id/comment', authMiddleware, moderateContent, async (req, res) => {
+router.post('/:id/comment', authMiddleware, aiModerateContent, moderateContent, async (req, res) => {
   try {
     const post = await Post.findOne({ id: req.params.id });
     
@@ -231,11 +245,21 @@ router.post('/:id/comment', authMiddleware, moderateContent, async (req, res) =>
       timestamp: new Date()
     };
     
-    // Check if comment was flagged by moderation
-    if (req.contentModeration && req.contentModeration.flagged) {
+    // Check if comment content was flagged by AI moderation (priority)
+    if (req.aiModeration?.flagged || req.aiModeration?.recommendedAction === 'flag') {
       return res.status(400).json({
         success: false,
-        error: 'Comment flagged by moderation'
+        error: 'Comment content violates community guidelines',
+        flagReason: req.aiModeration.flagReason || 'inappropriate_content',
+        aiModerated: true
+      });
+    }
+    // Fallback to basic moderation
+    else if (req.contentModeration?.flagged) {
+      return res.status(400).json({
+        success: false,
+        error: 'Comment content violates community guidelines',
+        flagReason: req.contentModeration.flagReason
       });
     }
     
