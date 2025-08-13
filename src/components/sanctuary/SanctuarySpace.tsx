@@ -11,10 +11,15 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import { SanctuaryApi } from '@/services/api';
 import { SanctuaryMessage } from '@/types';
-import { Shield, Send, Clock, Users, MoreHorizontal, Flag, Mic, MicOff } from 'lucide-react';
+import { Shield, Send, Clock, Users, MoreHorizontal, Flag, Mic, MicOff, Volume2, Settings } from 'lucide-react';
+import LiveAudioRoom from '@/components/sanctuary/LiveAudioRoom';
+import BreakoutRoomManager from '@/components/sanctuary/BreakoutRoomManager';
+import SessionRecorder from '@/components/sanctuary/SessionRecorder';
+import AIModerationDashboard from '@/components/sanctuary/AIModerationDashboard';
 
 // Create a mock function for generating a random avatar color
 const getAvatarColor = (alias: string): string => {
@@ -54,6 +59,9 @@ const SanctuarySpace: React.FC<SanctuarySpaceProps> = ({ isHost = false }) => {
     description?: string;
     emoji?: string;
     expiresAt: string;
+    audioOnly?: boolean;
+    agoraChannelName?: string;
+    agoraToken?: string;
   } | null>(null);
   
   const [participant, setParticipant] = useState<{
@@ -77,6 +85,10 @@ const SanctuarySpace: React.FC<SanctuarySpaceProps> = ({ isHost = false }) => {
   const [tempAlias, setTempAlias] = useState('');
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [hostToken, setHostToken] = useState<string | null>(null);
+  const [sessionMode, setSessionMode] = useState<'text' | 'audio'>('text');
+  const [showBreakoutRooms, setShowBreakoutRooms] = useState(false);
+  const [showRecording, setShowRecording] = useState(false);
+  const [showModeration, setShowModeration] = useState(false);
   
   // Fetch session details
   useEffect(() => {
@@ -88,6 +100,9 @@ const SanctuarySpace: React.FC<SanctuarySpaceProps> = ({ isHost = false }) => {
         
         if (response.success && response.data) {
           setSession(response.data);
+          
+          // Set session mode based on audioOnly flag (default to text if not specified)
+          setSessionMode((response.data as any)?.audioOnly ? 'audio' : 'text');
           
           // Calculate time left
           const expiresAt = new Date(response.data.expiresAt).getTime();
@@ -432,6 +447,123 @@ const SanctuarySpace: React.FC<SanctuarySpaceProps> = ({ isHost = false }) => {
     );
   }
   
+  // If audio mode, show audio room interface
+  if (sessionMode === 'audio' && session && participant) {
+    return (
+      <div className="w-full min-h-screen bg-gradient-to-br from-primary/10 to-secondary/10">
+        <LiveAudioRoom 
+          session={{
+            id: session.id,
+            topic: session.topic,
+            description: session.description,
+            emoji: session.emoji,
+            hostId: 'host-id', // Temporary for now
+            agoraChannelName: session.agoraChannelName || `sanctuary-${session.id}`,
+            agoraToken: session.agoraToken || 'temp-token',
+            expiresAt: session.expiresAt,
+            maxParticipants: 50,
+            currentParticipants: 0,
+            allowAnonymous: true,
+            audioOnly: true,
+            moderationEnabled: true,
+            emergencyContactEnabled: true,
+            isActive: true,
+            createdAt: new Date().toISOString()
+          }}
+          participant={{
+            id: participant.id,
+            alias: participant.alias,
+            isHost: isHost,
+            isModerator: isHost
+          }}
+        />
+        
+        {/* Host Controls Overlay */}
+        {isHost && (
+          <div className="fixed bottom-4 right-4 space-y-2">
+            <Button
+              onClick={() => setShowBreakoutRooms(true)}
+              className="bg-primary/90 hover:bg-primary"
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Breakout Rooms
+            </Button>
+            <Button
+              onClick={() => setShowRecording(true)}
+              className="bg-secondary/90 hover:bg-secondary"
+            >
+              <Volume2 className="h-4 w-4 mr-2" />
+              Recording
+            </Button>
+            <Button
+              onClick={() => setShowModeration(true)}
+              className="bg-accent/90 hover:bg-accent"
+            >
+              <Shield className="h-4 w-4 mr-2" />
+              Moderation
+            </Button>
+          </div>
+        )}
+        
+        {/* Breakout Rooms Dialog */}
+        <Dialog open={showBreakoutRooms} onOpenChange={setShowBreakoutRooms}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Breakout Rooms Management</DialogTitle>
+              <DialogDescription>
+                Create and manage breakout rooms for smaller group discussions
+              </DialogDescription>
+            </DialogHeader>
+            <BreakoutRoomManager 
+              sessionId={session.id}
+              isHost={isHost}
+              onJoinRoom={(roomId) => {
+                console.log('Joining room:', roomId);
+                setShowBreakoutRooms(false);
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+        
+        {/* Recording Dialog */}
+        <Dialog open={showRecording} onOpenChange={setShowRecording}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Session Recording</DialogTitle>
+              <DialogDescription>
+                Manage session recording and AI moderation
+              </DialogDescription>
+            </DialogHeader>
+            <SessionRecorder 
+              sessionId={session.id}
+              sessionType="live-sanctuary"
+              isHost={isHost}
+            />
+          </DialogContent>
+        </Dialog>
+        
+        {/* AI Moderation Dashboard */}
+        <Dialog open={showModeration} onOpenChange={setShowModeration}>
+          <DialogContent className="max-w-5xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>AI Moderation Dashboard</DialogTitle>
+              <DialogDescription>
+                Real-time content moderation and safety monitoring
+              </DialogDescription>
+            </DialogHeader>
+            <AIModerationDashboard 
+              sessionId={session.id}
+              sessionType="live-sanctuary"
+              isHost={isHost}
+              isModerator={isHost}
+              realTimeEnabled={true}
+            />
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
   return (
     <>
       <Card className="w-full max-w-4xl mx-auto shadow-lg">
@@ -442,6 +574,16 @@ const SanctuarySpace: React.FC<SanctuarySpaceProps> = ({ isHost = false }) => {
                 <span className="text-2xl" role="img" aria-label="Topic emoji">{session.emoji}</span>
               )}
               <CardTitle className="tracking-tight">{session?.topic}</CardTitle>
+              <Badge variant="secondary" className="ml-2">
+                {sessionMode === 'audio' ? (
+                  <>
+                    <Mic className="h-3 w-3 mr-1" />
+                    Audio
+                  </>
+                ) : (
+                  'Text Chat'
+                )}
+              </Badge>
             </div>
             <div className="flex items-center space-x-2">
               <TooltipProvider>
@@ -471,6 +613,37 @@ const SanctuarySpace: React.FC<SanctuarySpaceProps> = ({ isHost = false }) => {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+              
+              {/* Host Controls */}
+              {isHost && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Settings className="h-4 w-4 mr-2" />
+                      Host Controls
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => setShowBreakoutRooms(true)}>
+                      <Users className="h-4 w-4 mr-2" />
+                      Breakout Rooms
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowRecording(true)}>
+                      <Volume2 className="h-4 w-4 mr-2" />
+                      Recording
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowModeration(true)}>
+                      <Shield className="h-4 w-4 mr-2" />
+                      AI Moderation
+                    </DropdownMenuItem>
+                    <Separator className="my-1" />
+                    <DropdownMenuItem onClick={() => setSessionMode(sessionMode === 'text' ? 'audio' : 'text')}>
+                      {sessionMode === 'text' ? <Mic className="h-4 w-4 mr-2" /> : <MicOff className="h-4 w-4 mr-2" />}
+                      Switch to {sessionMode === 'text' ? 'Audio' : 'Text'}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

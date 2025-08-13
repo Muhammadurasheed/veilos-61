@@ -27,9 +27,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 interface SessionRecorderProps {
   sessionId: string;
-  sessionType: 'sanctuary' | 'breakout' | 'private';
+  sessionType: 'sanctuary' | 'breakout' | 'private' | 'live-sanctuary';
   isHost: boolean;
-  participantCount: number;
+  participantCount?: number;
   onConsentRequest?: () => void;
 }
 

@@ -28,7 +28,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 interface AIModerationDashboardProps {
   sessionId: string;
-  sessionType: 'sanctuary' | 'breakout' | 'private';
+  sessionType: 'sanctuary' | 'breakout' | 'private' | 'live-sanctuary';
   isHost: boolean;
   isModerator: boolean;
   realTimeEnabled?: boolean;

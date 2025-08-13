@@ -19,6 +19,7 @@ import SessionHub from '@/pages/SessionHub';
 import NotFound from '@/pages/NotFound';
 import AdminPanel from '@/pages/AdminPanel';
 import Sanctuary from '@/pages/Sanctuary';
+import Phase4Test from '@/pages/Phase4Test';
 import { SessionProvider } from '@/contexts/SessionContext';
 
 import './App.css';
@@ -50,6 +51,7 @@ const App: React.FC = () => {
               <Route path="/sanctuary" element={<Sanctuary />} />
               <Route path="/sanctuary/:id" element={<Sanctuary />} />
               <Route path="/sanctuary/:id/:role" element={<Sanctuary />} />
+              <Route path="/phase4-test" element={<Phase4Test />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <Toaster />
