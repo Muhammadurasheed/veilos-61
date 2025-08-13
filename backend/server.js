@@ -14,6 +14,9 @@ const adminRoutes = require('./routes/adminRoutes');
 const ratingRoutes = require('./routes/ratingRoutes');
 const sanctuaryRoutes = require('./routes/sanctuaryRoutes');
 const geminiRoutes = require('./routes/geminiRoutes');
+const meetingRoutes = require('./routes/meetingRoutes');
+const sessionNotesRoutes = require('./routes/sessionNotesRoutes');
+const sessionRatingRoutes = require('./routes/sessionRatingRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -46,6 +49,9 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/ratings', ratingRoutes);
 app.use('/api/sanctuary', sanctuaryRoutes);
 app.use('/api/gemini', geminiRoutes);
+app.use('/api/meetings', meetingRoutes);
+app.use('/api/session-notes', sessionNotesRoutes);
+app.use('/api/session-ratings', sessionRatingRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
