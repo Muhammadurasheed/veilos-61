@@ -5,6 +5,7 @@ import { UserApi } from '@/services/api';
 import { toast } from '@/hooks/use-toast';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import { logger } from '@/services/logger';
+import { tokenManager } from '@/services/tokenManager';
 
 // Define the user type
 export interface User {
@@ -33,11 +34,11 @@ interface UserContextType {
   setUser: (user: User | null) => void;
   logout: () => void;
   refreshIdentity: () => void;
-  createAnonymousAccount: () => Promise<void>;
+  createAnonymousAccount: (alias?: string, avatarIndex?: number) => Promise<boolean>;
   isLoading: boolean;
   updateAvatar: (avatarUrl: string) => Promise<void>;
   creationState: UserCreationState;
-  retryAccountCreation: () => Promise<void>;
+  retryAccountCreation: () => Promise<boolean>;
 }
 
 // Initial creation state
@@ -54,11 +55,11 @@ const UserContext = createContext<UserContextType>({
   setUser: () => {},
   logout: () => {},
   refreshIdentity: () => {},
-  createAnonymousAccount: async () => {},
+  createAnonymousAccount: async () => false,
   isLoading: false,
   updateAvatar: async () => {},
   creationState: initialCreationState,
-  retryAccountCreation: async () => {},
+  retryAccountCreation: async () => false,
 });
 
 // Custom hook to use the UserContext
@@ -69,7 +70,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [creationState, setCreationState] = useState<UserCreationState>(initialCreationState);
-  const [token, setToken, removeToken] = useLocalStorage<string | null>('veilo-token', null);
+  // Remove useLocalStorage dependency - now handled by tokenManager
 
   // Helper to update creation state
   const updateCreationState = useCallback((updates: Partial<UserCreationState>) => {
@@ -78,7 +79,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   // Initialize user from token on mount with enhanced logging
   const initializeUser = useCallback(async () => {
-    if (token) {
+    if (tokenManager.hasToken()) {
       try {
         logger.info('Initializing user with existing token');
         updateCreationState({ 
@@ -87,6 +88,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           message: 'Verifying your identity...' 
         });
 
+        const token = tokenManager.getToken()!;
         const response = await UserApi.authenticate(token);
         
         if (response.success && response.data?.user) {
@@ -108,12 +110,12 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           });
         } else {
           logger.warn('Token authentication failed, removing token');
-          removeToken();
+          tokenManager.removeToken();
           updateCreationState({ step: 'idle', progress: 0, message: '' });
         }
       } catch (error: any) {
         logger.error('Authentication error', { error: error.message });
-        removeToken();
+        tokenManager.removeToken();
         updateCreationState({ step: 'idle', progress: 0, message: '' });
       } finally {
         setIsLoading(false);
@@ -123,14 +125,14 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
       updateCreationState({ step: 'idle', progress: 0, message: '' });
     }
-  }, [token, removeToken, updateCreationState]);
+  }, [updateCreationState]);
 
   useEffect(() => {
     initializeUser();
   }, [initializeUser]);
 
   // Enhanced anonymous account creation with perfect backend sync
-  const createAnonymousAccount = async () => {
+  const createAnonymousAccount = async (alias?: string, avatarIndex?: number): Promise<boolean> => {
     logger.accountCreation('Starting anonymous account creation process');
     setIsLoading(true);
     
@@ -162,7 +164,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       });
 
       logger.accountCreation('Calling backend registration API');
-      const response = await UserApi.register();
+      const userData = alias && avatarIndex ? { alias, avatarIndex } : {};
+      const response = await UserApi.register(userData);
 
       logger.accountCreation('Backend response received', { 
         success: response.success, 
@@ -179,8 +182,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Save token and user data
-        setToken(response.data.token);
+        // Token is automatically saved by UserApi.register via tokenManager
         if (response.data.refreshToken) {
           localStorage.setItem('refreshToken', response.data.refreshToken);
         }
@@ -214,6 +216,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         setTimeout(() => {
           updateCreationState(initialCreationState);
         }, 2000);
+        
+        return true;
 
       } else {
         throw new Error(response.error || 'Failed to create anonymous account');
@@ -247,15 +251,18 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       // Fallback to offline mode if retries exceed threshold
       if (creationState.retryCount >= 2) {
         useFallbackUser();
+        return false;
       }
+      
+      return false;
     } finally {
       setIsLoading(false);
     }
   };
 
   // Retry account creation
-  const retryAccountCreation = async () => {
-    await createAnonymousAccount();
+  const retryAccountCreation = async (): Promise<boolean> => {
+    return await createAnonymousAccount();
   };
 
   // Create fallback user when API is unavailable
@@ -290,7 +297,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = useCallback(() => {
-    removeToken();
+    tokenManager.removeToken();
     setUser(null);
     updateCreationState(initialCreationState);
     
@@ -298,7 +305,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       title: 'Logged out',
       description: 'You have been logged out successfully.',
     });
-  }, [removeToken, updateCreationState]);
+  }, [updateCreationState]);
 
   const refreshIdentity = async () => {
     if (user) {
