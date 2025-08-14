@@ -3,22 +3,25 @@ const mongoose = require('mongoose');
 // MongoDB connection with optimized settings
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/veilo', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-      family: 4,
-      bufferCommands: false,
-      bufferMaxEntries: 0
-    });
+    const conn = await mongoose.connect(
+      process.env.MONGODB_URI || 'mongodb://localhost:27017/veilo',
+      {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+        maxPoolSize: 10,               // max number of connections in pool
+        serverSelectionTimeoutMS: 5000, // time to try selecting a server
+        socketTimeoutMS: 45000,         // close sockets after inactivity
+        family: 4,                      // use IPv4
+        bufferCommands: false           // disable mongoose buffering
+        // ❌ bufferMaxEntries removed — not supported in modern MongoDB driver
+      }
+    );
 
     console.log(`MongoDB Connected: ${conn.connection.host}`);
-    
+
     // Create indexes for better performance
     await createIndexes();
-    
+
     return conn;
   } catch (error) {
     console.error('MongoDB connection error:', error);
@@ -33,13 +36,13 @@ const createIndexes = async () => {
     const Post = require('../models/Post');
     const Expert = require('../models/Expert');
     const Session = require('../models/Session');
-    
+
     // User indexes
     await User.collection.createIndex({ id: 1 }, { unique: true });
     await User.collection.createIndex({ email: 1 }, { sparse: true, unique: true });
     await User.collection.createIndex({ role: 1 });
     await User.collection.createIndex({ isExpert: 1 });
-    
+
     // Post indexes
     await Post.collection.createIndex({ id: 1 }, { unique: true });
     await Post.collection.createIndex({ authorId: 1 });
@@ -47,14 +50,14 @@ const createIndexes = async () => {
     await Post.collection.createIndex({ 'likes.userId': 1 });
     await Post.collection.createIndex({ topic: 1 });
     await Post.collection.createIndex({ wantsExpertHelp: 1 });
-    
+
     // Expert indexes
     await Expert.collection.createIndex({ id: 1 }, { unique: true });
     await Expert.collection.createIndex({ userId: 1 });
     await Expert.collection.createIndex({ status: 1 });
     await Expert.collection.createIndex({ specializations: 1 });
     await Expert.collection.createIndex({ averageRating: -1 });
-    
+
     // Session indexes
     await Session.collection.createIndex({ id: 1 }, { unique: true });
     await Session.collection.createIndex({ expertId: 1 });
@@ -62,7 +65,7 @@ const createIndexes = async () => {
     await Session.collection.createIndex({ status: 1 });
     await Session.collection.createIndex({ scheduledAt: 1 });
     await Session.collection.createIndex({ createdAt: -1 });
-    
+
     console.log('Database indexes created successfully');
   } catch (error) {
     console.error('Error creating indexes:', error);
