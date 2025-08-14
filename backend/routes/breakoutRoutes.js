@@ -2,11 +2,11 @@ const express = require('express');
 const router = express.Router();
 const BreakoutRoom = require('../models/BreakoutRoom');
 const LiveSanctuarySession = require('../models/LiveSanctuarySession');
-const { authenticateToken } = require('../middleware/auth');
+const { authMiddleware } = require('../middleware/auth');
 const { nanoid } = require('nanoid');
 
 // Create breakout room
-router.post('/:sessionId/breakout', authenticateToken, async (req, res) => {
+router.post('/:sessionId/breakout', authMiddleware, async (req, res) => {
   try {
     const { sessionId } = req.params;
     const { name, topic, description, maxParticipants = 8, isPrivate = false, requiresApproval = false } = req.body;
@@ -23,7 +23,7 @@ router.post('/:sessionId/breakout', authenticateToken, async (req, res) => {
     }
 
     // Check if user is host or moderator
-    if (parentSession.hostId !== req.userId) {
+    if (parentSession.hostId !== req.user.id) {
       return res.status(403).json({ success: false, error: 'Only hosts can create breakout rooms' });
     }
 
@@ -35,8 +35,8 @@ router.post('/:sessionId/breakout', authenticateToken, async (req, res) => {
       name: name.trim(),
       topic: topic?.trim(),
       description: description?.trim(),
-      createdBy: req.userId,
-      facilitatorId: req.userId,
+      createdBy: req.user.id,
+      facilitatorId: req.user.id,
       agoraChannelName: `breakout-${nanoid(12)}`,
       agoraToken: 'temp-token', // Generate with Agora
       maxParticipants,
@@ -63,7 +63,7 @@ router.post('/:sessionId/breakout', authenticateToken, async (req, res) => {
 });
 
 // Join breakout room
-router.post('/breakout/:roomId/join', authenticateToken, async (req, res) => {
+router.post('/breakout/:roomId/join', authMiddleware, async (req, res) => {
   try {
     const { roomId } = req.params;
     const { alias } = req.body;
@@ -84,7 +84,7 @@ router.post('/breakout/:roomId/join', authenticateToken, async (req, res) => {
     }
 
     // Check if already joined
-    const existingParticipant = room.participants.find(p => p.userId === req.userId && !p.leftAt);
+    const existingParticipant = room.participants.find(p => p.userId === req.user.id && !p.leftAt);
     if (existingParticipant) {
       return res.json({
         success: true,
@@ -99,10 +99,10 @@ router.post('/breakout/:roomId/join', authenticateToken, async (req, res) => {
 
     // Add participant
     room.participants.push({
-      userId: req.userId,
-      alias: alias || `User ${req.userId}`,
+      userId: req.user.id,
+      alias: alias || `User ${req.user.id}`,
       joinedAt: new Date(),
-      role: req.userId === room.facilitatorId ? 'facilitator' : 'participant'
+      role: req.user.id === room.facilitatorId ? 'facilitator' : 'participant'
     });
 
     room.currentParticipants = room.participants.filter(p => !p.leftAt).length;
@@ -114,7 +114,7 @@ router.post('/breakout/:roomId/join', authenticateToken, async (req, res) => {
         roomId: room.id,
         agoraChannelName: room.agoraChannelName,
         agoraToken: room.agoraToken,
-        role: req.userId === room.facilitatorId ? 'facilitator' : 'participant'
+        role: req.user.id === room.facilitatorId ? 'facilitator' : 'participant'
       }
     });
   } catch (error) {
@@ -124,7 +124,7 @@ router.post('/breakout/:roomId/join', authenticateToken, async (req, res) => {
 });
 
 // Leave breakout room
-router.post('/breakout/:roomId/leave', authenticateToken, async (req, res) => {
+router.post('/breakout/:roomId/leave', authMiddleware, async (req, res) => {
   try {
     const { roomId } = req.params;
 
@@ -134,7 +134,7 @@ router.post('/breakout/:roomId/leave', authenticateToken, async (req, res) => {
     }
 
     // Mark participant as left
-    const participant = room.participants.find(p => p.userId === req.userId && !p.leftAt);
+    const participant = room.participants.find(p => p.userId === req.user.id && !p.leftAt);
     if (participant) {
       participant.leftAt = new Date();
     }
@@ -142,7 +142,7 @@ router.post('/breakout/:roomId/leave', authenticateToken, async (req, res) => {
     room.currentParticipants = room.participants.filter(p => !p.leftAt).length;
 
     // Auto-close if no participants and facilitator left
-    if (room.currentParticipants === 0 || req.userId === room.facilitatorId) {
+    if (room.currentParticipants === 0 || req.user.id === room.facilitatorId) {
       room.isActive = false;
       room.endedAt = new Date();
     }
@@ -178,7 +178,7 @@ router.get('/:sessionId/breakouts', async (req, res) => {
 });
 
 // Close breakout room
-router.post('/breakout/:roomId/close', authenticateToken, async (req, res) => {
+router.post('/breakout/:roomId/close', authMiddleware, async (req, res) => {
   try {
     const { roomId } = req.params;
 
@@ -188,7 +188,7 @@ router.post('/breakout/:roomId/close', authenticateToken, async (req, res) => {
     }
 
     // Check permission
-    if (room.facilitatorId !== req.userId && room.createdBy !== req.userId) {
+    if (room.facilitatorId !== req.user.id && room.createdBy !== req.user.id) {
       return res.status(403).json({ success: false, error: 'Only facilitator can close breakout room' });
     }
 
