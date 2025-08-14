@@ -37,34 +37,47 @@ const createIndexes = async () => {
     const Expert = require('../models/Expert');
     const Session = require('../models/Session');
 
+    // Helper function to create index safely
+    const createIndexSafely = async (collection, indexSpec, options = {}) => {
+      try {
+        await collection.createIndex(indexSpec, options);
+      } catch (error) {
+        if (error.code === 86) { // IndexKeySpecsConflict
+          console.log(`Index already exists with different options for ${JSON.stringify(indexSpec)}, skipping...`);
+        } else {
+          throw error;
+        }
+      }
+    };
+
     // User indexes
-    await User.collection.createIndex({ id: 1 }, { unique: true });
-    await User.collection.createIndex({ email: 1 }, { sparse: true, unique: true });
-    await User.collection.createIndex({ role: 1 });
-    await User.collection.createIndex({ isExpert: 1 });
+    await createIndexSafely(User.collection, { id: 1 }, { unique: true });
+    await createIndexSafely(User.collection, { email: 1 }, { sparse: true, unique: true });
+    await createIndexSafely(User.collection, { role: 1 });
+    await createIndexSafely(User.collection, { isExpert: 1 });
 
     // Post indexes
-    await Post.collection.createIndex({ id: 1 }, { unique: true });
-    await Post.collection.createIndex({ authorId: 1 });
-    await Post.collection.createIndex({ createdAt: -1 });
-    await Post.collection.createIndex({ 'likes.userId': 1 });
-    await Post.collection.createIndex({ topic: 1 });
-    await Post.collection.createIndex({ wantsExpertHelp: 1 });
+    await createIndexSafely(Post.collection, { id: 1 }, { unique: true });
+    await createIndexSafely(Post.collection, { authorId: 1 });
+    await createIndexSafely(Post.collection, { createdAt: -1 });
+    await createIndexSafely(Post.collection, { 'likes.userId': 1 });
+    await createIndexSafely(Post.collection, { topic: 1 });
+    await createIndexSafely(Post.collection, { wantsExpertHelp: 1 });
 
     // Expert indexes
-    await Expert.collection.createIndex({ id: 1 }, { unique: true });
-    await Expert.collection.createIndex({ userId: 1 });
-    await Expert.collection.createIndex({ status: 1 });
-    await Expert.collection.createIndex({ specializations: 1 });
-    await Expert.collection.createIndex({ averageRating: -1 });
+    await createIndexSafely(Expert.collection, { id: 1 }, { unique: true });
+    await createIndexSafely(Expert.collection, { userId: 1 });
+    await createIndexSafely(Expert.collection, { status: 1 });
+    await createIndexSafely(Expert.collection, { specializations: 1 });
+    await createIndexSafely(Expert.collection, { averageRating: -1 });
 
     // Session indexes
-    await Session.collection.createIndex({ id: 1 }, { unique: true });
-    await Session.collection.createIndex({ expertId: 1 });
-    await Session.collection.createIndex({ clientId: 1 });
-    await Session.collection.createIndex({ status: 1 });
-    await Session.collection.createIndex({ scheduledAt: 1 });
-    await Session.collection.createIndex({ createdAt: -1 });
+    await createIndexSafely(Session.collection, { id: 1 }, { unique: true });
+    await createIndexSafely(Session.collection, { expertId: 1 });
+    await createIndexSafely(Session.collection, { clientId: 1 });
+    await createIndexSafely(Session.collection, { status: 1 });
+    await createIndexSafely(Session.collection, { scheduledAt: 1 });
+    await createIndexSafely(Session.collection, { createdAt: -1 });
 
     console.log('Database indexes created successfully');
   } catch (error) {
