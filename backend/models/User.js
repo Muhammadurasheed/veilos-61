@@ -39,8 +39,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     sparse: true
   },
-  password: {
+  passwordHash: {
     type: String
+  },
+  refreshToken: {
+    type: String
+  },
+  lastLoginAt: {
+    type: Date
   },
   // For experts
   expertId: {

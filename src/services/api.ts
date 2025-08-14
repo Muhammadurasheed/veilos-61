@@ -255,7 +255,7 @@ export const UserApi = {
   
   // Create anonymous user specifically for joining sessions
   createAnonymousUser: () =>
-    apiRequest<{ token: string, user: any }>('POST', '/users/auth/anonymous'),
+    apiRequest<{ token: string, user: any }>('POST', '/auth/register'),
   
   // Register expert account (first step of expert registration)
   registerExpertAccount: (userData: Partial<ApiExpertRegisterRequest>) =>
@@ -274,10 +274,10 @@ export const UserApi = {
     apiRequest<{ user: any }>('GET', '/users/me'),
   
   refreshIdentity: () =>
-    apiRequest<{ user: any }>('POST', '/users/refresh-identity'),
+    apiRequest<{ user: any }>('POST', '/auth/register'),
     
   updateAvatar: (avatarUrl: string) =>
-    apiRequest<{ user: any }>('POST', '/users/avatar', { avatarUrl }),
+    apiRequest<{ user: any }>('POST', '/auth/avatar', { avatarUrl }),
 };
 
 // Post related API endpoints
