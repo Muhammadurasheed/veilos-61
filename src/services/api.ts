@@ -5,8 +5,8 @@ export type { ApiResponse };
 import axios from 'axios';
 import { toast } from '@/hooks/use-toast';
 
-// Base API URL - Updated to use the render.com backend
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://veilo-backend.onrender.com/api';
+// Base API URL - Use local development URL with /api prefix
+const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api`;
 
 // Create axios instance with base configuration
 const api = axios.create({

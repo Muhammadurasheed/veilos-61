@@ -1,35 +1,42 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useUserContext } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
 import Layout from '@/components/layout/Layout';
+import { AccountCreationFlow } from '@/components/ui/account-creation-flow';
 
 const Index = () => {
-  const { user, createAnonymousAccount, isLoading } = useUserContext();
+  const { user, createAnonymousAccount, isLoading, creationState } = useUserContext();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [showAccountCreation, setShowAccountCreation] = useState(false);
   
   // Create anonymous account handler
   const handleCreateAnonymousAccount = async () => {
-    toast({
-      title: "Creating account",
-      description: "Setting up your anonymous identity...",
-    });
-    
-    await createAnonymousAccount();
-    
+    setShowAccountCreation(true);
+  };
+
+  // Handle account creation completion
+  const handleAccountCreationComplete = () => {
+    setShowAccountCreation(false);
     // Navigate to sanctuary space after account creation
     navigate('/sanctuary');
+  };
+
+  // Handle account creation cancellation
+  const handleAccountCreationCancel = () => {
+    setShowAccountCreation(false);
   };
 
   // Handle entering sanctuary space
   const handleEnterSanctuary = () => {
     if (!user) {
-      // If no user, create anonymous account first
-      handleCreateAnonymousAccount();
+      // If no user, show account creation flow
+      setShowAccountCreation(true);
     } else {
       // User exists, navigate directly to sanctuary
       navigate('/sanctuary');
@@ -99,9 +106,9 @@ const Index = () => {
                 size="lg" 
                 onClick={handleCreateAnonymousAccount}
                 className="bg-veilo-green hover:bg-veilo-green-dark text-white font-medium text-lg px-8 py-6"
-                disabled={isLoading}
+                disabled={isLoading || creationState.step !== 'idle'}
               >
-                {isLoading ? 'Creating Account...' : 'Create Anonymous Account'}
+                {creationState.step !== 'idle' ? 'Creating Account...' : 'Create Anonymous Account'}
               </Button>
               
               <Button 
@@ -261,12 +268,24 @@ const Index = () => {
               size="lg" 
               variant="secondary"
               className="bg-white text-veilo-blue hover:bg-gray-100"
+              disabled={creationState.step !== 'idle'}
             >
-              Get Started Now
+              {creationState.step !== 'idle' ? 'Creating Account...' : 'Get Started Now'}
             </Button>
           </div>
         </motion.div>
       </div>
+
+      {/* Account Creation Modal */}
+      <Dialog open={showAccountCreation} onOpenChange={setShowAccountCreation}>
+        <DialogContent className="max-w-md p-0 overflow-hidden bg-transparent border-none shadow-none">
+          <AccountCreationFlow
+            onComplete={handleAccountCreationComplete}
+            onCancel={handleAccountCreationCancel}
+            variant="modal"
+          />
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };
