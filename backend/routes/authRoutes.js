@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { body } = require('express-validator');
 const User = require('../models/User');
-const { validateRequest } = require('../middleware/validation');
+const { validate } = require('../middleware/validation');
 const { authLimiter } = require('../middleware/security');
 const refreshTokenMiddleware = require('../middleware/refreshToken');
 const { uploadAvatar } = require('../config/cloudinary');
@@ -15,12 +15,11 @@ const router = express.Router();
 // Register new user
 router.post('/register', 
   authLimiter,
-  [
+  validate([
     body('email').optional().isEmail().normalizeEmail(),
     body('password').optional().isLength({ min: 6 }),
     body('alias').optional().isLength({ min: 2, max: 30 }),
-  ],
-  validateRequest,
+  ]),
   async (req, res) => {
     try {
       const { email, password, alias } = req.body;
@@ -97,11 +96,10 @@ router.post('/register',
 // Login
 router.post('/login',
   authLimiter,
-  [
+  validate([
     body('email').isEmail().normalizeEmail(),
     body('password').notEmpty(),
-  ],
-  validateRequest,
+  ]),
   async (req, res) => {
     try {
       const { email, password } = req.body;
@@ -211,11 +209,10 @@ router.get('/verify', authMiddleware, async (req, res) => {
 // Update profile
 router.put('/profile', 
   authMiddleware,
-  [
+  validate([
     body('alias').optional().isLength({ min: 2, max: 30 }),
     body('email').optional().isEmail().normalizeEmail(),
-  ],
-  validateRequest,
+  ]),
   async (req, res) => {
     try {
       const user = await User.findOne({ id: req.user.id });
