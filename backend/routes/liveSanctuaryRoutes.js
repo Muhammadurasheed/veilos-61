@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const LiveSanctuarySession = require('../models/LiveSanctuarySession');
-const { authenticateToken } = require('../middleware/auth');
+const { authMiddleware } = require('../middleware/auth');
 const { nanoid } = require('nanoid');
 
 // Create live sanctuary session
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authMiddleware, async (req, res) => {
   try {
     const { topic, description, emoji, maxParticipants = 50, audioOnly = true, allowAnonymous = true, moderationEnabled = true, emergencyContactEnabled = true, expireHours = 2 } = req.body;
 
@@ -20,7 +20,7 @@ router.post('/', authenticateToken, async (req, res) => {
       topic: topic.trim(),
       description: description?.trim(),
       emoji,
-      hostId: req.userId,
+      hostId: req.user.id,
       agoraChannelName: `sanctuary-${nanoid(12)}`,
       agoraToken: 'temp-token', // You'll generate this with Agora
       expiresAt,
