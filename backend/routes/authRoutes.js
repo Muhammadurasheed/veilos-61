@@ -7,7 +7,8 @@ const { validateRequest } = require('../middleware/validation');
 const { authLimiter } = require('../middleware/security');
 const refreshTokenMiddleware = require('../middleware/refreshToken');
 const { uploadAvatar } = require('../config/cloudinary');
-const auth = require('../middleware/auth');
+const { authMiddleware } = require('../middleware/auth');
+const { generateAlias } = require('../utils/helpers');
 
 const router = express.Router();
 
@@ -53,16 +54,16 @@ router.post('/register',
       // Generate tokens
       const accessToken = jwt.sign(
         { 
-          userId: user.id,
-          role: user.role,
-          isExpert: user.isExpert 
+          user: {
+            id: user.id
+          }
         },
         process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
       );
 
       const refreshToken = jwt.sign(
-        { userId: user.id },
+        { user: { id: user.id } },
         process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' }
       );
@@ -120,16 +121,16 @@ router.post('/login',
       // Generate tokens
       const accessToken = jwt.sign(
         { 
-          userId: user.id,
-          role: user.role,
-          isExpert: user.isExpert 
+          user: {
+            id: user.id
+          }
         },
         process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
       );
 
       const refreshToken = jwt.sign(
-        { userId: user.id },
+        { user: { id: user.id } },
         process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' }
       );
@@ -165,9 +166,9 @@ router.post('/login',
 router.post('/refresh-token', refreshTokenMiddleware);
 
 // Logout
-router.post('/logout', auth, async (req, res) => {
+router.post('/logout', authMiddleware, async (req, res) => {
   try {
-    const user = await User.findOne({ id: req.user.userId });
+    const user = await User.findOne({ id: req.user.id });
     if (user) {
       user.refreshToken = null;
       await user.save();
@@ -181,9 +182,9 @@ router.post('/logout', auth, async (req, res) => {
 });
 
 // Verify token
-router.get('/verify', auth, async (req, res) => {
+router.get('/verify', authMiddleware, async (req, res) => {
   try {
-    const user = await User.findOne({ id: req.user.userId });
+    const user = await User.findOne({ id: req.user.id });
     if (!user) {
       return res.error('User not found', 404);
     }
@@ -209,7 +210,7 @@ router.get('/verify', auth, async (req, res) => {
 
 // Update profile
 router.put('/profile', 
-  auth,
+  authMiddleware,
   [
     body('alias').optional().isLength({ min: 2, max: 30 }),
     body('email').optional().isEmail().normalizeEmail(),
@@ -217,7 +218,7 @@ router.put('/profile',
   validateRequest,
   async (req, res) => {
     try {
-      const user = await User.findOne({ id: req.user.userId });
+      const user = await User.findOne({ id: req.user.id });
       if (!user) {
         return res.error('User not found', 404);
       }
@@ -260,7 +261,7 @@ router.put('/profile',
 
 // Update avatar
 router.post('/avatar',
-  auth,
+  authMiddleware,
   uploadAvatar.single('avatar'),
   async (req, res) => {
     try {
@@ -268,7 +269,7 @@ router.post('/avatar',
         return res.error('No file uploaded', 400);
       }
 
-      const user = await User.findOne({ id: req.user.userId });
+      const user = await User.findOne({ id: req.user.id });
       if (!user) {
         return res.error('User not found', 404);
       }

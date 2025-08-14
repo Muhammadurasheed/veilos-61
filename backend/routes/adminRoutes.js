@@ -4,6 +4,7 @@ const router = express.Router();
 const Expert = require('../models/Expert');
 const Post = require('../models/Post');
 const User = require('../models/User');
+const jwt = require('jsonwebtoken');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
 // Get all unverified experts

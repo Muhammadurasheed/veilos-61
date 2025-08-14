@@ -4,10 +4,10 @@ const User = require('../models/User');
 const Expert = require('../models/Expert');
 const Post = require('../models/Post');
 const SanctuarySession = require('../models/SanctuarySession');
-const auth = require('../middleware/auth');
+const { authMiddleware } = require('../middleware/auth');
 
 // AI-powered personalized recommendations
-router.post('/recommendations', auth, async (req, res) => {
+router.post('/recommendations', authMiddleware, async (req, res) => {
   try {
     const { userId, includeExperts, includeSanctuarySpaces, includeContent } = req.body;
     
@@ -44,7 +44,7 @@ router.post('/recommendations', auth, async (req, res) => {
 });
 
 // Expert matching based on post content
-router.post('/expert-matching', auth, async (req, res) => {
+router.post('/expert-matching', authMiddleware, async (req, res) => {
   try {
     const { postContent, userHistory, sentimentAnalysis, urgencyDetection } = req.body;
     
@@ -78,7 +78,7 @@ router.post('/expert-matching', auth, async (req, res) => {
 });
 
 // Risk assessment for crisis detection
-router.post('/risk-assessment', auth, async (req, res) => {
+router.post('/risk-assessment', authMiddleware, async (req, res) => {
   try {
     const { userId, posts, timeframe } = req.body;
     
@@ -92,7 +92,7 @@ router.post('/risk-assessment', auth, async (req, res) => {
 });
 
 // Smart response generation for experts
-router.post('/smart-response', auth, async (req, res) => {
+router.post('/smart-response', authMiddleware, async (req, res) => {
   try {
     const { content, specializations, responseType } = req.body;
     
@@ -106,7 +106,7 @@ router.post('/smart-response', auth, async (req, res) => {
 });
 
 // Crisis detection
-router.post('/crisis-detection', auth, async (req, res) => {
+router.post('/crisis-detection', authMiddleware, async (req, res) => {
   try {
     const { content } = req.body;
     
@@ -120,7 +120,7 @@ router.post('/crisis-detection', auth, async (req, res) => {
 });
 
 // Track user interactions for ML
-router.post('/track-interaction', auth, async (req, res) => {
+router.post('/track-interaction', authMiddleware, async (req, res) => {
   try {
     const { userId, interaction } = req.body;
     
