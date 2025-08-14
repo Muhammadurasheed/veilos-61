@@ -3,11 +3,10 @@ const router = express.Router();
 const { SessionMetric, ExpertAnalytics, PlatformHealth } = require('../models/Analytics');
 const Expert = require('../models/Expert');
 const User = require('../models/User');
-const auth = require('../middleware/auth');
-const admin = require('../middleware/admin');
+const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
 // Get expert analytics
-router.get('/expert/:expertId', auth, async (req, res) => {
+router.get('/expert/:expertId', authMiddleware, async (req, res) => {
   try {
     const { expertId } = req.params;
     const { timeframe = '30d' } = req.query;
@@ -78,7 +77,7 @@ router.get('/expert/:expertId', auth, async (req, res) => {
 });
 
 // Get platform analytics (admin only)
-router.get('/platform', auth, admin, async (req, res) => {
+router.get('/platform', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const { timeframe = '30d' } = req.query;
     
@@ -140,7 +139,7 @@ router.get('/platform', auth, admin, async (req, res) => {
 });
 
 // Record session metric
-router.post('/session-metric', auth, async (req, res) => {
+router.post('/session-metric', authMiddleware, async (req, res) => {
   try {
     const {
       sessionId,
@@ -205,7 +204,7 @@ router.post('/session-metric', auth, async (req, res) => {
 });
 
 // Get expert performance ranking
-router.get('/rankings', auth, admin, async (req, res) => {
+router.get('/rankings', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const { sortBy = 'rating', limit = 10 } = req.query;
     
@@ -246,7 +245,7 @@ router.get('/rankings', auth, admin, async (req, res) => {
 });
 
 // Update platform health metrics
-router.post('/platform-health', auth, admin, async (req, res) => {
+router.post('/platform-health', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const {
       activeUsers,
