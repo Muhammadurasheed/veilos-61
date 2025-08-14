@@ -16,6 +16,8 @@ const sanctuaryRoutes = require('./routes/sanctuaryRoutes');
 const liveSanctuaryRoutes = require('./routes/liveSanctuaryRoutes');
 const breakoutRoutes = require('./routes/breakoutRoutes');
 const recordingRoutes = require('./routes/recordingRoutes');
+const consultationRoutes = require('./routes/consultationRoutes');
+const stripeRoutes = require('./routes/stripeRoutes');
 const geminiRoutes = require('./routes/geminiRoutes');
 const meetingRoutes = require('./routes/meetingRoutes');
 const sessionNotesRoutes = require('./routes/sessionNotesRoutes');
@@ -70,6 +72,8 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/recommendations', require('./routes/recommendationRoutes'));
 app.use('/api/appeals', require('./routes/appealRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
+app.use('/api/consultations', consultationRoutes);
+app.use('/api/stripe', stripeRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
