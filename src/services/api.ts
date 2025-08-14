@@ -4,9 +4,10 @@ import { ApiResponse, ApiPostRequest, ApiExpertRegisterRequest, ApiChatSessionRe
 export type { ApiResponse };
 import axios from 'axios';
 import { toast } from '@/hooks/use-toast';
+import { logger } from './logger';
 
-// Base API URL - Use local development URL with /api prefix
-const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api`;
+// Base API URL - Match backend routes exactly  
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 // Create axios instance with base configuration
 const api = axios.create({
@@ -18,108 +19,44 @@ const api = axios.create({
   timeout: 10000,
 });
 
-// Add auth token to requests if available
+// Enhanced request interceptor with logging
 api.interceptors.request.use(config => {
-  // Skip adding token for public endpoints
-  const publicEndpoints = [
-    '/experts/register',
-    '/users/register',
-    '/users/auth/anonymous',
-    '/users/register-expert-account',
-    '/users/expert-onboarding-start',
-    '/sanctuary',
-    '/gemini/refine-post'
-  ];
-  
-  // Check if the current request path is in the publicEndpoints list
-  const isPublicEndpoint = publicEndpoints.some(endpoint => 
-    config.url && config.url.includes(endpoint)
-  );
-  
-  // Only add token if it's not a public endpoint
-  if (!isPublicEndpoint) {
-    const token = localStorage.getItem('veilo-token');
-    if (token) {
-      config.headers['x-auth-token'] = token;
-    }
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
   
+  logger.apiRequest(config.method?.toUpperCase() || 'GET', config.url || '', config.data);
   return config;
+}, error => {
+  logger.error('API Request Error', error);
+  return Promise.reject(error);
 });
 
-// Add global error handler
+// Enhanced response interceptor with logging
 api.interceptors.response.use(
-  response => response,
+  response => {
+    logger.apiResponse(
+      response.config.method?.toUpperCase() || 'GET',
+      response.config.url || '',
+      response.status,
+      response.data
+    );
+    return response;
+  },
   error => {
-    // Extract error message
-    const errorMessage = 
-      error.response?.data?.error || 
-      error.message || 
-      'An unexpected error occurred';
-    
-    // Handle specific status codes
-    if (error.response) {
-      switch (error.response.status) {
-        case 401:
-          toast({
-            title: "Authentication Error",
-            description: "Please sign in again to continue.",
-            variant: "destructive",
-          });
-          
-          // Clear token if authentication failed
-          localStorage.removeItem('veilo-token');
-          break;
-          
-        case 403:
-          toast({
-            title: "Access Denied",
-            description: "You don't have permission to access this resource.",
-            variant: "destructive",
-          });
-          break;
-          
-        case 404:
-          toast({
-            title: "Resource Not Found",
-            description: "The requested resource could not be found.",
-            variant: "destructive",
-          });
-          break;
-          
-        case 429:
-          toast({
-            title: "Too Many Requests",
-            description: "Please slow down and try again later.",
-            variant: "destructive",
-          });
-          break;
-          
-        case 500:
-          toast({
-            title: "Server Error",
-            description: "Something went wrong on our end. Please try again later.",
-            variant: "destructive",
-          });
-          break;
-          
-        default:
-          // Only show toast for non-canceled requests
-          if (!axios.isCancel(error)) {
-            toast({
-              title: "Error",
-              description: errorMessage,
-              variant: "destructive",
-            });
-          }
-      }
-    } else if (error.request) {
-      // Network error (no response received)
-      toast({
-        title: "Network Error",
-        description: "Unable to connect to the server. Please check your connection.",
-        variant: "destructive",
-      });
+    logger.apiResponse(
+      error.config?.method?.toUpperCase() || 'GET',
+      error.config?.url || '',
+      error.response?.status || 0,
+      error.response?.data || error.message
+    );
+
+    if (error.response?.status === 401) {
+      logger.warn('Unauthorized - clearing tokens');
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      window.location.href = '/';
     }
     
     return Promise.reject(error);

@@ -132,14 +132,15 @@ export function WelcomeScreen({ isOpen, onComplete }: WelcomeScreenProps) {
                   exit={{ opacity: 0, x: -50 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
+                 <Card className="border border-primary/20 bg-gradient-to-br from-background via-background to-primary/5 shadow-veilo-lg">
                     <CardContent className="p-8">
                       <div className="flex items-start space-x-6">
                         <div 
-                          className="p-4 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex-shrink-0"
-                          style={{ color: welcomeSteps[currentStep].color }}
+                          className="p-4 rounded-full bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20 flex-shrink-0"
                         >
-                          {welcomeSteps[currentStep].icon}
+                          <div className="text-primary">
+                            {welcomeSteps[currentStep].icon}
+                          </div>
                         </div>
                         <div className="flex-1">
                           <h3 className="text-2xl font-semibold mb-3">
@@ -177,7 +178,11 @@ export function WelcomeScreen({ isOpen, onComplete }: WelcomeScreenProps) {
                         <ArrowRight className="w-4 h-4 ml-2" />
                       </Button>
                     ) : (
-                      <Button onClick={handleNext} size="lg" className="px-8 bg-gradient-to-r from-primary to-primary/80">
+                      <Button 
+                        onClick={handleNext} 
+                        size="lg" 
+                        className="px-8 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 shadow-veilo-md animate-pulse-glow"
+                      >
                         Enter Sanctuary
                         <ArrowRight className="w-4 h-4 ml-2" />
                       </Button>
@@ -203,17 +208,17 @@ export function WelcomeScreen({ isOpen, onComplete }: WelcomeScreenProps) {
               </DialogHeader>
 
               <div className="space-y-8">
-                <Card className="border border-primary/20">
+                <Card className="border border-primary/20 bg-gradient-to-br from-background to-primary/5 shadow-veilo-lg">
                   <CardContent className="p-8">
                     <div className="space-y-6">
                       <div className="flex items-center justify-center">
                         <div className="relative">
                           {creationState.step === 'error' ? (
-                            <div className="w-16 h-16 rounded-full bg-destructive/20 flex items-center justify-center">
+                            <div className="w-16 h-16 rounded-full bg-destructive/20 border border-destructive/30 flex items-center justify-center shadow-veilo-md">
                               <motion.div
                                 animate={{ rotate: [0, 10, -10, 0] }}
                                 transition={{ duration: 0.5, repeat: 2 }}
-                                className="text-destructive"
+                                className="text-destructive text-2xl"
                               >
                                 ⚠️
                               </motion.div>
@@ -222,19 +227,19 @@ export function WelcomeScreen({ isOpen, onComplete }: WelcomeScreenProps) {
                             <motion.div
                               initial={{ scale: 0 }}
                               animate={{ scale: 1 }}
-                              className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center"
+                              className="w-16 h-16 rounded-full bg-success/20 border border-success/30 flex items-center justify-center shadow-veilo-md"
                             >
                               <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 0.2 }}
-                                className="text-green-500 text-2xl"
+                                className="text-success text-2xl animate-pulse-glow"
                               >
                                 ✨
                               </motion.div>
                             </motion.div>
                           ) : (
-                            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
+                            <div className="w-16 h-16 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center shadow-veilo-md animate-pulse-glow">
                               <Loader2 className="w-8 h-8 text-primary animate-spin" />
                             </div>
                           )}
@@ -291,12 +296,12 @@ export function WelcomeScreen({ isOpen, onComplete }: WelcomeScreenProps) {
                             animate={{ opacity: 1, y: 0 }}
                             className="text-center space-y-4"
                           >
-                            <p className="text-green-600 font-medium">
+                            <p className="text-success font-medium">
                               Your sanctuary access is ready! 🎉
                             </p>
                             <Button 
                               onClick={onComplete}
-                              className="bg-gradient-to-r from-primary to-primary/80"
+                              className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 shadow-veilo-md animate-pulse-glow"
                               size="lg"
                             >
                               Enter Veilo

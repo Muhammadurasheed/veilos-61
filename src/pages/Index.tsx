@@ -79,13 +79,13 @@ const Index = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Button asChild size="lg" className="bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg transition-all">
+              <Button asChild size="lg" className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 shadow-veilo-lg hover:shadow-veilo-xl transition-all animate-pulse-glow">
                 <Link to="/sanctuary">
                   Enter Sanctuary
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg">
+              <Button asChild variant="outline" size="lg" className="border-primary/30 hover:bg-primary/5">
                 <Link to="/beacons">
                   Find Expert
                   <MessageCircle className="ml-2 h-5 w-5" />
@@ -209,12 +209,12 @@ const Index = () => {
               <Button 
                 size="lg" 
                 onClick={() => setShowWelcome(true)}
-                className="bg-gradient-to-r from-primary to-primary/80 hover:shadow-xl px-8 py-6 text-lg transition-all"
+                className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 shadow-veilo-lg hover:shadow-veilo-xl px-8 py-6 text-lg transition-all animate-pulse-glow"
               >
                 <Heart className="mr-2 h-5 w-5" />
                 Enter Sanctuary
               </Button>
-              <Button asChild variant="outline" size="lg" className="px-8 py-6 text-lg">
+              <Button asChild variant="outline" size="lg" className="px-8 py-6 text-lg border-primary/30 hover:bg-primary/5">
                 <Link to="/feed">
                   Explore Community
                   <ArrowRight className="ml-2 h-5 w-5" />
@@ -261,9 +261,9 @@ const Index = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.9 + index * 0.1 }}
               >
-                <Card className="h-full group hover:shadow-xl transition-all duration-300 border-primary/20">
+                <Card className="h-full group hover:shadow-veilo-xl transition-all duration-300 border border-primary/20 bg-gradient-to-br from-card to-primary/5">
                   <CardContent className="p-8">
-                    <div className={`inline-flex p-4 rounded-full bg-gradient-to-r ${feature.gradient} text-white mb-6 group-hover:scale-110 transition-transform`}>
+                    <div className="inline-flex p-4 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground mb-6 group-hover:scale-110 transition-transform shadow-veilo-md">
                       {feature.icon}
                     </div>
                     <h3 className="text-xl font-semibold mb-3">{feature.title}</h3>

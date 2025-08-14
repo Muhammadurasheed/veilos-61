@@ -54,26 +54,21 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Veilo custom colors
-        'veilo-blue': {
-          light: '#D3E4FD',
-          DEFAULT: '#0EA5E9',
-          dark: '#0C4A6E',
+        // Veilo brand gradients
+        'gradient-primary': 'var(--gradient-primary)',
+        'gradient-secondary': 'var(--gradient-secondary)',
+        'gradient-accent': 'var(--gradient-accent)',
+        
+        // Success colors
+        'success': {
+          DEFAULT: 'hsl(142 76% 36%)',
+          foreground: 'hsl(210 40% 98%)',
         },
-        'veilo-purple': {
-          light: '#E5DEFF',
-          DEFAULT: '#8B5CF6',
-          dark: '#6D28D9',
-        },
-        'veilo-green': {
-          light: '#F2FCE2',
-          DEFAULT: '#10B981',
-          dark: '#047857',
-        },
-        'veilo-gold': {
-          light: '#FEF7CD',
-          DEFAULT: '#F59E0B',
-          dark: '#B45309',
+        
+        // Warning colors  
+        'warning': {
+          DEFAULT: 'hsl(38 92% 50%)',
+          foreground: 'hsl(222 84% 4.9%)',
         },
       },
       borderRadius: {
@@ -83,6 +78,12 @@ const config = {
       },
       fontFamily: {
         sans: ["var(--font-sans)", ...fontFamily.sans],
+      },
+      boxShadow: {
+        'veilo-sm': 'var(--shadow-sm)',
+        'veilo-md': 'var(--shadow-md)', 
+        'veilo-lg': 'var(--shadow-lg)',
+        'veilo-xl': 'var(--shadow-xl)',
       },
       keyframes: {
         "accordion-down": {
@@ -109,14 +110,30 @@ const config = {
           from: { transform: "scale(1)", opacity: "1" },
           to: { transform: "scale(0.95)", opacity: "0" }
         },
+        "pulse-glow": {
+          "0%, 100%": { 
+            boxShadow: "0 0 20px hsl(var(--primary) / 0.3)",
+            transform: "scale(1)"
+          },
+          "50%": { 
+            boxShadow: "0 0 40px hsl(var(--primary) / 0.6)",
+            transform: "scale(1.02)"
+          }
+        },
+        "shimmer": {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(100%)" }
+        }
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out", 
         "fade-in": "fade-in 0.3s ease-out",
         "fade-out": "fade-out 0.3s ease-out",
         "scale-in": "scale-in 0.2s ease-out",
         "scale-out": "scale-out 0.2s ease-out",
+        "pulse-glow": "pulse-glow 2s ease-in-out infinite",
+        "shimmer": "shimmer 2s linear infinite",
       },
     },
   },

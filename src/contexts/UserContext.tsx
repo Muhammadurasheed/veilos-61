@@ -4,6 +4,7 @@ import { UserRole } from '@/types';
 import { UserApi } from '@/services/api';
 import { toast } from '@/hooks/use-toast';
 import useLocalStorage from '@/hooks/useLocalStorage';
+import { logger } from '@/services/logger';
 
 // Define the user type
 export interface User {
@@ -75,10 +76,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     setCreationState(prev => ({ ...prev, ...updates }));
   }, []);
 
-  // Initialize user from token on mount
+  // Initialize user from token on mount with enhanced logging
   const initializeUser = useCallback(async () => {
     if (token) {
       try {
+        logger.info('Initializing user with existing token');
         updateCreationState({ 
           step: 'authenticating', 
           progress: 20, 
@@ -93,23 +95,31 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
             loggedIn: true
           });
           
+          logger.info('User initialized successfully', {
+            userId: response.data.user.id,
+            alias: response.data.user.alias,
+            isAnonymous: response.data.user.isAnonymous
+          });
+          
           updateCreationState({ 
             step: 'complete', 
             progress: 100, 
             message: 'Welcome back!' 
           });
         } else {
+          logger.warn('Token authentication failed, removing token');
           removeToken();
           updateCreationState({ step: 'idle', progress: 0, message: '' });
         }
-      } catch (error) {
-        console.error('Authentication error:', error);
+      } catch (error: any) {
+        logger.error('Authentication error', { error: error.message });
         removeToken();
         updateCreationState({ step: 'idle', progress: 0, message: '' });
       } finally {
         setIsLoading(false);
       }
     } else {
+      logger.info('No token found, user not logged in');
       setIsLoading(false);
       updateCreationState({ step: 'idle', progress: 0, message: '' });
     }
@@ -119,51 +129,62 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     initializeUser();
   }, [initializeUser]);
 
-  // Enhanced anonymous account creation with detailed steps
+  // Enhanced anonymous account creation with perfect backend sync
   const createAnonymousAccount = async () => {
+    logger.accountCreation('Starting anonymous account creation process');
     setIsLoading(true);
     
     try {
       // Step 1: Initialize
       updateCreationState({
         step: 'initializing',
-        progress: 10,
-        message: 'Preparing your anonymous identity...',
+        progress: 15,
+        message: 'Initializing secure environment...',
         retryCount: 0
-      });
-
-      await new Promise(resolve => setTimeout(resolve, 800)); // UX timing
-
-      // Step 2: Creating identity
-      updateCreationState({
-        step: 'creating',
-        progress: 30,
-        message: 'Generating secure anonymous profile...'
       });
 
       await new Promise(resolve => setTimeout(resolve, 600));
 
+      // Step 2: Creating identity
+      updateCreationState({
+        step: 'creating',
+        progress: 35,
+        message: 'Generating anonymous identity...'
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 800));
+
       // Step 3: Server communication
       updateCreationState({
         step: 'authenticating',
-        progress: 60,
+        progress: 65,
         message: 'Establishing secure connection...'
       });
 
-      const response = await UserApi.createAnonymousUser();
+      logger.accountCreation('Calling backend registration API');
+      const response = await UserApi.register();
+
+      logger.accountCreation('Backend response received', { 
+        success: response.success, 
+        hasUser: !!response.data?.user 
+      });
 
       if (response.success && response.data) {
         // Step 4: Finalizing
         updateCreationState({
           step: 'finalizing',
-          progress: 85,
-          message: 'Setting up your sanctuary access...'
+          progress: 90,
+          message: 'Setting up your sanctuary...'
         });
 
         await new Promise(resolve => setTimeout(resolve, 500));
 
         // Save token and user data
         setToken(response.data.token);
+        if (response.data.refreshToken) {
+          localStorage.setItem('refreshToken', response.data.refreshToken);
+        }
+        
         setUser({
           ...response.data.user,
           loggedIn: true,
@@ -174,7 +195,12 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         updateCreationState({
           step: 'complete',
           progress: 100,
-          message: 'Your anonymous identity is ready!'
+          message: 'Welcome to your sanctuary! 🎉'
+        });
+
+        logger.accountCreation('Anonymous account creation successful', {
+          userId: response.data.user.id,
+          alias: response.data.user.alias
         });
 
         // Show success message
@@ -193,19 +219,27 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         throw new Error(response.error || 'Failed to create anonymous account');
       }
     } catch (error: any) {
-      console.error('Anonymous account creation failed:', error);
+      logger.error('Anonymous account creation failed', {
+        error: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          'Unable to create account. Please check your connection and try again.';
       
       updateCreationState({
         step: 'error',
         progress: 0,
-        message: 'Unable to create account. Please try again.',
+        message: errorMessage,
         retryCount: creationState.retryCount + 1
       });
 
       // Show error toast with retry option
       toast({
         title: "Connection Issue",
-        description: "We couldn't create your anonymous account. Check your internet connection.",
+        description: errorMessage,
         variant: "destructive",
         duration: 5000,
       });

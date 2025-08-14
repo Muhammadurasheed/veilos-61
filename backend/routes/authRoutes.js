@@ -71,6 +71,13 @@ router.post('/register',
       user.refreshToken = refreshToken;
       await user.save();
 
+      console.log('User registration successful:', {
+        id: user.id,
+        alias: user.alias,
+        isAnonymous: user.isAnonymous,
+        role: user.role
+      });
+
       return res.success({
         token: accessToken,
         refreshToken,
@@ -84,11 +91,14 @@ router.post('/register',
           email: user.email,
           isAnonymous: user.isAnonymous
         }
-      }, 'User registered successfully');
+      }, `Welcome to Veilo, ${user.alias}!`);
 
     } catch (error) {
-      console.error('Registration error:', error);
-      return res.error('Registration failed', 500);
+      console.error('Registration error:', error.message, {
+        stack: error.stack,
+        userId: req.body?.email || 'anonymous'
+      });
+      return res.error('Registration failed: ' + error.message, 500);
     }
   }
 );
