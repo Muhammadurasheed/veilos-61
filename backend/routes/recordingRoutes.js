@@ -2,12 +2,12 @@ const express = require('express');
 const router = express.Router();
 const SessionRecording = require('../models/SessionRecording');
 const AIModerationLog = require('../models/AIModerationLog');
-const { authenticateToken } = require('../middleware/auth');
+const { authMiddleware } = require('../middleware/auth');
 const { nanoid } = require('nanoid');
 const crypto = require('crypto');
 
 // Start session recording
-router.post('/:sessionId/recording/start', authenticateToken, async (req, res) => {
+router.post('/:sessionId/recording/start', authMiddleware, async (req, res) => {
   try {
     const { sessionId } = req.params;
     const { sessionType, recordingType = 'audio_only', retentionPolicy = 'delete_after_session' } = req.body;
@@ -29,7 +29,7 @@ router.post('/:sessionId/recording/start', authenticateToken, async (req, res) =
       sessionId,
       sessionType,
       recordingType,
-      initiatedBy: req.userId,
+      initiatedBy: req.user.id,
       startTime: new Date(),
       retentionPolicy,
       encryptionKey,
@@ -53,7 +53,7 @@ router.post('/:sessionId/recording/start', authenticateToken, async (req, res) =
 });
 
 // Stop session recording
-router.post('/:sessionId/recording/stop', authenticateToken, async (req, res) => {
+router.post('/:sessionId/recording/stop', authMiddleware, async (req, res) => {
   try {
     const { sessionId } = req.params;
 
@@ -67,7 +67,7 @@ router.post('/:sessionId/recording/stop', authenticateToken, async (req, res) =>
     }
 
     // Check permission
-    if (recording.initiatedBy !== req.userId) {
+    if (recording.initiatedBy !== req.user.id) {
       return res.status(403).json({ success: false, error: 'Only recording initiator can stop recording' });
     }
 
@@ -95,7 +95,7 @@ router.post('/:sessionId/recording/stop', authenticateToken, async (req, res) =>
 });
 
 // Get recording consent from participant
-router.post('/:sessionId/recording/consent', authenticateToken, async (req, res) => {
+router.post('/:sessionId/recording/consent', authMiddleware, async (req, res) => {
   try {
     const { sessionId } = req.params;
     const { consentGiven, alias } = req.body;
@@ -110,14 +110,14 @@ router.post('/:sessionId/recording/consent', authenticateToken, async (req, res)
     }
 
     // Update or add consent
-    const existingConsent = recording.participantConsent.find(c => c.userId === req.userId);
+    const existingConsent = recording.participantConsent.find(c => c.userId === req.user.id);
     if (existingConsent) {
       existingConsent.consentGiven = consentGiven;
       existingConsent.consentAt = new Date();
     } else {
       recording.participantConsent.push({
-        userId: req.userId,
-        alias: alias || `User ${req.userId}`,
+        userId: req.user.id,
+        alias: alias || `User ${req.user.id}`,
         consentGiven,
         consentAt: new Date()
       });
@@ -133,7 +133,7 @@ router.post('/:sessionId/recording/consent', authenticateToken, async (req, res)
 });
 
 // AI Moderation: Log detection
-router.post('/:sessionId/moderation/log', authenticateToken, async (req, res) => {
+router.post('/:sessionId/moderation/log', authMiddleware, async (req, res) => {
   try {
     const { sessionId } = req.params;
     const {
@@ -188,7 +188,7 @@ router.post('/:sessionId/moderation/log', authenticateToken, async (req, res) =>
 });
 
 // Take moderation action
-router.post('/:sessionId/moderation/action', authenticateToken, async (req, res) => {
+router.post('/:sessionId/moderation/action', authMiddleware, async (req, res) => {
   try {
     const { sessionId } = req.params;
     const { moderationId, actionTaken, actionTakenBy = 'human_moderator' } = req.body;
@@ -203,7 +203,7 @@ router.post('/:sessionId/moderation/action', authenticateToken, async (req, res)
     moderationLog.resolved = ['warning', 'mute', 'temporary_removal', 'permanent_ban'].includes(actionTaken);
 
     if (moderationLog.resolved) {
-      moderationLog.resolvedBy = req.userId;
+      moderationLog.resolvedBy = req.user.id;
       moderationLog.resolvedAt = new Date();
     }
 
@@ -217,7 +217,7 @@ router.post('/:sessionId/moderation/action', authenticateToken, async (req, res)
 });
 
 // Get moderation analytics
-router.get('/:sessionId/moderation/analytics', authenticateToken, async (req, res) => {
+router.get('/:sessionId/moderation/analytics', authMiddleware, async (req, res) => {
   try {
     const { sessionId } = req.params;
 
