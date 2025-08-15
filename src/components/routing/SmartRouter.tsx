@@ -10,7 +10,7 @@ interface SmartRouterProps {
 }
 
 export const SmartRouter: React.FC<SmartRouterProps> = ({ children }) => {
-  const { appState } = useAppState();
+  const { appState, markOnboardingComplete } = useAppState();
   const { isLoading: userLoading, user } = useUserContext();
 
   // Show loading while app is initializing
@@ -28,7 +28,7 @@ export const SmartRouter: React.FC<SmartRouterProps> = ({ children }) => {
   // Show onboarding for first-time users
   if (appState.currentStep === 'onboarding' && !appState.hasCompletedOnboarding) {
     logger.debug('Showing onboarding screen');
-    return <WelcomeScreen isOpen={true} onComplete={() => {}} />;
+    return <WelcomeScreen isOpen={true} onComplete={markOnboardingComplete} />;
   }
 
   // Show main app for returning users or after onboarding
