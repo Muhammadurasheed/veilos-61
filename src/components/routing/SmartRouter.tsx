@@ -2,7 +2,7 @@ import React from 'react';
 import { useAppState } from '@/contexts/AppStateContext';
 import { useUserContext } from '@/contexts/UserContext';
 import { EnhancedLoadingState } from '@/components/ui/enhanced-loading-states';
-import { WelcomeScreen } from '@/components/onboarding/WelcomeScreen';
+import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow';
 import { logger } from '@/services/logger';
 
 interface SmartRouterProps {
@@ -27,8 +27,16 @@ export const SmartRouter: React.FC<SmartRouterProps> = ({ children }) => {
 
   // Show onboarding for first-time users
   if (appState.currentStep === 'onboarding' && !appState.hasCompletedOnboarding) {
-    logger.debug('Showing onboarding screen');
-    return <WelcomeScreen isOpen={true} onComplete={markOnboardingComplete} />;
+    logger.debug('Showing onboarding flow for first-time user');
+    return (
+      <OnboardingFlow 
+        isOpen={true} 
+        onComplete={() => {
+          logger.userAction('Onboarding completed successfully');
+          // Don't call markOnboardingComplete here, it's handled in OnboardingFlow
+        }} 
+      />
+    );
   }
 
   // Show main app for returning users or after onboarding

@@ -1,13 +1,20 @@
-import { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import { generateAlias } from '@/lib/alias';
 import { UserRole } from '@/types';
 import { UserApi } from '@/services/api';
 import { toast } from '@/hooks/use-toast';
-import useLocalStorage from '@/hooks/useLocalStorage';
 import { logger } from '@/services/logger';
 import { tokenManager } from '@/services/tokenManager';
 
-// Define the user type
+// Unified Application State
+interface AppState {
+  isFirstLaunch: boolean;
+  hasCompletedOnboarding: boolean;
+  isInitialized: boolean;
+  currentStep: 'loading' | 'onboarding' | 'main';
+}
+
+// User Data
 export interface User {
   id: string;
   alias: string;
@@ -20,7 +27,7 @@ export interface User {
   email?: string;
 }
 
-// Enhanced user creation state
+// Account Creation State
 export interface UserCreationState {
   step: 'idle' | 'initializing' | 'creating' | 'authenticating' | 'finalizing' | 'complete' | 'error';
   progress: number;
@@ -28,20 +35,39 @@ export interface UserCreationState {
   retryCount: number;
 }
 
-// Define the context type
-interface UserContextType {
+// Unified Context Type
+interface UnifiedStateContextType {
+  // App State
+  appState: AppState;
+  setInitialized: () => void;
+  markOnboardingComplete: () => void;
+  resetApp: () => void;
+  
+  // User State
   user: User | null;
   setUser: (user: User | null) => void;
-  logout: () => void;
-  refreshIdentity: () => void;
-  createAnonymousAccount: (alias?: string, avatarIndex?: number) => Promise<boolean>;
   isLoading: boolean;
-  updateAvatar: (avatarUrl: string) => Promise<void>;
+  
+  // Account Creation
+  createAnonymousAccount: (alias?: string, avatarIndex?: number) => Promise<boolean>;
   creationState: UserCreationState;
   retryAccountCreation: () => Promise<boolean>;
+  
+  // User Actions
+  logout: () => void;
+  refreshIdentity: () => void;
+  updateAvatar: (avatarUrl: string) => Promise<void>;
 }
 
-// Initial creation state
+const APP_STATE_KEY = 'veilo-unified-state';
+
+const defaultAppState: AppState = {
+  isFirstLaunch: true,
+  hasCompletedOnboarding: false,
+  isInitialized: false,
+  currentStep: 'loading'
+};
+
 const initialCreationState: UserCreationState = {
   step: 'idle',
   progress: 0,
@@ -49,35 +75,82 @@ const initialCreationState: UserCreationState = {
   retryCount: 0
 };
 
-// Create context with default values
-const UserContext = createContext<UserContextType>({
-  user: null,
-  setUser: () => {},
-  logout: () => {},
-  refreshIdentity: () => {},
-  createAnonymousAccount: async () => false,
-  isLoading: false,
-  updateAvatar: async () => {},
-  creationState: initialCreationState,
-  retryAccountCreation: async () => false,
-});
+const UnifiedStateContext = createContext<UnifiedStateContextType | undefined>(undefined);
 
-// Custom hook to use the UserContext
-export const useUserContext = () => useContext(UserContext);
+export const useUnifiedState = () => {
+  const context = useContext(UnifiedStateContext);
+  if (!context) {
+    throw new Error('useUnifiedState must be used within a UnifiedStateProvider');
+  }
+  return context;
+};
 
-// Provider component
-export const UserProvider = ({ children }: { children: ReactNode }) => {
+export const UnifiedStateProvider = ({ children }: { children: ReactNode }) => {
+  const [appState, setAppState] = useState<AppState>(defaultAppState);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [creationState, setCreationState] = useState<UserCreationState>(initialCreationState);
-  // Remove useLocalStorage dependency - now handled by tokenManager
 
   // Helper to update creation state
   const updateCreationState = useCallback((updates: Partial<UserCreationState>) => {
     setCreationState(prev => ({ ...prev, ...updates }));
   }, []);
 
-  // Initialize user from token on mount with enhanced logging
+  // Initialize app state from localStorage
+  useEffect(() => {
+    const initializeAppState = async () => {
+      try {
+        const savedState = localStorage.getItem(APP_STATE_KEY);
+        
+        if (savedState) {
+          const parsed = JSON.parse(savedState);
+          setAppState(prev => ({
+            ...prev,
+            ...parsed,
+            isInitialized: true,
+            currentStep: parsed.hasCompletedOnboarding ? 'main' : 'onboarding'
+          }));
+          logger.info('App state loaded from localStorage', parsed);
+        } else {
+          // First time user
+          setAppState(prev => ({
+            ...prev,
+            isInitialized: true,
+            currentStep: 'onboarding'
+          }));
+          logger.info('First launch detected - showing onboarding');
+        }
+
+        // Initialize user if token exists
+        await initializeUser();
+        
+      } catch (error) {
+        logger.error('Error loading app state', error);
+        setAppState(prev => ({ ...prev, isInitialized: true, currentStep: 'onboarding' }));
+        setIsLoading(false);
+      }
+    };
+
+    initializeAppState();
+  }, []);
+
+  // Save app state to localStorage whenever it changes
+  useEffect(() => {
+    if (appState.isInitialized) {
+      try {
+        const stateToSave = {
+          isFirstLaunch: appState.isFirstLaunch,
+          hasCompletedOnboarding: appState.hasCompletedOnboarding
+        };
+        localStorage.setItem(APP_STATE_KEY, JSON.stringify(stateToSave));
+        logger.debug('App state saved to localStorage', stateToSave);
+      } catch (error) {
+        logger.error('Error saving app state', error);
+      }
+    }
+  }, [appState]);
+
+  // Initialize user from token
   const initializeUser = useCallback(async () => {
     if (tokenManager.hasToken()) {
       try {
@@ -117,21 +190,39 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         logger.error('Authentication error', { error: error.message });
         tokenManager.removeToken();
         updateCreationState({ step: 'idle', progress: 0, message: '' });
-      } finally {
-        setIsLoading(false);
       }
     } else {
       logger.info('No token found, user not logged in');
-      setIsLoading(false);
       updateCreationState({ step: 'idle', progress: 0, message: '' });
     }
+    setIsLoading(false);
   }, [updateCreationState]);
 
-  useEffect(() => {
-    initializeUser();
-  }, [initializeUser]);
+  // App State Actions
+  const markOnboardingComplete = useCallback(() => {
+    setAppState(prev => ({
+      ...prev,
+      isFirstLaunch: false,
+      hasCompletedOnboarding: true,
+      currentStep: 'main'
+    }));
+    logger.userAction('Onboarding completed');
+  }, []);
 
-  // Enhanced anonymous account creation with perfect backend sync
+  const resetApp = useCallback(() => {
+    localStorage.removeItem(APP_STATE_KEY);
+    tokenManager.removeToken();
+    setAppState(defaultAppState);
+    setUser(null);
+    setCreationState(initialCreationState);
+    logger.userAction('App reset to initial state');
+  }, []);
+
+  const setInitialized = useCallback(() => {
+    setAppState(prev => ({ ...prev, isInitialized: true }));
+  }, []);
+
+  // Enhanced anonymous account creation
   const createAnonymousAccount = async (alias?: string, avatarIndex?: number): Promise<boolean> => {
     logger.accountCreation('Starting anonymous account creation process');
     setIsLoading(true);
@@ -182,7 +273,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Token is automatically saved by UserApi.register via tokenManager
+        // Save refresh token
         if (response.data.refreshToken) {
           localStorage.setItem('refreshToken', response.data.refreshToken);
         }
@@ -240,15 +331,14 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         retryCount: creationState.retryCount + 1
       });
 
-      // Show error toast with retry option
+      // Show error toast
       toast({
         title: "Connection Issue",
         description: errorMessage,
         variant: "destructive",
         duration: 5000,
       });
-
-      // Return false but don't auto-fallback, let user choose
+      
       return false;
     } finally {
       setIsLoading(false);
@@ -260,39 +350,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     return await createAnonymousAccount();
   };
 
-  // Create fallback user when API is unavailable
-  const useFallbackUser = () => {
-    const fallbackUser: User = {
-      id: `user-${Math.random().toString(36).substring(2, 10)}`,
-      alias: generateAlias(),
-      avatarIndex: Math.floor(Math.random() * 12) + 1,
-      loggedIn: false,
-      role: UserRole.SHADOW,
-      isAnonymous: true
-    };
-    
-    setUser(fallbackUser);
-    
-    updateCreationState({
-      step: 'complete',
-      progress: 100,
-      message: 'Using offline mode'
-    });
-
-    toast({
-      title: "Offline Mode Activated",
-      description: "Using local profile. Some features may be limited.",
-      variant: "destructive",
-      duration: 4000,
-    });
-
-    setTimeout(() => {
-      updateCreationState(initialCreationState);
-    }, 2000);
-  };
-
+  // User Actions
   const logout = useCallback(() => {
     tokenManager.removeToken();
+    localStorage.removeItem('refreshToken');
     setUser(null);
     updateCreationState(initialCreationState);
     
@@ -337,12 +398,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
             avatarIndex: Math.floor(Math.random() * 12) + 1,
           });
           
-          updateCreationState({
-            step: 'complete',
-            progress: 100,
-            message: 'Identity refreshed locally'
-          });
-          
           toast({
             title: 'Identity refreshed',
             description: 'Your anonymous identity has been refreshed locally.',
@@ -353,13 +408,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           updateCreationState(initialCreationState);
         }, 1500);
       } catch (error) {
-        console.error('Identity refresh error:', error);
-        
-        updateCreationState({
-          step: 'error',
-          progress: 0,
-          message: 'Failed to refresh identity'
-        });
+        logger.error('Identity refresh error:', error);
         
         // Fallback to local refresh
         setUser({
@@ -399,7 +448,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         });
       }
     } catch (error) {
-      console.error('Avatar update error:', error);
+      logger.error('Avatar update error:', error);
       toast({
         title: 'Avatar update failed',
         description: 'An error occurred while updating your avatar.',
@@ -408,19 +457,32 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const value: UnifiedStateContextType = {
+    // App State
+    appState,
+    setInitialized,
+    markOnboardingComplete,
+    resetApp,
+    
+    // User State
+    user,
+    setUser,
+    isLoading,
+    
+    // Account Creation
+    createAnonymousAccount,
+    creationState,
+    retryAccountCreation,
+    
+    // User Actions
+    logout,
+    refreshIdentity,
+    updateAvatar,
+  };
+
   return (
-    <UserContext.Provider value={{ 
-      user, 
-      setUser, 
-      logout, 
-      refreshIdentity, 
-      createAnonymousAccount, 
-      isLoading,
-      updateAvatar,
-      creationState,
-      retryAccountCreation
-    }}>
+    <UnifiedStateContext.Provider value={value}>
       {children}
-    </UserContext.Provider>
+    </UnifiedStateContext.Provider>
   );
 };

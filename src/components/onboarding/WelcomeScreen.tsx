@@ -64,9 +64,13 @@ export function WelcomeScreen({ isOpen, onComplete }: WelcomeScreenProps) {
 
   const handleGetStarted = async () => {
     try {
-      await createAnonymousAccount();
-      // Account creation success is handled by UserContext
-      onComplete();
+      const success = await createAnonymousAccount();
+      if (success) {
+        // Wait for creation to fully complete before calling onComplete
+        setTimeout(() => {
+          onComplete();
+        }, 1000);
+      }
     } catch (error) {
       toast({
         title: "Connection Error",
@@ -78,8 +82,12 @@ export function WelcomeScreen({ isOpen, onComplete }: WelcomeScreenProps) {
 
   const handleRetry = async () => {
     try {
-      await retryAccountCreation();
-      onComplete();
+      const success = await retryAccountCreation();
+      if (success) {
+        setTimeout(() => {
+          onComplete();
+        }, 1000);
+      }
     } catch (error) {
       // Error is handled by UserContext
     }
@@ -309,7 +317,7 @@ export function WelcomeScreen({ isOpen, onComplete }: WelcomeScreenProps) {
                           </motion.div>
                         )}
 
-                        {!['error', 'complete'].includes(creationState.step) && (
+                        {!['error', 'complete'].includes(creationState.step) && creationState.step !== 'idle' && (
                           <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -317,12 +325,17 @@ export function WelcomeScreen({ isOpen, onComplete }: WelcomeScreenProps) {
                             className="text-center"
                           >
                             <Button 
-                              onClick={handleGetStarted}
+                              onClick={() => {
+                                // Force completion if stuck in loading state
+                                if (creationState.step !== 'idle') {
+                                  onComplete();
+                                }
+                              }}
                               variant="ghost"
-                              disabled={isLoading}
+                              disabled={isLoading && creationState.step !== 'complete'}
                               className="text-sm"
                             >
-                              {isLoading ? 'Creating...' : 'Skip to Complete'}
+                              Continue to App
                             </Button>
                           </motion.div>
                         )}
