@@ -197,7 +197,7 @@ export const AccountCreationFlow = ({
           {/* Action Buttons */}
           <div className="space-y-3">
             <Button
-              onClick={createAnonymousAccount}
+              onClick={() => createAnonymousAccount()}
               disabled={isLoading}
               className="w-full bg-gradient-to-r from-veilo-blue to-veilo-purple hover:from-veilo-blue-dark hover:to-veilo-purple-dark text-white font-medium h-12"
             >

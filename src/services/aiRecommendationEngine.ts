@@ -28,7 +28,7 @@ class AIRecommendationEngine {
   
   async getPersonalizedRecommendations(userId: string): Promise<PersonalizedRecommendation> {
     try {
-      const response = await apiRequest<PersonalizedRecommendation>('/api/ai/recommendations', 'POST', { 
+      const response = await apiRequest<PersonalizedRecommendation>('POST', '/api/ai/recommendations', { 
         userId,
         includeExperts: true,
         includeSanctuarySpaces: true,
@@ -44,7 +44,7 @@ class AIRecommendationEngine {
 
   async getSmartExpertMatching(userPost: string, userHistory: any[]): Promise<RecommendationScore[]> {
     try {
-      const response = await apiRequest<RecommendationScore[]>('/api/ai/expert-matching', 'POST', {
+      const response = await apiRequest<RecommendationScore[]>('POST', '/api/ai/expert-matching', {
         postContent: userPost,
         userHistory,
         sentimentAnalysis: true,
@@ -65,7 +65,7 @@ class AIRecommendationEngine {
     recommendations: string[];
   }> {
     try {
-      const response = await apiRequest('/api/ai/risk-assessment', 'POST', {
+      const response = await apiRequest('POST', '/api/ai/risk-assessment', {
         userId,
         posts: recentPosts,
         timeframe: '7d'
@@ -95,7 +95,7 @@ class AIRecommendationEngine {
     resources: string[];
   }> {
     try {
-      const response = await apiRequest('/api/ai/smart-response', 'POST', {
+      const response = await apiRequest('POST', '/api/ai/smart-response', {
         content: postContent,
         specializations: expertSpecialization,
         responseType: 'expert_guidance'
@@ -136,7 +136,7 @@ class AIRecommendationEngine {
     
     // Send to backend for persistent storage
     try {
-      await apiRequest('/api/ai/track-interaction', 'POST', { userId, interaction });
+      await apiRequest('POST', '/api/ai/track-interaction', { userId, interaction });
     } catch (error) {
       console.error('Interaction tracking error:', error);
     }
@@ -163,7 +163,7 @@ class AIRecommendationEngine {
     }[];
   }> {
     try {
-      const response = await apiRequest('/api/ai/crisis-detection', 'POST', { content });
+      const response = await apiRequest('POST', '/api/ai/crisis-detection', { content });
       
       return response.data as any || {
         isCrisis: false,

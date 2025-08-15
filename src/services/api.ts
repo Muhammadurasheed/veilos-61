@@ -19,7 +19,7 @@ api.interceptors.request.use(
   (config) => {
     // Add auth token if available
     const authHeaders = tokenManager.getAuthHeaders();
-    config.headers = { ...config.headers, ...authHeaders };
+    Object.assign(config.headers, authHeaders);
     
     logger.apiRequest(config.method?.toUpperCase() || 'UNKNOWN', config.url || '', config.data);
     return config;
@@ -57,6 +57,37 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Types
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+// Generic API request function
+export const apiRequest = async <T = any>(
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
+  url: string,
+  data?: any,
+  config?: any
+): Promise<ApiResponse<T>> => {
+  try {
+    const response = await api.request({
+      method,
+      url,
+      data,
+      ...config,
+    });
+    return response.data;
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.error || error.message || 'An error occurred',
+    };
+  }
+};
 
 // User API methods
 export const UserApi = {
@@ -116,6 +147,274 @@ export const UserApi = {
     logger.userAction('Profile update', updates);
     const response = await api.put('/api/auth/profile', updates);
     return response.data;
+  },
+
+  // Refresh identity
+  async refreshIdentity() {
+    const response = await api.post('/api/auth/refresh-identity');
+    return response.data;
+  },
+
+  // Update avatar
+  async updateAvatar(avatarUrl: string) {
+    const response = await api.put('/api/auth/avatar', { avatarUrl });
+    return response.data;
+  },
+
+  // Register expert account
+  async registerExpertAccount(expertData: any) {
+    const response = await api.post('/api/experts/register', expertData);
+    return response.data;
+  }
+};
+
+// Expert API methods
+export const ExpertApi = {
+  async register(expertData: any) {
+    return apiRequest('POST', '/api/experts/register', expertData);
+  },
+
+  async registerExpert(expertData: any) {
+    return apiRequest('POST', '/api/experts/register', expertData);
+  },
+
+  async getExperts() {
+    return apiRequest('GET', '/api/experts');
+  },
+
+  async getExpert(id: string) {
+    return apiRequest('GET', `/api/experts/${id}`);
+  },
+
+  async updateExpert(id: string, updates: any) {
+    return apiRequest('PUT', `/api/experts/${id}`, updates);
+  },
+
+  async uploadDocument(id: string, formData: FormData) {
+    return apiRequest('POST', `/api/experts/${id}/document`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+
+  async uploadVerificationDocument(expertId: string, file: File, type: string, progressCallback?: (progress: number) => void) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('documentType', type);
+    
+    return apiRequest('POST', `/api/experts/${expertId}/document`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (progressEvent: any) => {
+        if (progressCallback && progressEvent.total) {
+          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          progressCallback(progress);
+        }
+      }
+    });
+  },
+
+  async getDocuments(id: string) {
+    return apiRequest('GET', `/api/experts/${id}/documents`);
+  }
+};
+
+// Admin API methods
+export const AdminApi = {
+  async login(credentials: { email: string; password: string }) {
+    return apiRequest('POST', '/api/admin/login', credentials);
+  },
+
+  async getUsers(params?: any) {
+    return apiRequest('GET', '/api/admin/users', null, { params });
+  },
+
+  async getExperts(params?: any) {
+    return apiRequest('GET', '/api/admin/experts', null, { params });
+  },
+
+  async approveExpert(expertId: string) {
+    return apiRequest('POST', `/api/admin/experts/${expertId}/approve`);
+  },
+
+  async rejectExpert(expertId: string, reason: string) {
+    return apiRequest('POST', `/api/admin/experts/${expertId}/reject`, { reason });
+  },
+
+  async moderateContent(contentId: string, action: string) {
+    return apiRequest('POST', `/api/admin/content/${contentId}/moderate`, { action });
+  },
+
+  async getAnalytics(params?: any) {
+    return apiRequest('GET', '/api/admin/analytics', null, { params });
+  }
+};
+
+// Post API methods
+export const PostApi = {
+  async createPost(postData: any) {
+    return apiRequest('POST', '/api/posts', postData);
+  },
+
+  async getPosts(params?: any) {
+    return apiRequest('GET', '/api/posts', null, { params });
+  },
+
+  async getPost(id: string) {
+    return apiRequest('GET', `/api/posts/${id}`);
+  },
+
+  async updatePost(id: string, updates: any) {
+    return apiRequest('PUT', `/api/posts/${id}`, updates);
+  },
+
+  async deletePost(id: string) {
+    return apiRequest('DELETE', `/api/posts/${id}`);
+  },
+
+  async likePost(id: string) {
+    return apiRequest('POST', `/api/posts/${id}/like`);
+  },
+
+  async unlikePost(id: string) {
+    return apiRequest('POST', `/api/posts/${id}/unlike`);
+  },
+
+  async flagPost(id: string, reason: string) {
+    return apiRequest('POST', `/api/posts/${id}/flag`, { reason });
+  },
+
+  async addComment(postId: string, comment: any) {
+    return apiRequest('POST', `/api/posts/${postId}/comments`, comment);
+  }
+};
+
+// Analytics API methods
+export const AnalyticsApi = {
+  async getOverview(params?: any) {
+    return apiRequest('GET', '/api/analytics/overview', null, { params });
+  },
+
+  async getUserMetrics(params?: any) {
+    return apiRequest('GET', '/api/analytics/users', null, { params });
+  },
+
+  async getExpertMetrics(params?: any) {
+    return apiRequest('GET', '/api/analytics/experts', null, { params });
+  },
+
+  async getSessionMetrics(params?: any) {
+    return apiRequest('GET', '/api/analytics/sessions', null, { params });
+  },
+
+  async trackEvent(eventData: any) {
+    return apiRequest('POST', '/api/analytics/events', eventData);
+  },
+
+  async getExpertAnalytics(expertId: string, timeframe?: string) {
+    return apiRequest('GET', '/api/analytics/expert-analytics', null, { 
+      params: { expertId, timeframe } 
+    });
+  },
+
+  async getExpertRankings(sortBy?: string, limit?: number) {
+    return apiRequest('GET', '/api/analytics/expert-rankings', null, { 
+      params: { sortBy, limit } 
+    });
+  },
+
+  async getPlatformAnalytics(params?: any) {
+    return apiRequest('GET', '/api/analytics/platform', null, { params });
+  }
+};
+
+// Sanctuary API methods
+export const SanctuaryApi = {
+  async createSanctuary(sanctuaryData: any) {
+    return apiRequest('POST', '/api/sanctuary', sanctuaryData);
+  },
+
+  async createSession(sessionData: any) {
+    return apiRequest('POST', '/api/sanctuary/sessions', sessionData);
+  },
+
+  async getSanctuaries(params?: any) {
+    return apiRequest('GET', '/api/sanctuary', null, { params });
+  },
+
+  async getSession(id: string) {
+    return apiRequest('GET', `/api/sanctuary/sessions/${id}`);
+  },
+
+  async joinSanctuary(id: string) {
+    return apiRequest('POST', `/api/sanctuary/${id}/join`);
+  },
+
+  async joinSession(sessionId: string, options?: { alias?: string }) {
+    return apiRequest('POST', `/api/sanctuary/sessions/${sessionId}/join`, options);
+  },
+
+  async leaveSanctuary(id: string) {
+    return apiRequest('POST', `/api/sanctuary/${id}/leave`);
+  },
+
+  async endSession(sessionId: string, hostToken?: string) {
+    return apiRequest('POST', `/api/sanctuary/sessions/${sessionId}/end`, { hostToken });
+  },
+
+  async flagSession(id: string, reason: string) {
+    return apiRequest('POST', `/api/sanctuary/sessions/${id}/flag`, { reason });
+  },
+
+  async removeParticipant(sessionId: string, participantId: string, hostToken?: string) {
+    return apiRequest('POST', `/api/sanctuary/sessions/${sessionId}/remove`, { 
+      participantId, 
+      hostToken 
+    });
+  },
+
+  async moderateSession(sessionId: string, action: any) {
+    return apiRequest('POST', `/api/sanctuary/sessions/${sessionId}/moderate`, action);
+  }
+};
+
+// Session API methods
+export const SessionApi = {
+  async createSession(sessionData: any) {
+    return apiRequest('POST', '/api/sessions', sessionData);
+  },
+
+  async getSessions(params?: any) {
+    return apiRequest('GET', '/api/sessions', null, { params });
+  },
+
+  async getSession(id: string) {
+    return apiRequest('GET', `/api/sessions/${id}`);
+  },
+
+  async joinSession(id: string) {
+    return apiRequest('POST', `/api/sessions/${id}/join`);
+  },
+
+  async endSession(id: string) {
+    return apiRequest('POST', `/api/sessions/${id}/end`);
+  }
+};
+
+// Gemini API methods
+export const GeminiApi = {
+  async refineContent(content: string, instructions: string) {
+    return apiRequest('POST', '/api/ai/gemini/refine', { content, instructions });
+  },
+
+  async refinePost(postData: any, instructions: string) {
+    return apiRequest('POST', '/api/ai/gemini/refine-post', { postData, instructions });
+  },
+
+  async generateSuggestions(context: any) {
+    return apiRequest('POST', '/api/ai/gemini/suggestions', context);
+  },
+
+  async analyzeContent(content: string) {
+    return apiRequest('POST', '/api/ai/gemini/analyze', { content });
   }
 };
 
