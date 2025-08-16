@@ -528,40 +528,41 @@ const ExpertRegistration = () => {
             )}
 
             {step === 'availability' && (
-              <div className="space-y-6">
-                <p className="text-gray-600 dark:text-gray-300 mb-4">
-                  Please set your availability for sessions. This helps users know when they can book time with you.
-                </p>
-                
-                <FormField
-                  control={form.control}
-                  name="timezone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-gray-700 dark:text-gray-300">Your Timezone</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="bg-white dark:bg-gray-800">
-                            <SelectValue placeholder="Select your timezone" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="UTC">UTC (Coordinated Universal Time)</SelectItem>
-                          <SelectItem value="EST">EST (Eastern Standard Time)</SelectItem>
-                          <SelectItem value="CST">CST (Central Standard Time)</SelectItem>
-                          <SelectItem value="MST">MST (Mountain Standard Time)</SelectItem>
-                          <SelectItem value="PST">PST (Pacific Standard Time)</SelectItem>
-                          <SelectItem value="GMT">GMT (Greenwich Mean Time)</SelectItem>
-                          <SelectItem value="CET">CET (Central European Time)</SelectItem>
-                          <SelectItem value="IST">IST (Indian Standard Time)</SelectItem>
-                          <SelectItem value="JST">JST (Japan Standard Time)</SelectItem>
-                          <SelectItem value="AEST">AEST (Australian Eastern Standard Time)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <Form {...form}>
+                <div className="space-y-6">
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">
+                    Please set your availability for sessions. This helps users know when they can book time with you.
+                  </p>
+                  
+                  <FormField
+                    control={form.control}
+                    name="timezone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-700 dark:text-gray-300">Your Timezone</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-white dark:bg-gray-800">
+                              <SelectValue placeholder="Select your timezone" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="UTC">UTC (Coordinated Universal Time)</SelectItem>
+                            <SelectItem value="EST">EST (Eastern Standard Time)</SelectItem>
+                            <SelectItem value="CST">CST (Central Standard Time)</SelectItem>
+                            <SelectItem value="MST">MST (Mountain Standard Time)</SelectItem>
+                            <SelectItem value="PST">PST (Pacific Standard Time)</SelectItem>
+                            <SelectItem value="GMT">GMT (Greenwich Mean Time)</SelectItem>
+                            <SelectItem value="CET">CET (Central European Time)</SelectItem>
+                            <SelectItem value="IST">IST (Indian Standard Time)</SelectItem>
+                            <SelectItem value="JST">JST (Japan Standard Time)</SelectItem>
+                            <SelectItem value="AEST">AEST (Australian Eastern Standard Time)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 
                 <div className="mt-6">
                   <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-4">Weekly Availability</h3>
@@ -639,43 +640,45 @@ const ExpertRegistration = () => {
                   </Button>
                 </div>
               </div>
+            </Form>
             )}
 
             {step === 'preferences' && (
-              <div className="space-y-6">
-                <p className="text-gray-600 dark:text-gray-300 mb-4">
-                  Configure your session preferences to customize how you interact with users on our platform.
-                </p>
-                
+              <Form {...form}>
                 <div className="space-y-6">
-                  <div className="flex flex-col space-y-4">
-                    <h3 className="font-medium text-gray-700 dark:text-gray-300">Privacy Settings</h3>
-                    
-                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
-                      <div>
-                        <Label className="text-base text-gray-700 dark:text-gray-300" htmlFor="voice-masking">
-                          Voice Masking
-                        </Label>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Change your voice during audio/video calls for enhanced privacy.
-                        </p>
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">
+                    Configure your session preferences to customize how you interact with users on our platform.
+                  </p>
+                  
+                  <div className="space-y-6">
+                    <div className="flex flex-col space-y-4">
+                      <h3 className="font-medium text-gray-700 dark:text-gray-300">Privacy Settings</h3>
+                      
+                      <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
+                        <div>
+                          <Label className="text-base text-gray-700 dark:text-gray-300" htmlFor="voice-masking">
+                            Voice Masking
+                          </Label>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Change your voice during audio/video calls for enhanced privacy.
+                          </p>
+                        </div>
+                        <FormField
+                          control={form.control}
+                          name="voiceMasking"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center gap-2">
+                              <FormControl>
+                                <Switch
+                                  id="voice-masking"
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
                       </div>
-                      <FormField
-                        control={form.control}
-                        name="voiceMasking"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center gap-2">
-                            <FormControl>
-                              <Switch
-                                id="voice-masking"
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
                     
                     <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
                       <div>
@@ -774,6 +777,7 @@ const ExpertRegistration = () => {
                   </Button>
                 </div>
               </div>
+            </Form>
             )}
 
             {step === 'verification' && (

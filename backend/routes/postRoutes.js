@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const Post = require('../models/Post');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, optionalAuthMiddleware } = require('../middleware/auth');
 const { moderateContent } = require('../middleware/contentModeration');
 const { aiModerateContent } = require('../middleware/aiContentModeration');
 
@@ -97,7 +97,7 @@ router.post('/', authMiddleware, aiModerateContent, moderateContent, async (req,
 
 // Get all posts
 // GET /api/posts
-router.get('/', async (req, res) => {
+router.get('/', optionalAuthMiddleware, async (req, res) => {
   try {
     let query = {};
     
@@ -142,7 +142,7 @@ router.get('/', async (req, res) => {
 
 // Get single post
 // GET /api/posts/:id
-router.get('/:id', async (req, res) => {
+router.get('/:id', optionalAuthMiddleware, async (req, res) => {
   try {
     const post = await Post.findOne({ id: req.params.id });
     
@@ -153,8 +153,8 @@ router.get('/:id', async (req, res) => {
       });
     }
     
-    // Check if post is flagged and user is not admin
-    if (post.flagged && (!req.user || req.user.role !== 'admin')) {
+    // Check if post is flagged and user is not admin or author
+    if (post.flagged && (!req.user || (req.user.role !== 'admin' && req.user.id !== post.userId))) {
       return res.status(403).json({
         success: false,
         error: 'This content has been flagged for review'

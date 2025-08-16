@@ -17,7 +17,7 @@ const getClientIp = (req, res, next) => {
 // POST /api/sanctuary/sessions (Updated to match API expectations)
 router.post('/sessions', getClientIp, async (req, res) => {
   try {
-    const { topic, description, emoji, expireHours = 1 } = req.body;
+    const { topic, description, emoji, expireHours = 1, sanctuaryType = 'anonymous-link' } = req.body;
     
     // Validation
     if (!topic) {
@@ -54,16 +54,23 @@ router.post('/sessions', getClientIp, async (req, res) => {
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + hours);
     
+    // Determine mode based on sanctuary type
+    const mode = sanctuaryType === 'anonymous-link' ? 'anon-inbox' : 
+                 sanctuaryType === 'scheduled-audio' ? 'live-audio' : 
+                 'text-room';
+
     // Create session
     const session = new SanctuarySession({
       topic,
       description: description || '',
       emoji: emoji || '',
+      mode,
       hostId,
       hostToken,
       hostIp: req.clientIp,
       expiresAt,
-      participants: []
+      participants: [],
+      submissions: []
     });
     
     await session.save();
@@ -310,6 +317,140 @@ router.post('/sessions/:id/remove-participant', getClientIp, async (req, res) =>
     res.status(500).json({
       success: false,
       error: 'Server error removing participant'
+    });
+  }
+});
+
+// Submit anonymous message to sanctuary inbox
+// POST /api/sanctuary/sessions/:id/submit
+router.post('/sessions/:id/submit', getClientIp, async (req, res) => {
+  try {
+    const { alias, message } = req.body;
+    
+    // Validation
+    if (!message || !message.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Message is required'
+      });
+    }
+
+    // Find active session
+    const session = await SanctuarySession.findOne({ 
+      id: req.params.id,
+      isActive: true,
+      expiresAt: { $gt: new Date() }
+    });
+    
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: 'Sanctuary session not found or expired'
+      });
+    }
+
+    // Only allow submissions for anon-inbox mode
+    if (session.mode !== 'anon-inbox') {
+      return res.status(400).json({
+        success: false,
+        error: 'Submissions not allowed for this session type'
+      });
+    }
+    
+    // Create submission
+    const submission = {
+      alias: alias || `Anonymous ${nanoid(4)}`,
+      message: message.trim(),
+      timestamp: new Date()
+    };
+    
+    session.submissions.push(submission);
+    await session.save();
+    
+    res.json({
+      success: true,
+      data: {
+        message: 'Message submitted successfully',
+        submissionId: submission.id
+      }
+    });
+    
+  } catch (err) {
+    console.error('Sanctuary submission error:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Server error submitting message'
+    });
+  }
+});
+
+// Get submissions for host (anonymous inbox)
+// GET /api/sanctuary/sessions/:id/submissions
+router.get('/sessions/:id/submissions', getClientIp, async (req, res) => {
+  try {
+    const { hostToken } = req.query;
+    let session;
+    
+    // Authentication logic similar to other host-only endpoints
+    if (hostToken) {
+      session = await SanctuarySession.findOne({ 
+        id: req.params.id,
+        hostToken
+      });
+    }
+    
+    if (!session && req.headers['x-auth-token']) {
+      try {
+        const decoded = require('jsonwebtoken').verify(
+          req.headers['x-auth-token'], 
+          process.env.JWT_SECRET
+        );
+        
+        session = await SanctuarySession.findOne({
+          id: req.params.id,
+          hostId: decoded.user.id
+        });
+      } catch (err) {
+        // Invalid token
+      }
+    }
+    
+    if (!session) {
+      session = await SanctuarySession.findOne({
+        id: req.params.id,
+        hostIp: req.clientIp
+      });
+    }
+    
+    if (!session) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to view submissions'
+      });
+    }
+    
+    // Return submissions with session info
+    res.json({
+      success: true,
+      data: {
+        session: {
+          id: session.id,
+          topic: session.topic,
+          description: session.description,
+          emoji: session.emoji,
+          mode: session.mode,
+          createdAt: session.createdAt,
+          expiresAt: session.expiresAt
+        },
+        submissions: session.submissions || []
+      }
+    });
+    
+  } catch (err) {
+    console.error('Get submissions error:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Server error retrieving submissions'
     });
   }
 });

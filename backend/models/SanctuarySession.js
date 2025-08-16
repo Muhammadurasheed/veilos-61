@@ -21,6 +21,11 @@ const sanctuarySessionSchema = new mongoose.Schema({
   emoji: {
     type: String
   },
+  mode: {
+    type: String,
+    enum: ['anon-inbox', 'live-audio', 'text-room'],
+    default: 'anon-inbox'
+  },
   hostId: {
     type: String
   },
@@ -42,6 +47,18 @@ const sanctuarySessionSchema = new mongoose.Schema({
     id: String,
     alias: String,
     joinedAt: Date
+  }],
+  submissions: [{
+    id: {
+      type: String,
+      default: () => nanoid(10)
+    },
+    alias: String,
+    message: String,
+    timestamp: {
+      type: Date,
+      default: Date.now
+    }
   }],
   isActive: {
     type: Boolean,

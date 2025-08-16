@@ -140,6 +140,11 @@ router.post('/:id/document', authMiddleware, async (req, res) => {
         status: 'pending'
       });
       
+      // If photo type, update avatar URL immediately
+      if (documentType === 'photo') {
+        expert.avatarUrl = fileUrl;
+      }
+      
       await expert.save();
       
       res.json({

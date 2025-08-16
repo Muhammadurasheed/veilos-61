@@ -21,8 +21,13 @@ const liveSanctuarySessionSchema = new mongoose.Schema({
     type: String
   },
   hostId: {
-    type: String,
-    required: true
+    type: String
+  },
+  hostToken: {
+    type: String
+  },
+  hostIp: {
+    type: String
   },
   agoraChannelName: {
     type: String,
@@ -70,7 +75,15 @@ const liveSanctuarySessionSchema = new mongoose.Schema({
   expiresAt: {
     type: Date,
     required: true
-  }
+  },
+  scheduledAt: {
+    type: Date
+  },
+  participants: [{
+    id: String,
+    alias: String,
+    joinedAt: Date
+  }]
 });
 
 // TTL index for auto-cleanup
