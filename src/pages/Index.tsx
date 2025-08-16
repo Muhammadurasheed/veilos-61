@@ -13,10 +13,8 @@ const Index = () => {
   const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
-    // Show welcome screen for new users
-    if (!user) {
-      setShowWelcome(true);
-    }
+    // Show welcome only when no user; hide when user loads
+    setShowWelcome(!user);
   }, [user]);
 
   const handleWelcomeComplete = () => {
