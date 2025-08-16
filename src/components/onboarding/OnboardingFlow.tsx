@@ -199,13 +199,14 @@ export function OnboardingFlow({ isOpen, onComplete }: OnboardingFlowProps) {
                       initial={false}
                       animate={{
                         scale: index === currentStep ? 1.5 : 1,
-                        backgroundColor: index === currentStep 
-                          ? 'hsl(var(--primary))' 
-                          : index < currentStep 
-                            ? 'hsl(var(--primary) / 0.6)'
-                            : 'hsl(var(--muted))'
                       }}
-                      className="w-3 h-3 rounded-full transition-all duration-300"
+                      className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                        index === currentStep
+                          ? 'bg-primary'
+                          : index < currentStep
+                            ? 'bg-primary/60'
+                            : 'bg-muted'
+                      }`}
                     />
                   ))}
                 </div>
