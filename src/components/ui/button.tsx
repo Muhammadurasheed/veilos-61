@@ -18,6 +18,11 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        // Veilo brand variants with proper contrast
+        "veilo-primary": "bg-veilo-blue text-white hover:bg-veilo-blue-dark shadow-md border border-veilo-blue/20",
+        "veilo-secondary": "bg-veilo-purple text-white hover:bg-veilo-purple-dark shadow-md border border-veilo-purple/20",
+        "veilo-outline": "border-2 border-veilo-blue text-veilo-blue bg-transparent hover:bg-veilo-blue hover:text-white",
+        "veilo-ghost": "text-veilo-blue hover:bg-veilo-blue/10 hover:text-veilo-blue-dark",
       },
       size: {
         default: "h-10 px-4 py-2",

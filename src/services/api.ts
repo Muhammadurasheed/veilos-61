@@ -405,7 +405,7 @@ export const SanctuaryApi = {
   },
 
   async createSession(sessionData: any) {
-    return apiRequest('POST', '/api/sanctuary/sessions', sessionData);
+    return apiRequest('POST', '/api/sanctuary', sessionData);
   },
 
   async getSanctuaries(params?: any) {
@@ -413,7 +413,7 @@ export const SanctuaryApi = {
   },
 
   async getSession(id: string) {
-    return apiRequest('GET', `/api/sanctuary/sessions/${id}`);
+    return apiRequest('GET', `/api/sanctuary/${id}`);
   },
 
   async joinSanctuary(id: string) {
@@ -421,7 +421,7 @@ export const SanctuaryApi = {
   },
 
   async joinSession(sessionId: string, options?: { alias?: string }) {
-    return apiRequest('POST', `/api/sanctuary/sessions/${sessionId}/join`, options);
+    return apiRequest('POST', `/api/sanctuary/${sessionId}/join`, options);
   },
 
   async leaveSanctuary(id: string) {
@@ -429,22 +429,22 @@ export const SanctuaryApi = {
   },
 
   async endSession(sessionId: string, hostToken?: string) {
-    return apiRequest('POST', `/api/sanctuary/sessions/${sessionId}/end`, { hostToken });
+    return apiRequest('POST', `/api/sanctuary/${sessionId}/end`, { hostToken });
   },
 
   async flagSession(id: string, reason: string) {
-    return apiRequest('POST', `/api/sanctuary/sessions/${id}/flag`, { reason });
+    return apiRequest('POST', `/api/sanctuary/${id}/flag`, { reason });
   },
 
   async removeParticipant(sessionId: string, participantId: string, hostToken?: string) {
-    return apiRequest('POST', `/api/sanctuary/sessions/${sessionId}/remove`, { 
+    return apiRequest('POST', `/api/sanctuary/${sessionId}/remove-participant`, { 
       participantId, 
       hostToken 
     });
   },
 
   async moderateSession(sessionId: string, action: any) {
-    return apiRequest('POST', `/api/sanctuary/sessions/${sessionId}/moderate`, action);
+    return apiRequest('POST', `/api/sanctuary/${sessionId}/moderate`, action);
   }
 };
 

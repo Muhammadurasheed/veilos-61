@@ -116,8 +116,8 @@ const CreateSanctuary: React.FC = () => {
           description: "Your anonymous support space is now ready to share."
         });
         
-        // Navigate to the new session
-        navigate(`/sanctuary/${response.data.id}/host`);
+        // Navigate to the new session with correct route
+        navigate(`/sanctuary/${response.data.id}`);
       } else {
         throw new Error(response.error || "Failed to create sanctuary session");
       }
@@ -253,7 +253,7 @@ const CreateSanctuary: React.FC = () => {
         <Button 
           onClick={form.handleSubmit(onSubmit)}
           disabled={isSubmitting || topicEthical === false}
-          className="bg-veilo-purple hover:bg-veilo-purple-dark"
+          variant="veilo-secondary"
         >
           {isSubmitting ? "Creating..." : "Create Sanctuary Space"}
         </Button>

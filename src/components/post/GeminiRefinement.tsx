@@ -53,7 +53,13 @@ const GeminiRefinement: React.FC<GeminiRefinementProps> = ({
           description: reason,
         });
       } else {
-        throw new Error(response.error || 'Failed to refine content');
+      // Set original content as fallback when refinement fails
+      setRefinedContent(originalContent);
+      toast({
+        title: "Using original content",
+        description: "Content refinement is temporarily unavailable. Your post will use your original text.",
+        variant: "default",
+      });
       }
     } catch (error: any) {
       console.error('Content refinement error:', error);
@@ -66,10 +72,12 @@ const GeminiRefinement: React.FC<GeminiRefinementProps> = ({
           description: 'Too many requests. You can post your content as-is or try again later.',
         });
       } else {
+        // Set original content as fallback for all error cases
+        setRefinedContent(originalContent);
         toast({
-          variant: 'destructive',
-          title: 'Refinement failed',
-          description: 'Unable to refine content. You can post your content as-is or try again.',
+          title: 'Using original content',
+          description: 'Content refinement failed. Your post will use your original text.',
+          variant: 'default',
         });
       }
     } finally {

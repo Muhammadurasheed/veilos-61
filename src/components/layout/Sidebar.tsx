@@ -222,8 +222,9 @@ export const Sidebar = ({ className }: SidebarProps) => {
         )}>
           <NavLink to="/register-expert" onClick={handleNavigation}>
             <Button 
+              variant="veilo-primary"
               className={cn(
-                "bg-veilo-blue hover:bg-veilo-blue-dark text-white w-full transition-all shadow-md",
+                "w-full transition-all shadow-md",
                 collapsed && "p-2"
               )}
             >

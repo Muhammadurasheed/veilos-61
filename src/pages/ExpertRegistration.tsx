@@ -100,28 +100,35 @@ const ExpertRegistration = () => {
     try {
       console.log('Submitting expert registration:', values);
       
-      // Step 1: Create user account first using the new expert-onboarding-start endpoint
-      const response = await axios.post(`${apiBaseUrl}/users/expert-onboarding-start`, {
+      // Step 1: Create user account first using expert registration API
+      const response = await ExpertApi.register({
         name: values.name,
         email: values.email,
         specialization: values.specialization,
         bio: values.bio,
         pricingModel: values.pricingModel,
-        pricingDetails: values.pricingDetails
+        pricingDetails: values.pricingDetails,
+        phoneNumber: values.phoneNumber,
+        timezone: values.timezone,
+        voiceMasking: values.voiceMasking
       });
       
       console.log('Registration response:', response);
       
-      if (!response.data.success || !response.data.data) {
-        throw new Error(response.data.error || 'Failed to register. Please try again.');
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Failed to register. Please try again.');
       }
       
-      // Save the token and user ID
-      localStorage.setItem('veilo-token', response.data.data.token);
-      axios.defaults.headers.common['x-auth-token'] = response.data.data.token;
+      // Import tokenManager for consistent token handling
+      const { tokenManager } = await import('@/services/tokenManager');
+      
+      // Save the token and user ID using tokenManager
+      if (response.data.token) {
+        tokenManager.setToken(response.data.token);
+      }
       
       // Set the expert ID
-      setExpertId(response.data.data.userId);
+      setExpertId(response.data.expertId || response.data.userId);
 
       toast({
         title: 'Registration submitted!',
@@ -131,7 +138,7 @@ const ExpertRegistration = () => {
       // Now we have a token, move to the next step
       setStep('documents');
       
-      console.log('Expert registered successfully with ID:', response.data.data.userId);
+      console.log('Expert registered successfully with ID:', response.data.expertId || response.data.userId);
     } catch (error) {
       console.error('Registration error:', error);
       toast({
@@ -162,29 +169,23 @@ const ExpertRegistration = () => {
       formData.append('file', file);
       formData.append('documentType', type);
       
-      // Get token from local storage
-      const token = localStorage.getItem('veilo-token');
+      // Import tokenManager for consistent token handling  
+      const { tokenManager } = await import('@/services/tokenManager');
+      const token = tokenManager.getToken();
       if (!token) {
         throw new Error('Authentication token not found. Please login again.');
       }
       
-      console.log(`Uploading to ${apiBaseUrl}/api/experts/${expertId}/document`);
+      console.log(`Uploading document via ExpertApi`);
       console.log('Form data:', Array.from(formData.entries()));
       
-      // Make the API call to backend
-      const response = await fetch(`${apiBaseUrl}/api/experts/${expertId}/document`, {
-        method: 'POST',
-        headers: {
-          'x-auth-token': token
-        },
-        body: formData
-      });
+      // Use ExpertApi for consistent API handling
+      const response = await ExpertApi.uploadVerificationDocument(expertId, file, type);
       
-      const responseData = await response.json();
-      console.log('Upload response:', responseData);
+      console.log('Upload response:', response);
       
-      if (!response.ok || !responseData.success) {
-        throw new Error(responseData.error || `Failed to upload document (${response.status})`);
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to upload document');
       }
       
       // Mark this document type as uploaded
@@ -198,7 +199,7 @@ const ExpertRegistration = () => {
         description: `Your ${type} document has been uploaded.`,
       });
       
-      return responseData.data;
+      return response.data;
     } catch (error) {
       console.error('Upload error:', error);
       toast({

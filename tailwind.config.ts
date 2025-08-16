@@ -59,6 +59,18 @@ const config = {
         'gradient-secondary': 'var(--gradient-secondary)',
         'gradient-accent': 'var(--gradient-accent)',
         
+        // Veilo brand colors
+        'veilo-blue': {
+          DEFAULT: 'hsl(200 98% 39%)',
+          light: 'hsl(200 100% 85%)',
+          dark: 'hsl(200 98% 25%)',
+        },
+        'veilo-purple': {
+          DEFAULT: 'hsl(262 83% 58%)',
+          light: 'hsl(262 83% 85%)',
+          dark: 'hsl(262 83% 35%)',
+        },
+        
         // Success colors
         'success': {
           DEFAULT: 'hsl(142 76% 36%)',
