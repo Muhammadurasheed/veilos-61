@@ -127,8 +127,10 @@ const ExpertRegistration = () => {
         tokenManager.setToken(response.data.token);
       }
       
-      // Set the expert ID
-      setExpertId(response.data.expertId || response.data.userId);
+      // Set the expert ID - use the expert ID from response data
+      const newExpertId = response.data.expertId || response.data.data?.id;
+      console.log('Setting expertId:', newExpertId);
+      setExpertId(newExpertId);
 
       toast({
         title: 'Registration submitted!',
@@ -491,7 +493,8 @@ const ExpertRegistration = () => {
                     Back
                   </Button>
                   <Button 
-                    className="bg-veilo-blue hover:bg-veilo-blue-dark transition-colors"
+                    variant="veilo-primary"
+                    className="w-full"
                     onClick={() => setStep('availability')}
                     disabled={!canProceedToVerification()}
                   >

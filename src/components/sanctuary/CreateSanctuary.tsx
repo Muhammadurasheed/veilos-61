@@ -7,20 +7,25 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { useToast } from '@/components/ui/use-toast';
-import { Shield } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { Shield, Link, Calendar, Share2, Twitter, MessageCircle } from 'lucide-react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { SanctuaryApi } from '@/services/api';
-import { ApiSanctuaryCreateRequest } from '@/types'; // Add this import for the type
+import { ApiSanctuaryCreateRequest } from '@/types';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 
 // Define form schema
 const formSchema = z.object({
   topic: z.string().min(5, { message: "Topic must be at least 5 characters." }).max(100),
   description: z.string().max(500).optional(),
   emoji: z.string().max(2).optional(),
-  expireHours: z.number().min(1).max(24).default(1)
+  expireHours: z.number().min(1).max(24).default(1),
+  sanctuaryType: z.enum(['anonymous-link', 'scheduled-audio']).default('anonymous-link'),
+  scheduledTime: z.date().optional(),
+  maxParticipants: z.number().min(2).max(200).default(50),
 });
 
 type SanctuaryFormValues = z.infer<typeof formSchema>;
@@ -33,6 +38,8 @@ const CreateSanctuary: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [topicEthical, setTopicEthical] = useState<boolean | null>(null);
   const [validatingTopic, setValidatingTopic] = useState(false);
+  const [createdSession, setCreatedSession] = useState<any>(null);
+  const [showShareOptions, setShowShareOptions] = useState(false);
 
   // Initialize form
   const form = useForm<SanctuaryFormValues>({
@@ -41,9 +48,13 @@ const CreateSanctuary: React.FC = () => {
       topic: "",
       description: "",
       emoji: "💭",
-      expireHours: 1
+      expireHours: 1,
+      sanctuaryType: 'anonymous-link',
+      maxParticipants: 50,
     },
   });
+
+  const watchSanctuaryType = form.watch('sanctuaryType');
 
   // Simulated ethical check - in production, this would call the Gemini API
   const checkTopicEthical = async (topic: string): Promise<boolean> => {
@@ -94,32 +105,55 @@ const CreateSanctuary: React.FC = () => {
         return;
       }
       
-      // Create sanctuary session with the required topic
-      // Make sure topic is always defined (which it should be based on form validation)
-      const sanctuaryData: ApiSanctuaryCreateRequest = {
-        topic: values.topic, // Ensuring topic is always passed
-        description: values.description,
-        emoji: values.emoji,
-        expireHours: values.expireHours
-      };
-      
-      const response = await SanctuaryApi.createSession(sanctuaryData);
-      
-      if (response.success && response.data) {
-        // Store host token in localStorage if this is an anonymous host
-        if (response.data.hostToken) {
-          localStorage.setItem(`sanctuary-host-${response.data.id}`, response.data.hostToken);
-        }
+      // Create sanctuary session based on type
+      if (values.sanctuaryType === 'anonymous-link') {
+        const sanctuaryData: ApiSanctuaryCreateRequest = {
+          topic: values.topic,
+          description: values.description,
+          emoji: values.emoji,
+          expireHours: values.expireHours
+        };
         
+        const response = await SanctuaryApi.createSession(sanctuaryData);
+        
+        if (response.success && response.data) {
+          // Store host token in localStorage if this is an anonymous host
+          if (response.data.hostToken) {
+            localStorage.setItem(`sanctuary-host-${response.data.id}`, response.data.hostToken);
+          }
+          
+          setCreatedSession(response.data);
+          setShowShareOptions(true);
+          
+          toast({
+            title: "Anonymous sanctuary created!",
+            description: "Your sanctuary link is ready to share."
+          });
+        } else {
+          throw new Error(response.error || "Failed to create sanctuary session");
+        }
+      } else {
+        // Handle scheduled live audio session
+        // For now, navigate to live sanctuary creation (future feature)
         toast({
-          title: "Sanctuary space created!",
-          description: "Your anonymous support space is now ready to share."
+          title: "Scheduled Live Audio",
+          description: "Feature coming soon! For now, creating anonymous link.",
         });
         
-        // Navigate to the new session with correct route
-        navigate(`/sanctuary/${response.data.id}`);
-      } else {
-        throw new Error(response.error || "Failed to create sanctuary session");
+        // Fallback to anonymous link for now
+        const sanctuaryData: ApiSanctuaryCreateRequest = {
+          topic: values.topic,
+          description: values.description,
+          emoji: values.emoji,
+          expireHours: values.expireHours
+        };
+        
+        const response = await SanctuaryApi.createSession(sanctuaryData);
+        
+        if (response.success && response.data) {
+          setCreatedSession(response.data);
+          setShowShareOptions(true);
+        }
       }
     } catch (error: any) {
       toast({
@@ -132,6 +166,87 @@ const CreateSanctuary: React.FC = () => {
     }
   };
 
+  const shareOnTwitter = () => {
+    const url = `${window.location.origin}/sanctuary/${createdSession.id}`;
+    const text = `Join me in a safe space to discuss: ${createdSession.topic}`;
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
+  };
+
+  const shareOnWhatsApp = () => {
+    const url = `${window.location.origin}/sanctuary/${createdSession.id}`;
+    const text = `Join me in a safe sanctuary space to discuss: ${createdSession.topic} ${url}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  const copyToClipboard = () => {
+    const url = `${window.location.origin}/sanctuary/${createdSession.id}`;
+    navigator.clipboard.writeText(url);
+    toast({
+      title: "Link copied!",
+      description: "Sanctuary link has been copied to your clipboard."
+    });
+  };
+
+  if (showShareOptions && createdSession) {
+    return (
+      <Card className="w-full max-w-lg mx-auto">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-center">
+            <Shield className="h-5 w-5 text-veilo-purple" />
+            Sanctuary Created Successfully!
+          </CardTitle>
+          <CardDescription className="text-center">
+            Your sanctuary space is ready. Share this link with others who need support.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <h3 className="font-medium mb-2">{createdSession.topic}</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+              {createdSession.description || "A safe space for support and discussion."}
+            </p>
+            <div className="flex items-center justify-between">
+              <Badge variant="outline" className="text-xs">
+                Expires in {form.getValues('expireHours')} hour{form.getValues('expireHours') !== 1 ? 's' : ''}
+              </Badge>
+              <span className="text-lg">{createdSession.emoji || "💭"}</span>
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            <h4 className="font-medium text-center">Share your sanctuary:</h4>
+            <div className="grid grid-cols-3 gap-3">
+              <Button variant="outline" onClick={shareOnWhatsApp} className="flex flex-col gap-1 h-16">
+                <MessageCircle className="h-5 w-5 text-green-600" />
+                <span className="text-xs">WhatsApp</span>
+              </Button>
+              <Button variant="outline" onClick={shareOnTwitter} className="flex flex-col gap-1 h-16">
+                <Twitter className="h-5 w-5 text-blue-500" />
+                <span className="text-xs">Twitter</span>
+              </Button>
+              <Button variant="outline" onClick={copyToClipboard} className="flex flex-col gap-1 h-16">
+                <Link className="h-5 w-5" />
+                <span className="text-xs">Copy Link</span>
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter className="flex justify-between">
+          <Button variant="outline" onClick={() => {
+            setShowShareOptions(false);
+            setCreatedSession(null);
+            form.reset();
+          }}>
+            Create Another
+          </Button>
+          <Button variant="veilo-primary" onClick={() => navigate(`/sanctuary/${createdSession.id}`)}>
+            Enter Sanctuary
+          </Button>
+        </CardFooter>
+      </Card>
+    );
+  }
+
   return (
     <Card className="w-full max-w-lg mx-auto">
       <CardHeader>
@@ -140,12 +255,76 @@ const CreateSanctuary: React.FC = () => {
           Create Sanctuary Space
         </CardTitle>
         <CardDescription>
-          Create an anonymous, temporary space for emotional support around a specific topic.
+          Create an anonymous, safe space for emotional support around a specific topic.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            
+            {/* Sanctuary Type Selection */}
+            <FormField
+              control={form.control}
+              name="sanctuaryType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sanctuary Type</FormLabel>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <input
+                        type="radio"
+                        id="anonymous-link"
+                        value="anonymous-link"
+                        checked={field.value === 'anonymous-link'}
+                        onChange={() => field.onChange('anonymous-link')}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="anonymous-link"
+                        className={`flex flex-col items-center p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                          field.value === 'anonymous-link'
+                            ? 'border-veilo-blue bg-veilo-blue/5'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <Link className="h-6 w-6 mb-2" />
+                        <h4 className="font-medium">Anonymous Link</h4>
+                        <p className="text-xs text-gray-600 text-center mt-1">
+                          Create instant anonymous support space
+                        </p>
+                      </label>
+                    </div>
+                    
+                    <div>
+                      <input
+                        type="radio"
+                        id="scheduled-audio"
+                        value="scheduled-audio"
+                        checked={field.value === 'scheduled-audio'}
+                        onChange={() => field.onChange('scheduled-audio')}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="scheduled-audio"
+                        className={`flex flex-col items-center p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                          field.value === 'scheduled-audio'
+                            ? 'border-veilo-blue bg-veilo-blue/5'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <Calendar className="h-6 w-6 mb-2" />
+                        <h4 className="font-medium">Live Audio</h4>
+                        <p className="text-xs text-gray-600 text-center mt-1">
+                          Schedule anonymous audio session
+                        </p>
+                        <Badge variant="outline" className="text-xs mt-1">Coming Soon</Badge>
+                      </label>
+                    </div>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="topic"
@@ -253,9 +432,10 @@ const CreateSanctuary: React.FC = () => {
         <Button 
           onClick={form.handleSubmit(onSubmit)}
           disabled={isSubmitting || topicEthical === false}
-          variant="veilo-secondary"
+          variant="veilo-primary"
         >
-          {isSubmitting ? "Creating..." : "Create Sanctuary Space"}
+          {isSubmitting ? "Creating..." : 
+           watchSanctuaryType === 'anonymous-link' ? "Create Anonymous Link" : "Schedule Live Audio"}
         </Button>
       </CardFooter>
     </Card>

@@ -55,6 +55,11 @@ export const Sidebar = ({ className }: SidebarProps) => {
       icon: MessageSquare
     },
     {
+      name: 'Sanctuary',
+      href: '/sanctuary',
+      icon: Shield
+    },
+    {
       name: 'Beacons',
       href: '/beacons',
       icon: Shield

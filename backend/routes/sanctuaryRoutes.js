@@ -14,8 +14,8 @@ const getClientIp = (req, res, next) => {
 };
 
 // Create a new sanctuary session
-// POST /api/sanctuary
-router.post('/', getClientIp, async (req, res) => {
+// POST /api/sanctuary/sessions (Updated to match API expectations)
+router.post('/sessions', getClientIp, async (req, res) => {
   try {
     const { topic, description, emoji, expireHours = 1 } = req.body;
     
@@ -91,8 +91,8 @@ router.post('/', getClientIp, async (req, res) => {
 });
 
 // Get session details (for joining)
-// GET /api/sanctuary/:id
-router.get('/:id', async (req, res) => {
+// GET /api/sanctuary/sessions/:id
+router.get('/sessions/:id', async (req, res) => {
   try {
     const session = await SanctuarySession.findOne({ 
       id: req.params.id,
@@ -130,8 +130,8 @@ router.get('/:id', async (req, res) => {
 });
 
 // Join session as anonymous or authenticated user
-// POST /api/sanctuary/:id/join
-router.post('/:id/join', getClientIp, async (req, res) => {
+// POST /api/sanctuary/sessions/:id/join
+router.post('/sessions/:id/join', getClientIp, async (req, res) => {
   try {
     const { alias } = req.body;
     
@@ -184,8 +184,8 @@ router.post('/:id/join', getClientIp, async (req, res) => {
 });
 
 // End session (host only)
-// POST /api/sanctuary/:id/end
-router.post('/:id/end', getClientIp, async (req, res) => {
+// POST /api/sanctuary/sessions/:id/end
+router.post('/sessions/:id/end', getClientIp, async (req, res) => {
   try {
     const { hostToken } = req.body;
     let session;
@@ -249,8 +249,8 @@ router.post('/:id/end', getClientIp, async (req, res) => {
 });
 
 // Remove a participant (host only)
-// POST /api/sanctuary/:id/remove-participant
-router.post('/:id/remove-participant', getClientIp, async (req, res) => {
+// POST /api/sanctuary/sessions/:id/remove-participant
+router.post('/sessions/:id/remove-participant', getClientIp, async (req, res) => {
   try {
     const { hostToken, participantId } = req.body;
     let session;
@@ -315,8 +315,8 @@ router.post('/:id/remove-participant', getClientIp, async (req, res) => {
 });
 
 // Flag session for moderation
-// POST /api/sanctuary/:id/flag
-router.post('/:id/flag', async (req, res) => {
+// POST /api/sanctuary/sessions/:id/flag
+router.post('/sessions/:id/flag', async (req, res) => {
   try {
     const session = await SanctuarySession.findOne({ id: req.params.id });
     
