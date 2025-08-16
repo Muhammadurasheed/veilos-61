@@ -182,10 +182,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Token is automatically saved by UserApi.register via tokenManager
-        if (response.data.refreshToken) {
-          localStorage.setItem('refreshToken', response.data.refreshToken);
-        }
+        // Tokens are automatically saved by UserApi.register via tokenManager
         
         setUser({
           ...response.data.user,

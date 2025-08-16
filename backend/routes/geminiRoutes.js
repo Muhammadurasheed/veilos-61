@@ -49,7 +49,7 @@ router.post('/moderate', authMiddleware, async (req, res) => {
     `;
     
     const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         contents: [
           {
@@ -92,6 +92,16 @@ router.post('/moderate', authMiddleware, async (req, res) => {
     });
   } catch (err) {
     console.error('Gemini moderation error:', err);
+    
+    // Handle rate limiting gracefully
+    if (err.response?.status === 429) {
+      return res.status(429).json({
+        success: false,
+        error: 'Rate limit exceeded. Please try again in a moment.',
+        retryAfter: 60
+      });
+    }
+    
     res.status(500).json({
       success: false,
       error: 'Gemini API error'
@@ -139,7 +149,7 @@ router.post('/improve', authMiddleware, async (req, res) => {
     `;
     
     const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         contents: [
           {
@@ -168,6 +178,16 @@ router.post('/improve', authMiddleware, async (req, res) => {
     });
   } catch (err) {
     console.error('Gemini content improvement error:', err);
+    
+    // Handle rate limiting gracefully
+    if (err.response?.status === 429) {
+      return res.status(429).json({
+        success: false,
+        error: 'Content refinement is temporarily unavailable. You can post without refinement.',
+        retryAfter: 60
+      });
+    }
+    
     res.status(500).json({
       success: false,
       error: 'Gemini API error'
@@ -223,7 +243,7 @@ router.post('/refine-post', authMiddleware, async (req, res) => {
     `;
     
     const moderationResponse = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         contents: [
           {
@@ -285,7 +305,7 @@ router.post('/refine-post', authMiddleware, async (req, res) => {
     `;
     
     const refinementResponse = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         contents: [
           {
@@ -314,6 +334,16 @@ router.post('/refine-post', authMiddleware, async (req, res) => {
     });
   } catch (err) {
     console.error('Gemini post refinement error:', err);
+    
+    // Handle rate limiting gracefully
+    if (err.response?.status === 429) {
+      return res.status(429).json({
+        success: false,
+        error: 'Post refinement is temporarily unavailable. You can post without refinement.',
+        retryAfter: 60
+      });
+    }
+    
     res.status(500).json({
       success: false,
       error: 'Gemini API error'

@@ -17,8 +17,19 @@ router.post('/', authMiddleware, aiModerateContent, moderateContent, async (req,
       wantsExpertHelp
     } = req.body;
     
+    // Enhanced logging for debugging
+    console.log('Creating post:', {
+      userId: req.user.id,
+      userAlias: req.user.alias,
+      contentLength: content?.length || 0,
+      feeling,
+      topic,
+      wantsExpertHelp: Boolean(wantsExpertHelp)
+    });
+    
     // Validation
     if (!content) {
+      console.log('Post creation failed: Missing content');
       return res.status(400).json({
         success: false,
         error: 'Content is required'
@@ -59,12 +70,24 @@ router.post('/', authMiddleware, aiModerateContent, moderateContent, async (req,
     
     await post.save();
     
+    console.log('Post created successfully:', {
+      postId: post.id,
+      userId: req.user.id,
+      flagged: post.flagged
+    });
+    
     res.json({
       success: true,
       data: post
     });
   } catch (err) {
-    console.error(err.message);
+    console.error('Post creation error:', {
+      error: err.message,
+      stack: err.stack,
+      userId: req.user?.id,
+      userAlias: req.user?.alias,
+      contentLength: req.body?.content?.length || 0
+    });
     res.status(500).json({
       success: false,
       error: 'Server error'

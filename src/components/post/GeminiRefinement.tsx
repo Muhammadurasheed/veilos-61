@@ -55,13 +55,23 @@ const GeminiRefinement: React.FC<GeminiRefinementProps> = ({
       } else {
         throw new Error(response.error || 'Failed to refine content');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Content refinement error:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Refinement failed',
-        description: error instanceof Error ? error.message : 'An unexpected error occurred.',
-      });
+      
+      // Handle rate limiting gracefully
+      if (error.response?.status === 429) {
+        toast({
+          variant: 'default',
+          title: 'Refinement temporarily unavailable',
+          description: 'Too many requests. You can post your content as-is or try again later.',
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Refinement failed',
+          description: 'Unable to refine content. You can post your content as-is or try again.',
+        });
+      }
     } finally {
       setIsLoading(false);
     }

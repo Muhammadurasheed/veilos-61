@@ -13,31 +13,34 @@ const refreshToken = async (req, res, next) => {
     // Verify refresh token
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
     
-    // Find user
-    const user = await User.findOne({ id: decoded.userId });
+    // Find user - handle both old and new token formats
+    let userId = decoded.user?.id || decoded.userId;
+    const user = await User.findOne({ id: userId });
     if (!user) {
       return res.error('User not found', 404);
     }
 
-    // Check if refresh token is valid (you might want to store refresh tokens in DB)
+    // Check if refresh token is valid
     if (user.refreshToken !== refreshToken) {
       return res.error('Invalid refresh token', 401);
     }
 
-    // Generate new access token
+    // Generate new access token with standardized format
     const newAccessToken = jwt.sign(
       { 
-        userId: user.id,
-        role: user.role,
-        isExpert: user.isExpert 
+        user: {
+          id: user.id,
+          role: user.role,
+          isExpert: user.isExpert
+        }
       },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
 
-    // Optionally generate new refresh token
+    // Generate new refresh token with standardized format
     const newRefreshToken = jwt.sign(
-      { userId: user.id },
+      { user: { id: user.id } },
       process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' }
     );

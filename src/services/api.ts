@@ -14,6 +14,22 @@ const api = axios.create({
   },
 });
 
+// State for handling refresh token
+let isRefreshing = false;
+let failedQueue: Array<{ resolve: Function; reject: Function }> = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error);
+    } else {
+      resolve(token);
+    }
+  });
+  
+  failedQueue = [];
+};
+
 // Request interceptor for authentication and logging
 api.interceptors.request.use(
   (config) => {
@@ -30,7 +46,7 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor for logging
+// Response interceptor with token refresh logic
 api.interceptors.response.use(
   (response) => {
     logger.apiResponse(
@@ -41,17 +57,64 @@ api.interceptors.response.use(
     );
     return response;
   },
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config;
     const status = error.response?.status || 0;
     const url = error.config?.url || 'unknown';
     const method = error.config?.method?.toUpperCase() || 'UNKNOWN';
     
     logger.apiResponse(method, url, status, error.response?.data);
     
-    // Handle 401 errors by clearing invalid tokens
-    if (status === 401) {
-      logger.warn('Unauthorized request - clearing token');
-      tokenManager.removeToken();
+    // Handle 401 errors with token refresh
+    if (status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then(() => {
+          return api(originalRequest);
+        }).catch((err) => {
+          return Promise.reject(err);
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      const refreshToken = tokenManager.getRefreshToken();
+      
+      if (refreshToken) {
+        try {
+          const response = await api.post('/api/auth/refresh-token', { refreshToken });
+          
+          if (response.data?.success && response.data?.data?.token) {
+            const { token: newAccessToken, refreshToken: newRefreshToken } = response.data.data;
+            tokenManager.setToken(newAccessToken);
+            tokenManager.setRefreshToken(newRefreshToken);
+            
+            logger.debug('Token refreshed successfully via interceptor');
+            processQueue(null, newAccessToken);
+            
+            // Update original request with new token
+            originalRequest.headers['x-auth-token'] = newAccessToken;
+            
+            return api(originalRequest);
+          } else {
+            throw new Error('Invalid refresh response');
+          }
+        } catch (refreshError) {
+          logger.warn('Token refresh failed, clearing all tokens');
+          tokenManager.clearAllTokens();
+          processQueue(refreshError, null);
+          return Promise.reject(refreshError);
+        } finally {
+          isRefreshing = false;
+        }
+      } else {
+        logger.warn('No refresh token available, clearing tokens');
+        tokenManager.clearAllTokens();
+        isRefreshing = false;
+        return Promise.reject(error);
+      }
     }
     
     return Promise.reject(error);
@@ -103,6 +166,9 @@ export const UserApi = {
     
     if (response.data?.success && response.data?.data?.token) {
       tokenManager.setToken(response.data.data.token);
+      if (response.data.data.refreshToken) {
+        tokenManager.setRefreshToken(response.data.data.refreshToken);
+      }
       logger.accountCreation('Registration successful - token saved');
     }
     
@@ -116,6 +182,9 @@ export const UserApi = {
     
     if (response.data?.success && response.data?.data?.token) {
       tokenManager.setToken(response.data.data.token);
+      if (response.data.data.refreshToken) {
+        tokenManager.setRefreshToken(response.data.data.refreshToken);
+      }
       logger.userAction('Login successful - token saved');
     }
     
@@ -132,10 +201,13 @@ export const UserApi = {
 
   // Refresh token
   async refreshToken(token: string) {
-    const response = await api.post('/api/auth/refresh', { refreshToken: token });
+    const response = await api.post('/api/auth/refresh-token', { refreshToken: token });
     
     if (response.data?.success && response.data?.data?.token) {
       tokenManager.setToken(response.data.data.token);
+      if (response.data.data.refreshToken) {
+        tokenManager.setRefreshToken(response.data.data.refreshToken);
+      }
       logger.debug('Token refreshed successfully');
     }
     
