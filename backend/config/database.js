@@ -50,15 +50,23 @@ const createIndexes = async () => {
       }
     };
 
-    // Drop legacy problematic index if it exists (created from unique subdocument path)
-    try {
-      await Post.collection.dropIndex('comments.id_1');
-      console.log('Dropped legacy unique index comments.id_1');
-    } catch (e) {
-      if (e.codeName === 'IndexNotFound' || e.message?.includes('index not found')) {
-        // ok, not present
-      } else {
-        console.warn('Could not drop comments.id_1:', e.message);
+    // Drop legacy problematic indexes if they exist (created from unique subdocument paths)
+    const problematicIndexes = [
+      { collection: Post.collection, index: 'comments.id_1' },
+      { collection: Expert.collection, index: 'testimonials.id_1' },
+      { collection: Expert.collection, index: 'verificationDocuments.id_1' }
+    ];
+
+    for (const { collection, index } of problematicIndexes) {
+      try {
+        await collection.dropIndex(index);
+        console.log(`Dropped legacy unique index ${index}`);
+      } catch (e) {
+        if (e.codeName === 'IndexNotFound' || e.message?.includes('index not found')) {
+          // ok, not present
+        } else {
+          console.warn(`Could not drop ${index}:`, e.message);
+        }
       }
     }
 

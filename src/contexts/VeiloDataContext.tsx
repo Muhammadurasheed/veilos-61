@@ -235,8 +235,14 @@ export const VeiloDataProvider = ({ children }: { children: ReactNode }) => {
     try {
       const response = await PostApi.flagPost(postId, reason);
       if (response.success) {
-        // Remove the flagged post from the local state
-        setPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
+        // Mark post as flagged in local state but keep it visible if it's user's own post
+        setPosts(prevPosts => 
+          prevPosts.map(post => 
+            post.id === postId 
+              ? { ...post, flagged: true, flagReason: reason }
+              : post
+          )
+        );
         toast({
           title: 'Post reported',
           description: 'Thank you for helping keep our community safe',

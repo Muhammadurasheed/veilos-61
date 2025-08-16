@@ -5,8 +5,7 @@ const { nanoid } = require('nanoid');
 const testimonialSchema = new mongoose.Schema({
   id: {
     type: String,
-    default: () => `test-${nanoid(8)}`,
-    unique: true
+    default: () => `test-${nanoid(8)}`
   },
   text: {
     type: String,
@@ -27,8 +26,7 @@ const testimonialSchema = new mongoose.Schema({
 const documentSchema = new mongoose.Schema({
   id: {
     type: String,
-    default: () => `doc-${nanoid(8)}`,
-    unique: true
+    default: () => `doc-${nanoid(8)}`
   },
   type: {
     type: String,

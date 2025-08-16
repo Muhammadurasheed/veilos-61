@@ -99,10 +99,30 @@ router.post('/', authMiddleware, aiModerateContent, moderateContent, async (req,
 // GET /api/posts
 router.get('/', async (req, res) => {
   try {
-    // Filter out flagged posts unless user is admin
-    const isAdmin = req.user && req.user.role === 'admin';
+    let query = {};
     
-    const query = isAdmin ? {} : { flagged: { $ne: true } };
+    if (req.user) {
+      // For authenticated users, show:
+      // - All non-flagged posts 
+      // - Their own posts (even if flagged)
+      const isAdmin = req.user.role === 'admin';
+      
+      if (isAdmin) {
+        // Admins see everything
+        query = {};
+      } else {
+        // Regular users see non-flagged posts OR their own posts
+        query = {
+          $or: [
+            { flagged: { $ne: true } },
+            { userId: req.user.id }
+          ]
+        };
+      }
+    } else {
+      // Anonymous users only see non-flagged posts
+      query = { flagged: { $ne: true } };
+    }
     
     const posts = await Post.find(query)
       .sort({ timestamp: -1 });

@@ -104,42 +104,69 @@ app.get('/health', (req, res) => {
 app.use((err, req, res, next) => {
   console.error('Error:', err);
   
+  // Handle JSON parsing errors
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid JSON format'
+    });
+  }
+  
   // Multer errors
   if (err.code === 'LIMIT_FILE_SIZE') {
-    return res.error('File too large. Maximum size is 5MB.', 400);
+    return res.status(400).json({
+      success: false,
+      error: 'File too large. Maximum size is 5MB.'
+    });
   }
   
   if (err.code === 'LIMIT_FILE_COUNT') {
-    return res.error('Too many files. Maximum 5 files allowed.', 400);
+    return res.status(400).json({
+      success: false,
+      error: 'Too many files. Maximum 5 files allowed.'
+    });
   }
   
   // JWT errors
   if (err.name === 'JsonWebTokenError') {
-    return res.error('Invalid token', 401);
+    return res.status(401).json({
+      success: false,
+      error: 'Invalid token'
+    });
   }
   
   if (err.name === 'TokenExpiredError') {
-    return res.error('Token expired', 401);
+    return res.status(401).json({
+      success: false,
+      error: 'Token expired'
+    });
   }
   
   // MongoDB errors
   if (err.name === 'ValidationError') {
     const errors = Object.values(err.errors).map(e => e.message);
-    return res.error('Validation failed', 400, errors);
+    return res.status(400).json({
+      success: false,
+      error: 'Validation failed',
+      details: errors
+    });
   }
   
   if (err.code === 11000) {
-    return res.error('Duplicate entry', 409);
+    return res.status(409).json({
+      success: false,
+      error: 'Duplicate entry'
+    });
   }
   
   // Default error
-  res.error(
-    process.env.NODE_ENV === 'production' 
+  res.status(err.statusCode || 500).json({
+    success: false,
+    error: process.env.NODE_ENV === 'production' 
       ? 'An unexpected error occurred' 
       : err.message,
-    err.statusCode || 500,
-    process.env.NODE_ENV === 'development' ? err.stack : null
-  );
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
 });
 
 server.listen(PORT, () => {

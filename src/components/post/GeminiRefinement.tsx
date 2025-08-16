@@ -53,13 +53,13 @@ const GeminiRefinement: React.FC<GeminiRefinementProps> = ({
           description: reason,
         });
       } else {
-      // Set original content as fallback when refinement fails
-      setRefinedContent(originalContent);
-      toast({
-        title: "Using original content",
-        description: "Content refinement is temporarily unavailable. Your post will use your original text.",
-        variant: "default",
-      });
+        // Set original content as fallback when refinement fails
+        setRefinedContent(originalContent);
+        toast({
+          title: "Using original content",
+          description: "Content refinement is temporarily unavailable. Your post will use your original text.",
+          variant: "default",
+        });
       }
     } catch (error: any) {
       console.error('Content refinement error:', error);

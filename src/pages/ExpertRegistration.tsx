@@ -128,8 +128,14 @@ const ExpertRegistration = () => {
       }
       
       // Set the expert ID - use the expert ID from response data
-      const newExpertId = response.data.expertId || response.data.data?.id;
+      const newExpertId = response.data.data?.expertId || response.data.data?.id || response.data.expertId;
+      console.log('Setting expertId from response:', response.data);
       console.log('Setting expertId:', newExpertId);
+      
+      if (!newExpertId) {
+        throw new Error('Expert ID not found in registration response');
+      }
+      
       setExpertId(newExpertId);
 
       toast({

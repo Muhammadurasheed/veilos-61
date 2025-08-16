@@ -66,7 +66,11 @@ router.post('/register', authMiddleware, async (req, res) => {
     
     res.json({
       success: true,
-      data: expert
+      data: {
+        expertId: expert.id,
+        userId: req.user.id,
+        expert: expert
+      }
     });
   } catch (err) {
     console.error(err.message);
