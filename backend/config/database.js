@@ -50,17 +50,28 @@ const createIndexes = async () => {
       }
     };
 
+    // Drop legacy problematic index if it exists (created from unique subdocument path)
+    try {
+      await Post.collection.dropIndex('comments.id_1');
+      console.log('Dropped legacy unique index comments.id_1');
+    } catch (e) {
+      if (e.codeName === 'IndexNotFound' || e.message?.includes('index not found')) {
+        // ok, not present
+      } else {
+        console.warn('Could not drop comments.id_1:', e.message);
+      }
+    }
+
     // User indexes
     await createIndexSafely(User.collection, { id: 1 }, { unique: true });
     await createIndexSafely(User.collection, { email: 1 }, { sparse: true, unique: true });
     await createIndexSafely(User.collection, { role: 1 });
     await createIndexSafely(User.collection, { isExpert: 1 });
 
-    // Post indexes
+    // Post indexes (align with current schema fields)
     await createIndexSafely(Post.collection, { id: 1 }, { unique: true });
-    await createIndexSafely(Post.collection, { authorId: 1 });
-    await createIndexSafely(Post.collection, { createdAt: -1 });
-    await createIndexSafely(Post.collection, { 'likes.userId': 1 });
+    await createIndexSafely(Post.collection, { userId: 1 });
+    await createIndexSafely(Post.collection, { timestamp: -1 });
     await createIndexSafely(Post.collection, { topic: 1 });
     await createIndexSafely(Post.collection, { wantsExpertHelp: 1 });
 

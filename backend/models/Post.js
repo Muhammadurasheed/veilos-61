@@ -5,8 +5,7 @@ const { nanoid } = require('nanoid');
 const commentSchema = new mongoose.Schema({
   id: {
     type: String,
-    default: () => `comment-${nanoid(8)}`,
-    unique: true
+    default: () => `comment-${nanoid(8)}`
   },
   userId: {
     type: String,
