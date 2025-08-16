@@ -283,7 +283,7 @@ export const PostApi = {
   },
 
   async addComment(postId: string, comment: any) {
-    return apiRequest('POST', `/api/posts/${postId}/comments`, comment);
+    return apiRequest('POST', `/api/posts/${postId}/comment`, comment);
   }
 };
 
@@ -401,12 +401,13 @@ export const SessionApi = {
 
 // Gemini API methods
 export const GeminiApi = {
-  async refineContent(content: string, instructions: string) {
-    return apiRequest('POST', '/api/ai/gemini/refine', { content, instructions });
+  async refineContent(content: string, instructions?: string) {
+    // Map to backend improve endpoint
+    return apiRequest('POST', '/api/gemini/improve', { content, instructions });
   },
 
-  async refinePost(postData: any, instructions: string) {
-    return apiRequest('POST', '/api/ai/gemini/refine-post', { postData, instructions });
+  async refinePost(content: string, instructions?: string) {
+    return apiRequest('POST', '/api/gemini/refine-post', { content, instructions });
   },
 
   async generateSuggestions(context: any) {

@@ -37,16 +37,24 @@ const GeminiRefinement: React.FC<GeminiRefinementProps> = ({
     try {
       const response = await GeminiApi.refinePost(originalContent, 'supportive');
       
-      if (!response.success) {
+      if (response.success && response.data && (response.data as any).refinedText) {
+        setRefinedContent((response.data as any).refinedText);
+        toast({
+          title: "Content refined",
+          description: "Gemini has polished your post.",
+          variant: "default",
+        });
+      } else if (!response.success && (response.data as any)?.violation) {
+        const reason = (response.data as any).reason || 'Content violates community guidelines.';
+        setViolation({ reason });
+        toast({
+          variant: 'destructive',
+          title: 'Content needs review',
+          description: reason,
+        });
+      } else {
         throw new Error(response.error || 'Failed to refine content');
       }
-      
-      setRefinedContent(response.data.refinedContent);
-      toast({
-        title: "Content refined",
-        description: "Gemini has polished your post.",
-        variant: "default",
-      });
     } catch (error) {
       console.error('Content refinement error:', error);
       toast({
