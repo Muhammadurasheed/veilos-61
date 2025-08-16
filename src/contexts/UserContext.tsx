@@ -79,8 +79,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   // Initialize user from token on mount with enhanced logging
   const initializeUser = useCallback(async () => {
-    if (tokenManager.hasToken()) {
-      try {
+    try {
+      // 1) Attempt with existing access token
+      if (tokenManager.hasToken()) {
         logger.info('Initializing user with existing token');
         updateCreationState({ 
           step: 'authenticating', 
@@ -108,22 +109,48 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
             progress: 100, 
             message: 'Welcome back!' 
           });
+          setIsLoading(false);
+          return;
         } else {
-          logger.warn('Token authentication failed, removing token');
-          tokenManager.removeToken();
-          updateCreationState({ step: 'idle', progress: 0, message: '' });
+          logger.warn('Token authentication failed');
         }
-      } catch (error: any) {
-        logger.error('Authentication error', { error: error.message });
-        tokenManager.removeToken();
-        updateCreationState({ step: 'idle', progress: 0, message: '' });
-      } finally {
-        setIsLoading(false);
       }
-    } else {
-      logger.info('No token found, user not logged in');
-      setIsLoading(false);
+
+      // 2) Fallback to refresh token if access token missing/invalid
+      if (tokenManager.hasRefreshToken()) {
+        logger.info('Attempting refresh token flow for returning user');
+        updateCreationState({ 
+          step: 'authenticating', 
+          progress: 25, 
+          message: 'Refreshing your session...' 
+        });
+
+        const refresh = tokenManager.getRefreshToken()!;
+        const refreshResp = await UserApi.refreshToken(refresh);
+
+        if (refreshResp.success && refreshResp.data?.user && refreshResp.data?.token) {
+          setUser({
+            ...refreshResp.data.user,
+            loggedIn: true
+          });
+          updateCreationState({ step: 'complete', progress: 100, message: 'Welcome back!' });
+          setIsLoading(false);
+          return;
+        } else {
+          logger.warn('Refresh token invalid, clearing tokens');
+          tokenManager.clearAllTokens();
+        }
+      }
+
+      // 3) No valid tokens -> idle state
+      logger.info('No valid tokens found, user not logged in');
       updateCreationState({ step: 'idle', progress: 0, message: '' });
+    } catch (error: any) {
+      logger.error('Authentication error', { error: error.message });
+      tokenManager.clearAllTokens();
+      updateCreationState({ step: 'idle', progress: 0, message: '' });
+    } finally {
+      setIsLoading(false);
     }
   }, [updateCreationState]);
 
@@ -289,7 +316,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = useCallback(() => {
-    tokenManager.removeToken();
+    tokenManager.clearAllTokens();
     setUser(null);
     updateCreationState(initialCreationState);
     
