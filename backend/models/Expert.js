@@ -112,8 +112,20 @@ const expertSchema = new mongoose.Schema({
   verificationDocuments: [documentSchema],
   accountStatus: {
     type: String,
-    enum: ['pending', 'approved', 'rejected'],
+    enum: ['pending', 'approved', 'rejected', 'suspended'],
     default: 'pending'
+  },
+  adminNotes: [{
+    id: String,
+    note: String,
+    category: String,
+    date: { type: Date, default: Date.now },
+    adminId: String,
+    action: String
+  }],
+  lastUpdated: {
+    type: Date,
+    default: Date.now
   },
   createdAt: {
     type: Date,

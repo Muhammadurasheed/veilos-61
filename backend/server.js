@@ -79,6 +79,7 @@ app.use('/api/experts', expertRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin', enhancedAdminRoutes);
 app.use('/api/ratings', ratingRoutes);
 app.use('/api/sanctuary', sanctuaryRoutes);
 app.use('/api/live-sanctuary', liveSanctuaryRoutes);

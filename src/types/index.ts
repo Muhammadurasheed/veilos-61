@@ -65,8 +65,20 @@ export interface Expert {
   rating: number;
   testimonials: Testimonial[];
   topicsHelped: string[];
-  accountStatus: "pending" | "approved" | "rejected";
+  accountStatus: "pending" | "approved" | "rejected" | "suspended";
   verificationDocuments?: VerificationDocument[];
+  adminNotes?: AdminNote[];
+  lastUpdated?: string | Date;
+  createdAt?: string | Date;
+}
+
+export interface AdminNote {
+  id: string;
+  note: string;
+  category: string;
+  date: string | Date;
+  adminId: string;
+  action: string;
 }
 
 export interface Testimonial {

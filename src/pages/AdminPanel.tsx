@@ -7,9 +7,9 @@ import { useUserContext } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
 import Layout from '@/components/layout/Layout';
 import AdminLogin from '@/components/admin/AdminLogin';
-import ExpertVerification from '@/components/admin/ExpertVerification';
+import EnhancedExpertManagement from '@/components/admin/EnhancedExpertManagement';
 import ContentModeration from '@/components/admin/ContentModeration';
-import AdminDashboard from '@/components/admin/AdminDashboard';
+import EnhancedAdminDashboard from '@/components/admin/EnhancedAdminDashboard';
 import UserSafetyMonitor from '@/components/admin/UserSafetyMonitor';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -79,8 +79,8 @@ const AdminPanel = () => {
         </Card>
 
         <Routes>
-          <Route path="/" element={<AdminDashboard />} />
-          <Route path="/experts" element={<ExpertVerification />} />
+          <Route path="/" element={<EnhancedAdminDashboard />} />
+          <Route path="/experts" element={<EnhancedExpertManagement />} />
           <Route path="/content" element={<ContentModeration />} />
           <Route path="/safety" element={<UserSafetyMonitor />} />
         </Routes>
