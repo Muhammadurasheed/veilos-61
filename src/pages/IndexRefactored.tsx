@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import { SmartRouter } from '@/components/routing/SmartRouter';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 
 // Import pages
 import Index from '@/pages/Index';
@@ -23,29 +24,31 @@ import Phase4Test from '@/pages/Phase4Test';
 
 const IndexRefactored = () => {
   return (
-    <SmartRouter>
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/feed" element={<Feed />} />
-        <Route path="/beacons" element={<BeaconsList />} />
-        <Route path="/expert/:expertId" element={<ExpertProfile />} />
-        <Route path="/chat/:sessionId?" element={<Chat />} />
-        <Route path="/sessions" element={<SessionHub />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/register-expert" element={<ExpertRegistration />} />
-        <Route path="/expert-dashboard" element={<ExpertDashboard />} />
-        <Route path="/admin/*" element={<AdminPanel />} />
-        <Route path="/sanctuary" element={<Sanctuary />} />
-        <Route path="/sanctuary/inbox/:sessionId" element={<SanctuaryInbox />} />
-        <Route path="/sanctuary/submit/:sessionId" element={<SanctuarySubmit />} />
-        <Route path="/sanctuary/live/:sessionId" element={<EnhancedSanctuary />} />
-        {/* Generic sanctuary route for backward compatibility - auto-detects session type */}
-        <Route path="/sanctuary/:sessionId" element={<SmartSanctuaryRouter />} />
-        <Route path="/phase4-test" element={<Phase4Test />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </SmartRouter>
+    <ErrorBoundary>
+      <SmartRouter>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/feed" element={<Feed />} />
+          <Route path="/beacons" element={<BeaconsList />} />
+          <Route path="/expert/:expertId" element={<ExpertProfile />} />
+          <Route path="/chat/:sessionId?" element={<Chat />} />
+          <Route path="/sessions" element={<SessionHub />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/register-expert" element={<ExpertRegistration />} />
+          <Route path="/expert-dashboard" element={<ExpertDashboard />} />
+          <Route path="/admin/*" element={<AdminPanel />} />
+          <Route path="/sanctuary" element={<Sanctuary />} />
+          <Route path="/sanctuary/inbox/:sessionId" element={<SanctuaryInbox />} />
+          <Route path="/sanctuary/submit/:sessionId" element={<SanctuarySubmit />} />
+          <Route path="/sanctuary/live/:sessionId" element={<EnhancedSanctuary />} />
+          {/* Generic sanctuary route for backward compatibility - auto-detects session type */}
+          <Route path="/sanctuary/:sessionId" element={<SmartSanctuaryRouter />} />
+          <Route path="/phase4-test" element={<Phase4Test />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </SmartRouter>
+    </ErrorBoundary>
   );
 };
 

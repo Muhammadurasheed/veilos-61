@@ -28,6 +28,18 @@ import { SessionProvider } from '@/contexts/SessionContext';
 
 import './App.css';
 
+const UserErrorFallback = ({ error }: { error: Error }) => (
+  <div className="min-h-screen flex items-center justify-center">
+    <p>Unable to load user data. Please refresh the page.</p>
+  </div>
+);
+
+const DataErrorFallback = ({ error }: { error: Error }) => (
+  <div className="min-h-screen flex items-center justify-center">
+    <p>Unable to load application data. Please refresh the page.</p>
+  </div>
+);
+
 const App: React.FC = () => {
   // Initialize i18n and other global services
   useEffect(() => {
@@ -40,9 +52,9 @@ const App: React.FC = () => {
       <ThemeProvider>
         <AppStateProvider>
           <UserProvider>
-            <ErrorBoundary fallback={<div className="min-h-screen flex items-center justify-center"><p>Unable to load user data. Please refresh the page.</p></div>}>
+            <ErrorBoundary fallback={UserErrorFallback}>
               <VeiloDataProvider>
-                <ErrorBoundary fallback={<div className="min-h-screen flex items-center justify-center"><p>Unable to load application data. Please refresh the page.</p></div>}>
+                <ErrorBoundary fallback={DataErrorFallback}>
                   <SessionProvider>
                     <SmartRouter>
                       <Routes>

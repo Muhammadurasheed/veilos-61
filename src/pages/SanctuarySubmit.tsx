@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import Layout from '@/components/layout/Layout';
 import { MessageCircle, Send, Clock, Eye, Heart, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { SanctuaryApi } from '@/services/api';
+import { SEOHead } from '@/components/seo/SEOHead';
 
 interface SanctuarySession {
   id: string;
@@ -34,21 +36,12 @@ const SanctuarySubmit = () => {
     
     try {
       setLoading(true);
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+      const response = await SanctuaryApi.getSession(sessionId);
       
-      const response = await fetch(`${apiBaseUrl}/sanctuary/sessions/${sessionId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        setSession(data.data);
+      if (response.success && response.data) {
+        setSession(response.data);
       } else {
-        setError(data.error || 'Session not found');
+        setError(response.error || 'Session not found');
       }
     } catch (err) {
       console.error('Fetch session error:', err);
@@ -72,36 +65,27 @@ const SanctuarySubmit = () => {
 
     try {
       setSubmitting(true);
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+      const response = await SanctuaryApi.submitMessage(
+        sessionId,
+        alias.trim() || `Anonymous ${Date.now()}`,
+        message.trim()
+      );
       
-      const response = await fetch(`${apiBaseUrl}/sanctuary/sessions/${sessionId}/submit`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          alias: alias.trim() || undefined,
-          message: message.trim()
-        })
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
+      if (response.success) {
         setSubmitted(true);
         toast({
           title: "Message sent!",
           description: "Your anonymous message has been delivered.",
         });
       } else {
-        throw new Error(data.error || 'Failed to send message');
+        throw new Error(response.error || 'Failed to send message');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Submit error:', err);
       toast({
         variant: 'destructive',
         title: 'Failed to send',
-        description: err instanceof Error ? err.message : 'Something went wrong. Please try again.',
+        description: err.message || 'Something went wrong. Please try again.',
       });
     } finally {
       setSubmitting(false);
@@ -171,6 +155,11 @@ const SanctuarySubmit = () => {
 
   return (
     <Layout>
+      <SEOHead
+        title={`Send Anonymous Message - ${session?.topic || 'Sanctuary'} | Veilo`}
+        description="Share your thoughts safely and anonymously in this judgment-free sanctuary space"
+        keywords="anonymous message, safe space, mental health support, judgment-free"
+      />
       <div className="container py-6 max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">

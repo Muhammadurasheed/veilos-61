@@ -7,6 +7,8 @@ import { ArrowLeft, Copy, ExternalLink, MessageCircle, Clock, Users, Flag, X } f
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import EnhancedSanctuaryFlow from '@/components/sanctuary/EnhancedSanctuaryFlow';
+import { SanctuaryApi } from '@/services/api';
+import { SEOHead } from '@/components/seo/SEOHead';
 
 interface Submission {
   id: string;
@@ -36,7 +38,8 @@ const SanctuaryInbox = () => {
   const navigate = useNavigate();
 
   // Check if we're the host (have host token) to show inbox view
-  const isHost = sessionId && localStorage.getItem(`sanctuary-host-${sessionId}`);
+  const hostToken = sessionId ? localStorage.getItem(`sanctuary-host-${sessionId}`) : null;
+  const isHost = !!hostToken;
 
   // If not host, show join flow first
   if (!isHost) {
@@ -50,7 +53,7 @@ const SanctuaryInbox = () => {
   const getHostToken = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const tokenFromUrl = urlParams.get('hostToken');
-    const tokenFromStorage = localStorage.getItem(`sanctuary_host_${sessionId}`);
+    const tokenFromStorage = sessionId ? localStorage.getItem(`sanctuary-host-${sessionId}`) : null;
     return tokenFromUrl || tokenFromStorage;
   };
 
@@ -60,27 +63,15 @@ const SanctuaryInbox = () => {
     try {
       setLoading(true);
       const hostToken = getHostToken();
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
       
-      const response = await fetch(
-        `${apiBaseUrl}/sanctuary/sessions/${sessionId}/submissions?hostToken=${hostToken}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(hostToken ? {} : { 'x-auth-token': localStorage.getItem('token') || '' })
-          },
-        }
-      );
-
-      const data = await response.json();
+      const response = await SanctuaryApi.getSubmissions(sessionId, hostToken || undefined);
       
-      if (data.success) {
-        setInboxData(data.data);
+      if (response.success && response.data) {
+        setInboxData(response.data);
       } else {
-        setError(data.error || 'Failed to load inbox');
+        setError(response.error || 'Failed to load inbox');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Fetch inbox error:', err);
       setError('Failed to connect to server');
     } finally {
@@ -170,6 +161,11 @@ const SanctuaryInbox = () => {
 
   return (
     <Layout>
+      <SEOHead
+        title={`Sanctuary Inbox - ${inboxData?.session?.topic || 'Anonymous Messages'} | Veilo`}
+        description="Manage your anonymous sanctuary messages and maintain a safe space for open communication"
+        keywords="sanctuary inbox, anonymous messages, safe space management"
+      />
       <div className="container py-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

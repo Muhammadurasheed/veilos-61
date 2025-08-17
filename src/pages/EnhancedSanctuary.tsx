@@ -21,6 +21,8 @@ import {
   Activity
 } from 'lucide-react';
 import { LiveSanctuarySession, LiveParticipant } from '@/types/sanctuary';
+import { LiveSanctuaryApi } from '@/services/api';
+import { SEOHead } from '@/components/seo/SEOHead';
 
 const EnhancedSanctuary = () => {
   const { sessionId } = useParams();
@@ -40,24 +42,23 @@ const EnhancedSanctuary = () => {
       if (!sessionId) return;
       
       try {
-        const response = await fetch(`/api/live-sanctuary/${sessionId}`);
-        const result = await response.json();
+        const response = await LiveSanctuaryApi.getSession(sessionId);
         
-        if (result.success && result.data) {
+        if (response.success && response.data) {
           // Convert API data to LiveSanctuarySession format
           const sessionData: LiveSanctuarySession = {
-            ...result.data,
+            ...response.data,
             hostAlias: 'Host',
             status: 'active',
             participants: [],
-            startTime: result.data.createdAt,
+            startTime: response.data.createdAt,
             estimatedDuration: 3600,
             tags: ['support'],
             language: 'en',
             isRecorded: false,
             recordingConsent: [],
-            agoraChannelName: result.data.agoraChannelName || `sanctuary_${sessionId}`,
-            agoraToken: result.data.agoraToken || 'mock-agora-token',
+            agoraChannelName: response.data.agoraChannelName || `sanctuary_${sessionId}`,
+            agoraToken: response.data.agoraToken || 'mock-agora-token',
             breakoutRooms: [],
             moderationLevel: 'high' as const,
             emergencyProtocols: true,
@@ -66,7 +67,7 @@ const EnhancedSanctuary = () => {
           
           setSession(sessionData);
         } else {
-          throw new Error(result.error || 'Session not found');
+          throw new Error(response.error || 'Session not found');
         }
       } catch (error) {
         console.error('Failed to fetch session:', error);
@@ -180,6 +181,12 @@ const EnhancedSanctuary = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+      <SEOHead
+        title={`Live Sanctuary - ${session?.topic || 'Anonymous Audio Space'} | Veilo`}
+        description="Join a live anonymous audio sanctuary for real-time emotional support and community connection"
+        keywords="live audio sanctuary, anonymous support, real-time community, mental health"
+      />
+      
       {/* Emergency Response Overlay */}
       <EmergencyResponse
         sessionId={session.id}
