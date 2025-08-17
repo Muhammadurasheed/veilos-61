@@ -11,6 +11,7 @@ import EnhancedExpertManagement from '@/components/admin/EnhancedExpertManagemen
 import ContentModeration from '@/components/admin/ContentModeration';
 import EnhancedAdminDashboard from '@/components/admin/EnhancedAdminDashboard';
 import UserSafetyMonitor from '@/components/admin/UserSafetyMonitor';
+import RealTimePlatformMonitor from '@/components/admin/RealTimePlatformMonitor';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Shield } from 'lucide-react';
@@ -31,6 +32,7 @@ const AdminPanel = () => {
     if (path.includes('/experts')) return 'experts';
     if (path.includes('/content')) return 'content';
     if (path.includes('/safety')) return 'safety';
+    if (path.includes('/monitoring')) return 'monitoring';
     return 'dashboard';
   };
 
@@ -47,6 +49,9 @@ const AdminPanel = () => {
         break;
       case 'safety':
         navigate('/admin/safety');
+        break;
+      case 'monitoring':
+        navigate('/admin/monitoring');
         break;
       default:
         navigate('/admin');
@@ -68,11 +73,12 @@ const AdminPanel = () => {
               onValueChange={handleTabChange}
               className="w-full"
             >
-              <TabsList className="grid grid-cols-4 w-full">
+              <TabsList className="grid grid-cols-5 w-full">
                 <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
                 <TabsTrigger value="experts">Expert Verification</TabsTrigger>
                 <TabsTrigger value="content">Content Moderation</TabsTrigger>
                 <TabsTrigger value="safety">User Safety</TabsTrigger>
+                <TabsTrigger value="monitoring">Live Monitoring</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -83,6 +89,7 @@ const AdminPanel = () => {
           <Route path="/experts" element={<EnhancedExpertManagement />} />
           <Route path="/content" element={<ContentModeration />} />
           <Route path="/safety" element={<UserSafetyMonitor />} />
+          <Route path="/monitoring" element={<RealTimePlatformMonitor />} />
         </Routes>
       </div>
     </Layout>

@@ -52,6 +52,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import EnhancedExpertDocumentViewer from './EnhancedExpertDocumentViewer';
 
 interface ExpertFilters {
   status: string;
@@ -579,29 +580,12 @@ const EnhancedExpertManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Document Viewer Dialog - placeholder for now */}
-      <Dialog open={showDocumentViewer} onOpenChange={setShowDocumentViewer}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Expert Documents - {selectedExpert?.name}</DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <p>Document viewer will be implemented in the next iteration.</p>
-            {selectedExpert?.verificationDocuments?.map((doc, index) => (
-              <div key={index} className="p-3 border rounded">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">{doc.type}</span>
-                  <Badge>{doc.status || 'pending'}</Badge>
-                </div>
-                <div className="text-sm text-muted-foreground mt-1">
-                  {doc.fileName}
-                </div>
-              </div>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Enhanced Document Viewer */}
+      <EnhancedExpertDocumentViewer
+        expert={selectedExpert}
+        isOpen={showDocumentViewer}
+        onClose={() => setShowDocumentViewer(false)}
+      />
     </div>
   );
 };
