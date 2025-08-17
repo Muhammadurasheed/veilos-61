@@ -18,6 +18,7 @@ import Sanctuary from '@/pages/Sanctuary';
 import SanctuaryInbox from '@/pages/SanctuaryInbox';
 import SanctuarySubmit from '@/pages/SanctuarySubmit';
 import EnhancedSanctuary from '@/pages/EnhancedSanctuary';
+import SmartSanctuaryRouter from '@/components/sanctuary/SmartSanctuaryRouter';
 import Phase4Test from '@/pages/Phase4Test';
 
 const IndexRefactored = () => {
@@ -39,7 +40,8 @@ const IndexRefactored = () => {
         <Route path="/sanctuary/inbox/:sessionId" element={<SanctuaryInbox />} />
         <Route path="/sanctuary/submit/:sessionId" element={<SanctuarySubmit />} />
         <Route path="/sanctuary/live/:sessionId" element={<EnhancedSanctuary />} />
-        <Route path="/sanctuary/:sessionId" element={<EnhancedSanctuary />} />
+        {/* Generic sanctuary route for backward compatibility - auto-detects session type */}
+        <Route path="/sanctuary/:sessionId" element={<SmartSanctuaryRouter />} />
         <Route path="/phase4-test" element={<Phase4Test />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

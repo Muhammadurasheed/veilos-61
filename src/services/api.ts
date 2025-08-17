@@ -445,6 +445,42 @@ export const SanctuaryApi = {
 
   async moderateSession(sessionId: string, action: any) {
     return apiRequest('POST', `/api/sanctuary/sessions/${sessionId}/moderate`, action);
+  },
+
+  async submitMessage(sessionId: string, alias: string, message: string) {
+    return apiRequest('POST', `/api/sanctuary/sessions/${sessionId}/submit`, { alias, message });
+  },
+
+  async getSubmissions(sessionId: string, hostToken?: string) {
+    return apiRequest('GET', `/api/sanctuary/sessions/${sessionId}/submissions`, null, { 
+      params: hostToken ? { hostToken } : {} 
+    });
+  }
+};
+
+// Live Sanctuary API methods
+export const LiveSanctuaryApi = {
+  async createSession(sessionData: any) {
+    return apiRequest('POST', '/api/live-sanctuary', sessionData);
+  },
+
+  async getSession(id: string) {
+    return apiRequest('GET', `/api/live-sanctuary/${id}`);
+  },
+
+  async joinSession(sessionId: string, options: { alias?: string }) {
+    return apiRequest('POST', `/api/live-sanctuary/${sessionId}/join`, options);
+  },
+
+  async endSession(sessionId: string, hostToken?: string) {
+    return apiRequest('POST', `/api/live-sanctuary/${sessionId}/end`, { hostToken });
+  },
+
+  async removeParticipant(sessionId: string, participantId: string, hostToken?: string) {
+    return apiRequest('POST', `/api/live-sanctuary/${sessionId}/remove-participant`, { 
+      participantId, 
+      hostToken 
+    });
   }
 };
 

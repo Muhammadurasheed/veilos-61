@@ -12,7 +12,7 @@ import { Shield, Link, Calendar, Share2, Twitter, MessageCircle } from 'lucide-r
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { SanctuaryApi } from '@/services/api';
+import { SanctuaryApi, LiveSanctuaryApi } from '@/services/api';
 import { ApiSanctuaryCreateRequest } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -140,27 +140,19 @@ const CreateSanctuary: React.FC = () => {
           emoji: values.emoji,
           expireHours: values.expireHours,
           maxParticipants: values.maxParticipants,
-          scheduledTime: values.scheduledTime
+          scheduledAt: values.scheduledTime
         };
         
-        const response = await fetch('/api/live-sanctuary', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(liveSanctuaryData)
-        });
+        const response = await LiveSanctuaryApi.createSession(liveSanctuaryData);
         
-        const result = await response.json();
-        
-        if (result.success && result.data) {
+        if (response.success && response.data) {
           // Store host token for anonymous hosts
-          if (result.data.hostToken) {
-            localStorage.setItem(`live-sanctuary-host-${result.data.id}`, result.data.hostToken);
+          if (response.data.hostToken) {
+            localStorage.setItem(`live-sanctuary-host-${response.data.id}`, response.data.hostToken);
           }
           
           setCreatedSession({
-            ...result.data,
+            ...response.data,
             type: 'live-audio'
           });
           setShowShareOptions(true);
@@ -170,7 +162,7 @@ const CreateSanctuary: React.FC = () => {
             description: "Your live audio space is ready to share."
           });
         } else {
-          throw new Error(result.error || "Failed to create live sanctuary session");
+          throw new Error(response.error || "Failed to create live sanctuary session");
         }
       }
     } catch (error: any) {
@@ -185,19 +177,28 @@ const CreateSanctuary: React.FC = () => {
   };
 
   const shareOnTwitter = () => {
-    const url = `${window.location.origin}/sanctuary/${createdSession.id}`;
+    // Different URLs based on sanctuary type
+    const url = createdSession.type === 'live-audio' 
+      ? `${window.location.origin}/sanctuary/live/${createdSession.id}`
+      : `${window.location.origin}/sanctuary/submit/${createdSession.id}`;
     const text = `Join me in a safe space to discuss: ${createdSession.topic}`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
   };
 
   const shareOnWhatsApp = () => {
-    const url = `${window.location.origin}/sanctuary/${createdSession.id}`;
+    // Different URLs based on sanctuary type  
+    const url = createdSession.type === 'live-audio'
+      ? `${window.location.origin}/sanctuary/live/${createdSession.id}`
+      : `${window.location.origin}/sanctuary/submit/${createdSession.id}`;
     const text = `Join me in a safe sanctuary space to discuss: ${createdSession.topic} ${url}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   const copyToClipboard = () => {
-    const url = `${window.location.origin}/sanctuary/${createdSession.id}`;
+    // Different URLs based on sanctuary type
+    const url = createdSession.type === 'live-audio'
+      ? `${window.location.origin}/sanctuary/live/${createdSession.id}`
+      : `${window.location.origin}/sanctuary/submit/${createdSession.id}`;
     navigator.clipboard.writeText(url);
     toast({
       title: "Link copied!",
@@ -231,8 +232,13 @@ const CreateSanctuary: React.FC = () => {
             </div>
           </div>
           
-          <div className="space-y-3">
-            <h4 className="font-medium text-center">Share your sanctuary:</h4>
+            <div className="space-y-3">
+              <h4 className="font-medium text-center">
+                {createdSession.type === 'live-audio' 
+                  ? 'Share live audio space:' 
+                  : 'Share anonymous submission link:'
+                }
+              </h4>
             <div className="grid grid-cols-3 gap-3">
               <Button variant="outline" onClick={shareOnWhatsApp} className="flex flex-col gap-1 h-16">
                 <MessageCircle className="h-5 w-5 text-green-600" />

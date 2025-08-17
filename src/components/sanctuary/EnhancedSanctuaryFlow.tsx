@@ -17,6 +17,7 @@ import {
   MessageCircle,
   Link as LinkIcon
 } from 'lucide-react';
+import { SanctuaryApi, LiveSanctuaryApi } from '@/services/api';
 
 interface EnhancedSanctuaryFlowProps {
   sessionId: string;
@@ -40,20 +41,38 @@ const EnhancedSanctuaryFlow: React.FC<EnhancedSanctuaryFlowProps> = ({
   // Fetch session data
   useEffect(() => {
     const fetchSession = async () => {
-      try {
-        const endpoint = sessionType === 'live' 
-          ? `/api/live-sanctuary/${sessionId}` 
-          : `/api/sanctuary/sessions/${sessionId}`;
-        
-        const response = await fetch(endpoint);
-        const result = await response.json();
-
-        if (result.success && result.data) {
-          setSessionData(result.data);
-        } else {
-          throw new Error(result.error || 'Session not found');
+    try {
+      let response;
+      let actualSessionType = sessionType;
+      
+      // Try to determine session type from URL first
+      if (sessionType === 'live') {
+        response = await LiveSanctuaryApi.getSession(sessionId);
+      } else if (sessionType === 'inbox') {
+        response = await SanctuaryApi.getSession(sessionId);
+      } else {
+        // For generic routes, try both APIs to determine type
+        try {
+          response = await SanctuaryApi.getSession(sessionId);
+          if (response.success) {
+            // Update session type based on mode
+            actualSessionType = response.data.mode === 'live-audio' ? 'live' : 'inbox';
+          }
+        } catch {
+          // If not found in regular sanctuary, try live sanctuary
+          response = await LiveSanctuaryApi.getSession(sessionId);
+          if (response.success) {
+            actualSessionType = 'live';
+          }
         }
-      } catch (error) {
+      }
+
+      if (response?.success && response.data) {
+        setSessionData(response.data);
+      } else {
+        throw new Error(response?.error || 'Session not found');
+      }
+    } catch (error) {
         console.error('Failed to fetch session:', error);
         toast({
           title: "Session not found",
@@ -83,22 +102,16 @@ const EnhancedSanctuaryFlow: React.FC<EnhancedSanctuaryFlowProps> = ({
     setJoining(true);
     
     try {
-      const endpoint = sessionType === 'live'
-        ? `/api/live-sanctuary/${sessionId}/join`
-        : `/api/sanctuary/sessions/${sessionId}/join`;
+      let response;
+      
+      if (sessionType === 'live') {
+        response = await LiveSanctuaryApi.joinSession(sessionId, { alias: alias.trim() });
+      } else {
+        response = await SanctuaryApi.joinSession(sessionId, { alias: alias.trim() });
+      }
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ alias: alias.trim() })
-      });
-
-      const result = await response.json();
-
-      if (result.success && result.data) {
-        setParticipant(result.data);
+      if (response?.success && response.data) {
+        setParticipant(response.data);
         setHasJoined(true);
         
         toast({
@@ -110,14 +123,14 @@ const EnhancedSanctuaryFlow: React.FC<EnhancedSanctuaryFlowProps> = ({
         if (sessionType === 'live') {
           // For live audio, redirect to enhanced sanctuary with participant data
           navigate(`/sanctuary/live/${sessionId}`, { 
-            state: { participant: result.data } 
+            state: { participant: response.data } 
           });
         } else {
           // For inbox, show submission form
           navigate(`/sanctuary/submit/${sessionId}`);
         }
       } else {
-        throw new Error(result.error || 'Failed to join session');
+        throw new Error(response?.error || 'Failed to join session');
       }
     } catch (error: any) {
       toast({
