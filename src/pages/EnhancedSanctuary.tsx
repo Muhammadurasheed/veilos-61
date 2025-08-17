@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import LiveAudioRoom from '@/components/sanctuary/LiveAudioRoom';
 import BreakoutRoomManager from '@/components/sanctuary/BreakoutRoomManager';
 import SessionRecorder from '@/components/sanctuary/SessionRecorder';
-import SanctuaryModerationAI from '@/components/sanctuary/SanctuaryModerationAI';
+import AIModerationDashboard from '@/components/sanctuary/AIModerationDashboard';
 import EmergencyResponse from '@/components/sanctuary/EmergencyResponse';
 import { 
   Users, 
@@ -314,11 +314,12 @@ const EnhancedSanctuary = () => {
 
           {/* AI Moderation Tab */}
           <TabsContent value="moderation" className="space-y-6">
-            <SanctuaryModerationAI
+            <AIModerationDashboard
               sessionId={session.id}
+              sessionType="live-sanctuary"
               isHost={participant.isHost}
-              participantCount={session.participants.length}
-              onEmergencyAlert={handleEmergencyAlert}
+              isModerator={participant.isModerator}
+              realTimeEnabled={true}
             />
           </TabsContent>
 
