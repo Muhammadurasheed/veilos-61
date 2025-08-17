@@ -1,0 +1,93 @@
+{
+  "name": "Veilo - Mental Health Support Platform",
+  "short_name": "Veilo",
+  "description": "AI-powered mental health support platform connecting users with verified experts and supportive communities",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#8B5CF6",
+  "orientation": "portrait-primary",
+  "categories": ["health", "medical", "wellness", "lifestyle"],
+  "icons": [
+    {
+      "src": "/favicon-veilo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/veilo-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/mobile-home.png",
+      "sizes": "375x812",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Veilo Home Screen"
+    },
+    {
+      "src": "/screenshots/desktop-dashboard.png", 
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Veilo Expert Dashboard"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "protocol_handlers": [
+    {
+      "protocol": "web+veilo",
+      "url": "/?handler=%s"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Find Expert",
+      "short_name": "Experts",
+      "description": "Find verified mental health experts",
+      "url": "/beacons",
+      "icons": [
+        {
+          "src": "/favicon-veilo.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Join Sanctuary",
+      "short_name": "Sanctuary",
+      "description": "Join anonymous support spaces",
+      "url": "/sanctuary",
+      "icons": [
+        {
+          "src": "/favicon-veilo.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Emergency Support",
+      "short_name": "Emergency",
+      "description": "Access crisis support resources",
+      "url": "/emergency",
+      "icons": [
+        {
+          "src": "/favicon-veilo.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  }
+}
