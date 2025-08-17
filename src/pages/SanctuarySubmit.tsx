@@ -19,7 +19,7 @@ interface SanctuarySession {
 }
 
 const SanctuarySubmit = () => {
-  const { id } = useParams<{ id: string }>();
+  const { sessionId } = useParams<{ sessionId: string }>();
   const { toast } = useToast();
   const [session, setSession] = useState<SanctuarySession | null>(null);
   const [loading, setLoading] = useState(true);
@@ -30,13 +30,13 @@ const SanctuarySubmit = () => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchSession = async () => {
-    if (!id) return;
+    if (!sessionId) return;
     
     try {
       setLoading(true);
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
       
-      const response = await fetch(`${apiBaseUrl}/sanctuary/sessions/${id}`, {
+      const response = await fetch(`${apiBaseUrl}/sanctuary/sessions/${sessionId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -74,7 +74,7 @@ const SanctuarySubmit = () => {
       setSubmitting(true);
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
       
-      const response = await fetch(`${apiBaseUrl}/sanctuary/sessions/${id}/submit`, {
+      const response = await fetch(`${apiBaseUrl}/sanctuary/sessions/${sessionId}/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -110,7 +110,7 @@ const SanctuarySubmit = () => {
 
   useEffect(() => {
     fetchSession();
-  }, [id]);
+  }, [sessionId]);
 
   if (loading) {
     return (

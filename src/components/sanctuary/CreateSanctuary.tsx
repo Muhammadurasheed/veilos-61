@@ -132,27 +132,45 @@ const CreateSanctuary: React.FC = () => {
         } else {
           throw new Error(response.error || "Failed to create sanctuary session");
         }
-      } else {
+        } else {
         // Handle scheduled live audio session
-        // For now, navigate to live sanctuary creation (future feature)
-        toast({
-          title: "Scheduled Live Audio",
-          description: "Feature coming soon! For now, creating anonymous link.",
-        });
-        
-        // Fallback to anonymous link for now
-        const sanctuaryData: ApiSanctuaryCreateRequest = {
+        const liveSanctuaryData = {
           topic: values.topic,
           description: values.description,
           emoji: values.emoji,
-          expireHours: values.expireHours
+          expireHours: values.expireHours,
+          maxParticipants: values.maxParticipants,
+          scheduledTime: values.scheduledTime
         };
         
-        const response = await SanctuaryApi.createSession(sanctuaryData);
+        const response = await fetch('/api/live-sanctuary', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(liveSanctuaryData)
+        });
         
-        if (response.success && response.data) {
-          setCreatedSession(response.data);
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          // Store host token for anonymous hosts
+          if (result.data.hostToken) {
+            localStorage.setItem(`live-sanctuary-host-${result.data.id}`, result.data.hostToken);
+          }
+          
+          setCreatedSession({
+            ...result.data,
+            type: 'live-audio'
+          });
           setShowShareOptions(true);
+          
+          toast({
+            title: "Live Audio Sanctuary created!",
+            description: "Your live audio space is ready to share."
+          });
+        } else {
+          throw new Error(result.error || "Failed to create live sanctuary session");
         }
       }
     } catch (error: any) {
@@ -239,8 +257,13 @@ const CreateSanctuary: React.FC = () => {
           }}>
             Create Another
           </Button>
-          <Button variant="veilo-primary" onClick={() => navigate(`/sanctuary/${createdSession.id}`)}>
-            Enter Sanctuary
+          <Button variant="veilo-primary" onClick={() => {
+            const route = createdSession.type === 'live-audio' 
+              ? `/sanctuary/live/${createdSession.id}`
+              : `/sanctuary/inbox/${createdSession.id}`;
+            navigate(route);
+          }}>
+            {createdSession.type === 'live-audio' ? 'Enter Live Space' : 'View Inbox'}
           </Button>
         </CardFooter>
       </Card>
@@ -317,7 +340,7 @@ const CreateSanctuary: React.FC = () => {
                         <p className="text-xs text-gray-600 text-center mt-1">
                           Schedule anonymous audio session
                         </p>
-                        <Badge variant="outline" className="text-xs mt-1">Coming Soon</Badge>
+                        <Badge variant="outline" className="text-xs mt-1 bg-green-50 text-green-600">Live</Badge>
                       </label>
                     </div>
                   </div>

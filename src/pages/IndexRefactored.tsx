@@ -15,6 +15,8 @@ import SessionHub from '@/pages/SessionHub';
 import NotFound from '@/pages/NotFound';
 import AdminPanel from '@/pages/AdminPanel';
 import Sanctuary from '@/pages/Sanctuary';
+import SanctuaryInbox from '@/pages/SanctuaryInbox';
+import SanctuarySubmit from '@/pages/SanctuarySubmit';
 import EnhancedSanctuary from '@/pages/EnhancedSanctuary';
 import Phase4Test from '@/pages/Phase4Test';
 
@@ -34,6 +36,9 @@ const IndexRefactored = () => {
         <Route path="/expert-dashboard" element={<ExpertDashboard />} />
         <Route path="/admin/*" element={<AdminPanel />} />
         <Route path="/sanctuary" element={<Sanctuary />} />
+        <Route path="/sanctuary/inbox/:sessionId" element={<SanctuaryInbox />} />
+        <Route path="/sanctuary/submit/:sessionId" element={<SanctuarySubmit />} />
+        <Route path="/sanctuary/live/:sessionId" element={<EnhancedSanctuary />} />
         <Route path="/sanctuary/:sessionId" element={<EnhancedSanctuary />} />
         <Route path="/phase4-test" element={<Phase4Test />} />
         <Route path="*" element={<NotFound />} />

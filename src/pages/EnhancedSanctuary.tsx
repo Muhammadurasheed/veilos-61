@@ -36,8 +36,43 @@ const EnhancedSanctuary = () => {
 
   // Mock session data for demo
   useEffect(() => {
-    const mockSession: LiveSanctuarySession = {
-      id: sessionId || 'sanctuary-1',
+    const fetchSession = async () => {
+      if (!sessionId) return;
+      
+      try {
+        const response = await fetch(`/api/live-sanctuary/${sessionId}`);
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          // Convert API data to LiveSanctuarySession format
+          const sessionData: LiveSanctuarySession = {
+            ...result.data,
+            hostAlias: 'Host',
+            status: 'active',
+            participants: [],
+            startTime: result.data.createdAt,
+            estimatedDuration: 3600,
+            tags: ['support'],
+            language: 'en',
+            isRecorded: false,
+            recordingConsent: [],
+            agoraChannelName: result.data.agoraChannelName || `sanctuary_${sessionId}`,
+            agoraToken: result.data.agoraToken || 'mock-agora-token',
+            breakoutRooms: [],
+            moderationLevel: 'high' as const,
+            emergencyProtocols: true,
+            aiMonitoring: true
+          };
+          
+          setSession(sessionData);
+        } else {
+          throw new Error(result.error || 'Session not found');
+        }
+      } catch (error) {
+        console.error('Failed to fetch session:', error);
+        // Fallback to mock data for development
+        const mockSession: LiveSanctuarySession = {
+          id: sessionId || 'sanctuary-1',
       topic: 'Anxiety & Stress Support Circle',
       description: 'A safe space for sharing and supporting each other through anxiety and stress',
       emoji: '🏛️',
@@ -68,29 +103,34 @@ const EnhancedSanctuary = () => {
       createdAt: new Date().toISOString()
     };
 
-    const mockParticipant: LiveParticipant = {
-      id: 'user-123',
-      alias: 'Anonymous Seeker',
-      isHost: Math.random() > 0.8, // 20% chance of being host for demo
-      isModerator: false,
-      isMuted: true,
-      isBlocked: false,
-      handRaised: false,
-      joinedAt: new Date().toISOString(),
-      connectionStatus: 'connected',
-      audioLevel: 0,
-      speakingTime: 0,
-      avatarIndex: Math.floor(Math.random() * 7) + 1
+        setSession(mockSession);
+      }
+      
+      const mockParticipant: LiveParticipant = {
+        id: 'user-123',
+        alias: 'Anonymous Seeker',
+        isHost: Math.random() > 0.8, // 20% chance of being host for demo
+        isModerator: false,
+        isMuted: true,
+        isBlocked: false,
+        handRaised: false,
+        joinedAt: new Date().toISOString(),
+        connectionStatus: 'connected',
+        audioLevel: 0,
+        speakingTime: 0,
+        avatarIndex: Math.floor(Math.random() * 7) + 1
+      };
+
+      setParticipant(mockParticipant);
+      setIsLoading(false);
+
+      toast({
+        title: "Welcome to the Sanctuary",
+        description: "You've joined a safe space for support and guidance",
+      });
     };
-
-    setSession(mockSession);
-    setParticipant(mockParticipant);
-    setIsLoading(false);
-
-    toast({
-      title: "Welcome to the Sanctuary",
-      description: "You've joined a safe space for support and guidance",
-    });
+    
+    fetchSession();
   }, [sessionId, toast]);
 
   const handleEmergencyAlert = (participantId: string, isCrisis: boolean) => {

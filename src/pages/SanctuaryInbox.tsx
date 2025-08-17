@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Layout from '@/components/layout/Layout';
 import { ArrowLeft, Copy, ExternalLink, MessageCircle, Clock, Users, Flag, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import EnhancedSanctuaryFlow from '@/components/sanctuary/EnhancedSanctuaryFlow';
 
 interface Submission {
   id: string;
@@ -30,8 +31,17 @@ interface SanctuaryInboxData {
 }
 
 const SanctuaryInbox = () => {
-  const { id } = useParams<{ id: string }>();
+  const { sessionId } = useParams<{ sessionId: string }>();
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  // Check if we're the host (have host token) to show inbox view
+  const isHost = sessionId && localStorage.getItem(`sanctuary-host-${sessionId}`);
+
+  // If not host, show join flow first
+  if (!isHost) {
+    return sessionId ? <EnhancedSanctuaryFlow sessionId={sessionId} sessionType="inbox" /> : null;
+  }
   const [inboxData, setInboxData] = useState<SanctuaryInboxData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,12 +50,12 @@ const SanctuaryInbox = () => {
   const getHostToken = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const tokenFromUrl = urlParams.get('hostToken');
-    const tokenFromStorage = localStorage.getItem(`sanctuary_host_${id}`);
+    const tokenFromStorage = localStorage.getItem(`sanctuary_host_${sessionId}`);
     return tokenFromUrl || tokenFromStorage;
   };
 
   const fetchInboxData = async () => {
-    if (!id) return;
+    if (!sessionId) return;
     
     try {
       setLoading(true);
@@ -53,7 +63,7 @@ const SanctuaryInbox = () => {
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
       
       const response = await fetch(
-        `${apiBaseUrl}/sanctuary/sessions/${id}/submissions?hostToken=${hostToken}`,
+        `${apiBaseUrl}/sanctuary/sessions/${sessionId}/submissions?hostToken=${hostToken}`,
         {
           method: 'GET',
           headers: {
@@ -84,10 +94,10 @@ const SanctuaryInbox = () => {
     // Auto-refresh every 30 seconds
     const interval = setInterval(fetchInboxData, 30000);
     return () => clearInterval(interval);
-  }, [id]);
+  }, [sessionId]);
 
   const copyShareLink = () => {
-    const shareUrl = `${window.location.origin}/sanctuary/${id}`;
+    const shareUrl = `${window.location.origin}/sanctuary/submit/${sessionId}`;
     navigator.clipboard.writeText(shareUrl);
     toast({
       title: "Link copied!",
@@ -96,7 +106,7 @@ const SanctuaryInbox = () => {
   };
 
   const copyToSocial = (platform: 'whatsapp' | 'twitter') => {
-    const shareUrl = `${window.location.origin}/sanctuary/${id}`;
+    const shareUrl = `${window.location.origin}/sanctuary/submit/${sessionId}`;
     const text = `📮 Send me an anonymous message about: ${inboxData?.session?.topic}`;
     
     let socialUrl = '';

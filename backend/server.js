@@ -23,6 +23,8 @@ const meetingRoutes = require('./routes/meetingRoutes');
 const sessionNotesRoutes = require('./routes/sessionNotesRoutes');
 const sessionRatingRoutes = require('./routes/sessionRatingRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+const enhancedAdminRoutes = require('./routes/enhancedAdminRoutes');
+const recommendationRoutes = require('./routes/recommendationRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -83,14 +85,14 @@ app.use('/api/admin', enhancedAdminRoutes);
 app.use('/api/ratings', ratingRoutes);
 app.use('/api/sanctuary', sanctuaryRoutes);
 app.use('/api/live-sanctuary', liveSanctuaryRoutes);
-app.use('/api/live-sanctuary', breakoutRoutes);
-app.use('/api/live-sanctuary', recordingRoutes);
+app.use('/api/recommendations', recommendationRoutes);
+app.use('/api/breakout', breakoutRoutes);
 app.use('/api/gemini', geminiRoutes);
 app.use('/api/meetings', meetingRoutes);
 app.use('/api/session-notes', sessionNotesRoutes);
 app.use('/api/session-ratings', sessionRatingRoutes);
 app.use('/api/ai', aiRoutes);
-app.use('/api/recommendations', require('./routes/recommendationRoutes'));
+
 app.use('/api/appeals', require('./routes/appealRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/consultations', consultationRoutes);
