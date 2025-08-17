@@ -70,6 +70,65 @@ export interface Expert {
   adminNotes?: AdminNote[];
   lastUpdated?: string | Date;
   createdAt?: string | Date;
+  // Enhanced resume-based fields
+  resumeData?: {
+    personalInfo?: {
+      name?: string;
+      email?: string;
+      phone?: string;
+    };
+    education?: Array<{
+      degree?: string;
+      institution?: string;
+      field?: string;
+      year?: string;
+      raw?: string;
+    }>;
+    experience?: Array<{
+      position?: string;
+      company?: string;
+      duration?: string;
+      responsibilities?: string[];
+      raw?: string;
+    }>;
+    skills?: {
+      technical?: string[];
+      clinical?: string[];
+      soft?: string[];
+      other?: string[];
+    };
+    certifications?: Array<{
+      name?: string;
+      type?: string;
+      year?: string;
+      mentioned?: boolean;
+    }>;
+    summary?: string;
+    specializations?: Array<{
+      name?: string;
+      confidence?: number;
+      matchedKeywords?: string[];
+    }>;
+    yearsOfExperience?: number;
+    keyHighlights?: string[];
+    lastParsed?: string | Date;
+  };
+  profileEnhancements?: {
+    professionalSummary?: string;
+    timeline?: Array<{
+      year?: string;
+      title?: string;
+      description?: string;
+      type?: 'education' | 'experience' | 'certification' | 'achievement';
+    }>;
+    expertise?: Array<{
+      category?: string;
+      skills?: string[];
+      level?: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+    }>;
+    achievements?: string[];
+    specialtyTags?: string[];
+  };
 }
 
 export interface AdminNote {
@@ -92,7 +151,7 @@ export interface Testimonial {
 
 export interface VerificationDocument {
   id: string;
-  type: "id" | "credential" | "certificate" | "other";
+  type: "id" | "credential" | "certificate" | "other" | "resume" | "cv" | "photo";
   fileUrl: string;
   fileName: string;
   uploadedAt: string;
