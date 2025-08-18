@@ -366,6 +366,29 @@ router.post('/sessions/:id/submit', getClientIp, async (req, res) => {
     
     session.submissions.push(submission);
     await session.save();
+
+    // Emit real-time notification to host
+    try {
+      const { getIO } = require('../socket/socketHandler');
+      const io = getIO();
+      
+      // Notify host in real-time
+      io.to(`sanctuary_host_${session.id}`).emit('sanctuary_new_submission', {
+        submission: {
+          id: submission.id,
+          alias: submission.alias,
+          message: submission.message,
+          timestamp: submission.timestamp
+        },
+        sessionId: session.id,
+        totalSubmissions: session.submissions.length
+      });
+      
+      console.log(`Real-time notification sent to host for sanctuary ${session.id}`);
+    } catch (socketError) {
+      console.error('Socket notification error:', socketError);
+      // Continue execution even if socket fails
+    }
     
     res.json({
       success: true,

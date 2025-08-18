@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Layout from '@/components/layout/Layout';
-import { ArrowLeft, Copy, ExternalLink, MessageCircle, Clock, Users, Flag, X } from 'lucide-react';
+import { ArrowLeft, Copy, ExternalLink, MessageCircle, Clock, Users, Flag, X, Wifi, WifiOff, Volume2, VolumeX, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import EnhancedSanctuaryFlow from '@/components/sanctuary/EnhancedSanctuaryFlow';
 import { SanctuaryApi } from '@/services/api';
 import { SEOHead } from '@/components/seo/SEOHead';
+import { useSanctuaryRealtime } from '@/hooks/useSanctuaryRealtime';
+import { Switch } from '@/components/ui/switch';
 
 interface Submission {
   id: string;
@@ -48,6 +50,8 @@ const SanctuaryInbox = () => {
   const [inboxData, setInboxData] = useState<SanctuaryInboxData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   // Get host token from localStorage or URL params
   const getHostToken = () => {
@@ -57,17 +61,19 @@ const SanctuaryInbox = () => {
     return tokenFromUrl || tokenFromStorage;
   };
 
-  const fetchInboxData = async () => {
+  const fetchInboxData = useCallback(async (showLoading = false) => {
     if (!sessionId) return;
     
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const hostToken = getHostToken();
       
       const response = await SanctuaryApi.getSubmissions(sessionId, hostToken || undefined);
       
       if (response.success && response.data) {
         setInboxData(response.data);
+        setLastRefresh(new Date());
+        setError(null);
       } else {
         setError(response.error || 'Failed to load inbox');
       }
@@ -75,17 +81,51 @@ const SanctuaryInbox = () => {
       console.error('Fetch inbox error:', err);
       setError('Failed to connect to server');
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
-  };
+  }, [sessionId]);
+
+  // Handle real-time new submissions
+  const handleNewSubmission = useCallback((submission: any) => {
+    setInboxData(prev => {
+      if (!prev) return prev;
+      
+      return {
+        ...prev,
+        submissions: [...prev.submissions, submission]
+      };
+    });
+  }, []);
+
+  // Handle connection status changes
+  const handleConnectionChange = useCallback((connected: boolean) => {
+    if (!connected) {
+      toast({
+        variant: 'destructive',
+        title: 'Connection Lost',
+        description: 'Real-time updates temporarily unavailable. Retrying...',
+      });
+    }
+  }, [toast]);
+
+  // Initialize real-time connection
+  const { 
+    isConnected, 
+    connectionQuality, 
+    totalSubmissions,
+    markMessageAsRead,
+    requestNotificationPermission 
+  } = useSanctuaryRealtime({
+    sanctuaryId: sessionId || '',
+    hostToken: getHostToken() || undefined,
+    onNewSubmission: handleNewSubmission,
+    onConnectionChange: handleConnectionChange,
+    enableNotifications: notificationsEnabled
+  });
 
   useEffect(() => {
-    fetchInboxData();
-    
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchInboxData, 30000);
-    return () => clearInterval(interval);
-  }, [sessionId]);
+    fetchInboxData(true);
+  }, [fetchInboxData]);
 
   const copyShareLink = () => {
     const shareUrl = `${window.location.origin}/sanctuary/submit/${sessionId}`;
@@ -175,11 +215,90 @@ const SanctuaryInbox = () => {
               Back to Sanctuary
             </Button>
           </Link>
-          <Badge variant={session.mode === 'anon-inbox' ? 'default' : 'secondary'}>
-            <MessageCircle className="w-3 h-3 mr-1" />
-            Anonymous Inbox
-          </Badge>
+          <div className="flex items-center space-x-3">
+            {/* Connection Status */}
+            <div className="flex items-center space-x-2">
+              {isConnected ? (
+                <div className="flex items-center space-x-1">
+                  <Wifi className={`w-4 h-4 ${
+                    connectionQuality.status === 'excellent' ? 'text-green-500' :
+                    connectionQuality.status === 'good' ? 'text-yellow-500' :
+                    connectionQuality.status === 'poor' ? 'text-orange-500' :
+                    'text-red-500'
+                  }`} />
+                  <span className="text-xs text-muted-foreground">
+                    {connectionQuality.latency > 0 ? `${connectionQuality.latency}ms` : 'Live'}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-1">
+                  <WifiOff className="w-4 h-4 text-red-500" />
+                  <span className="text-xs text-red-500">Offline</span>
+                </div>
+              )}
+            </div>
+            
+            <Badge variant={session.mode === 'anon-inbox' ? 'default' : 'secondary'}>
+              <MessageCircle className="w-3 h-3 mr-1" />
+              Anonymous Inbox
+            </Badge>
+          </div>
         </div>
+
+        {/* Real-time Controls */}
+        <Card className="mb-6 bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+          <CardContent className="pt-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+                  <span className="text-sm font-medium">
+                    {isConnected ? 'Live Updates Active' : 'Connection Lost'}
+                  </span>
+                </div>
+                
+                <div className="text-sm text-muted-foreground">
+                  Last refresh: {lastRefresh.toLocaleTimeString()}
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-4">
+                {/* Notification Toggle */}
+                <div className="flex items-center space-x-2">
+                  <label htmlFor="notifications" className="text-sm">
+                    Notifications
+                  </label>
+                  {notificationsEnabled ? (
+                    <Volume2 className="w-4 h-4 text-blue-600" />
+                  ) : (
+                    <VolumeX className="w-4 h-4 text-muted-foreground" />
+                  )}
+                  <Switch
+                    id="notifications"
+                    checked={notificationsEnabled}
+                    onCheckedChange={(checked) => {
+                      setNotificationsEnabled(checked);
+                      if (checked) {
+                        requestNotificationPermission();
+                      }
+                    }}
+                  />
+                </div>
+                
+                {/* Manual Refresh */}
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => fetchInboxData(false)}
+                  disabled={loading}
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Session Info */}
         <Card className="mb-6">
@@ -200,6 +319,9 @@ const SanctuaryInbox = () => {
                 <Badge variant="outline">
                   <Users className="w-3 h-3 mr-1" />
                   {submissions.length}
+                  {isConnected && totalSubmissions !== submissions.length && (
+                    <span className="ml-1 text-blue-600">({totalSubmissions} total)</span>
+                  )}
                 </Badge>
                 <Badge variant="outline">
                   <Clock className="w-3 h-3 mr-1" />
@@ -228,10 +350,24 @@ const SanctuaryInbox = () => {
 
         {/* Messages */}
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold flex items-center">
-            <MessageCircle className="w-5 h-5 mr-2" />
-            Anonymous Messages ({submissions.length})
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold flex items-center">
+              <MessageCircle className="w-5 h-5 mr-2" />
+              Anonymous Messages ({submissions.length})
+              {isConnected && (
+                <Badge variant="secondary" className="ml-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1" />
+                  Live
+                </Badge>
+              )}
+            </h2>
+            
+            {isConnected && totalSubmissions > submissions.length && (
+              <Badge variant="outline" className="text-blue-600">
+                {totalSubmissions - submissions.length} new messages available
+              </Badge>
+            )}
+          </div>
 
           {submissions.length === 0 ? (
             <Card>

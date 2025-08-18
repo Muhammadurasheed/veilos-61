@@ -139,6 +139,48 @@ const initializeSocket = (server) => {
       console.log(`User ${socket.userId} joined sanctuary ${sanctuaryId}`);
     });
 
+    // Handle joining sanctuary as host for real-time inbox updates
+    socket.on('join_sanctuary_host', async (data) => {
+      const { sanctuaryId, hostToken } = data;
+      
+      // Verify host authorization
+      const SanctuarySession = require('../models/SanctuarySession');
+      let session;
+      
+      if (hostToken) {
+        session = await SanctuarySession.findOne({ 
+          id: sanctuaryId,
+          hostToken
+        });
+      } else if (!socket.isAnonymous) {
+        session = await SanctuarySession.findOne({
+          id: sanctuaryId,
+          hostId: socket.userId
+        });
+      }
+      
+      if (session) {
+        socket.join(`sanctuary_host_${sanctuaryId}`);
+        socket.currentSanctuaryHost = sanctuaryId;
+        
+        // Send current submissions count
+        socket.emit('sanctuary_host_joined', {
+          sanctuaryId,
+          submissionsCount: session.submissions?.length || 0,
+          lastActivity: session.submissions?.length > 0 ? 
+            session.submissions[session.submissions.length - 1].timestamp : 
+            session.createdAt
+        });
+        
+        console.log(`Host ${socket.userId} joined sanctuary host room ${sanctuaryId}`);
+      } else {
+        socket.emit('sanctuary_host_auth_failed', {
+          sanctuaryId,
+          error: 'Not authorized as host for this sanctuary'
+        });
+      }
+    });
+
     socket.on('sanctuary_message', async (data) => {
       const { sanctuaryId, content, type = 'text' } = data;
       
@@ -320,6 +362,26 @@ const initializeSocket = (server) => {
       }
     });
 
+    // Handle connection quality monitoring
+    socket.on('ping_sanctuary', (data) => {
+      socket.emit('pong_sanctuary', {
+        ...data,
+        serverTime: new Date().toISOString()
+      });
+    });
+
+    // Handle message read receipts for sanctuary
+    socket.on('sanctuary_message_read', (data) => {
+      const { sanctuaryId, messageId, hostToken } = data;
+      
+      // Verify host and emit read receipt
+      socket.to(`sanctuary_${sanctuaryId}`).emit('sanctuary_message_status', {
+        messageId,
+        status: 'read',
+        timestamp: new Date().toISOString()
+      });
+    });
+
     // Handle disconnection
     socket.on('disconnect', () => {
       console.log(`User disconnected: ${socket.userId}`);
@@ -340,6 +402,11 @@ const initializeSocket = (server) => {
           participantAlias: socket.userAlias,
           timestamp: new Date().toISOString()
         });
+      }
+
+      // Leave current sanctuary host room
+      if (socket.currentSanctuaryHost) {
+        console.log(`Host ${socket.userId} left sanctuary host room ${socket.currentSanctuaryHost}`);
       }
       
       // Leave current audio room
