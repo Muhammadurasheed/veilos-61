@@ -4,6 +4,7 @@ const router = express.Router();
 const SanctuarySession = require('../models/SanctuarySession');
 const { authMiddleware } = require('../middleware/auth');
 const { nanoid } = require('nanoid');
+const { generateRtcToken, generateChannelName, validateAgoraConfig } = require('../utils/agoraTokenGenerator');
 
 // Optional middleware to get user IP for anonymous users
 const getClientIp = (req, res, next) => {
@@ -59,6 +60,20 @@ router.post('/sessions', getClientIp, async (req, res) => {
                  sanctuaryType === 'scheduled-audio' ? 'live-audio' : 
                  'text-room';
 
+    // Generate Agora channel info for live audio sessions
+    let agoraChannelName = null;
+    let agoraToken = null;
+    
+    if (mode === 'live-audio' && validateAgoraConfig()) {
+      try {
+        agoraChannelName = generateChannelName(nanoid(10));
+        agoraToken = generateRtcToken(agoraChannelName, 0, 'publisher', 3600);
+      } catch (error) {
+        console.error('Agora token generation failed:', error);
+        // Continue without Agora - fallback to text mode
+      }
+    }
+
     // Create session
     const session = new SanctuarySession({
       topic,
@@ -70,7 +85,10 @@ router.post('/sessions', getClientIp, async (req, res) => {
       hostIp: req.clientIp,
       expiresAt,
       participants: [],
-      submissions: []
+      submissions: [],
+      agoraChannelName,
+      agoraToken,
+      maxParticipants: mode === 'live-audio' ? 20 : 100
     });
     
     await session.save();
@@ -83,8 +101,12 @@ router.post('/sessions', getClientIp, async (req, res) => {
         topic: session.topic,
         description: session.description,
         emoji: session.emoji,
+        mode: session.mode,
         expiresAt: session.expiresAt,
-        hostToken: hostToken // Only returned for anonymous hosts
+        hostToken: hostToken, // Only returned for anonymous hosts
+        agoraChannelName: session.agoraChannelName,
+        agoraToken: session.agoraToken,
+        maxParticipants: session.maxParticipants
       }
     });
     
@@ -122,8 +144,11 @@ router.get('/sessions/:id', async (req, res) => {
         topic: session.topic,
         description: session.description,
         emoji: session.emoji,
+        mode: session.mode,
         expiresAt: session.expiresAt,
-        participantCount: session.participants.length
+        participantCount: session.participants.length,
+        agoraChannelName: session.agoraChannelName,
+        maxParticipants: session.maxParticipants
       }
     });
     
@@ -169,17 +194,23 @@ router.post('/sessions/:id/join', getClientIp, async (req, res) => {
     
     await session.save();
     
-    // Return join confirmation with participant details
-    res.json({
-      success: true,
-      data: {
-        sessionId: session.id,
-        participantId,
-        participantAlias,
-        topic: session.topic,
-        expiresAt: session.expiresAt
-      }
-    });
+  // Update the session to include agora info in response
+  const updatedSession = await SanctuarySession.findOne({ id: req.params.id });
+  
+  res.json({
+    success: true,
+    data: {
+      sessionId: updatedSession.id,
+      participantId,
+      participantAlias,
+      topic: updatedSession.topic,
+      mode: updatedSession.mode,
+      expiresAt: updatedSession.expiresAt,
+      agoraChannelName: updatedSession.agoraChannelName,
+      agoraToken: updatedSession.agoraToken,
+      maxParticipants: updatedSession.maxParticipants
+    }
+  });
     
   } catch (err) {
     console.error(err);
@@ -463,7 +494,9 @@ router.get('/sessions/:id/submissions', getClientIp, async (req, res) => {
           emoji: session.emoji,
           mode: session.mode,
           createdAt: session.createdAt,
-          expiresAt: session.expiresAt
+          expiresAt: session.expiresAt,
+          agoraChannelName: session.agoraChannelName,
+          maxParticipants: session.maxParticipants
         },
         submissions: session.submissions || []
       }

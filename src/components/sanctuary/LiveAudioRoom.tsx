@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAgoraAudio } from '@/hooks/useAgoraAudio';
 import { useSanctuarySocket } from '@/hooks/useSocket';
+import AudioQualityMonitor from './AudioQualityMonitor';
+import SanctuaryAudioSettings from './SanctuaryAudioSettings';
 import {
   Mic,
   MicOff,
@@ -26,10 +28,6 @@ import {
   AlertTriangle,
   Settings,
   Users,
-  SignalHigh,
-  SignalMedium,
-  SignalLow,
-  SignalZero,
   LogOut,
   MoreVertical,
   UserX,
@@ -52,11 +50,9 @@ const LiveAudioRoom = ({ session, participant }: LiveAudioRoomProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   
-  // Agora Audio Hook with proper environment variable
+  // Agora Audio Hook configuration
   const agoraConfig = {
-    appId: import.meta.env.VITE_AGORA_APP_ID || '895482a8e89f4b2280281d87b8b09861',
-    channel: session.agoraChannelName,
-    token: session.agoraToken || '',
+    sessionId: session.id,
     uid: participant.id
   };
   
@@ -214,15 +210,6 @@ const LiveAudioRoom = ({ session, participant }: LiveAudioRoomProps) => {
     });
   }, [disconnect, navigate, toast]);
 
-  const getConnectionIcon = () => {
-    switch (connectionQuality) {
-      case 'excellent': return <SignalHigh className="h-4 w-4 text-green-500" />;
-      case 'good': return <SignalMedium className="h-4 w-4 text-yellow-500" />;
-      case 'poor': return <SignalLow className="h-4 w-4 text-orange-500" />;
-      default: return <SignalZero className="h-4 w-4 text-red-500" />;
-    }
-  };
-
   const getAudioLevelColor = (level: number) => {
     if (level > 80) return 'bg-red-500';
     if (level > 60) return 'bg-orange-500';
@@ -248,15 +235,21 @@ const LiveAudioRoom = ({ session, participant }: LiveAudioRoomProps) => {
                     <Badge variant="outline" className="text-xs">
                       {participants.length} / {session.maxParticipants} participants
                     </Badge>
-                    {getConnectionIcon()}
-                    <span className="text-xs text-gray-500">
-                      {connectionQuality}
-                    </span>
+                    <AudioQualityMonitor 
+                      audioStats={audioStats}
+                      connectionQuality={connectionQuality}
+                      isConnected={isConnected}
+                      className="ml-2"
+                    />
                   </div>
                 </div>
               </div>
               
               <div className="flex items-center space-x-2">
+                <SanctuaryAudioSettings
+                  currentVolume={volume}
+                  onVolumeChange={setVolume}
+                />
                 {participant.isHost && (
                   <Button
                     variant="outline"

@@ -3,14 +3,14 @@ import AgoraRTC, {
   IAgoraRTCClient, 
   IMicrophoneAudioTrack, 
   IAgoraRTCRemoteUser,
-  ClientRole
+  ClientRole,
+  ConnectionState
 } from 'agora-rtc-sdk-ng';
 import { useToast } from '@/hooks/use-toast';
+import axios from 'axios';
 
 interface AgoraConfig {
-  appId: string;
-  channel: string;
-  token: string;
+  sessionId: string;
   uid?: string | number;
 }
 
@@ -42,16 +42,55 @@ export const useAgoraAudio = (config: AgoraConfig) => {
     rtt: 0
   });
   const [connectionQuality, setConnectionQuality] = useState<'excellent' | 'good' | 'poor' | 'disconnected'>('disconnected');
+  const [agoraCredentials, setAgoraCredentials] = useState<{
+    appId: string;
+    token: string;
+    channelName: string;
+  } | null>(null);
 
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const localAudioTrackRef = useRef<IMicrophoneAudioTrack | null>(null);
   const audioLevelIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
+  const tokenRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Initialize Agora client
+  // Fetch Agora credentials and initialize client
   useEffect(() => {
-    if (!config.appId || !config.channel) return;
+    if (!config.sessionId) return;
+
+    const fetchCredentials = async () => {
+      try {
+        setIsLoading(true);
+        const response = await axios.post('/api/agora/token', {
+          sessionId: config.sessionId,
+          uid: config.uid,
+          role: 'publisher'
+        });
+
+        if (response.data.success) {
+          setAgoraCredentials(response.data.data);
+        } else {
+          throw new Error(response.data.error || 'Failed to get Agora credentials');
+        }
+      } catch (error) {
+        console.error('Failed to fetch Agora credentials:', error);
+        toast({
+          title: "Audio Setup Failed",
+          description: "Unable to initialize audio features. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCredentials();
+  }, [config.sessionId, config.uid, toast]);
+
+  // Initialize Agora client when credentials are available
+  useEffect(() => {
+    if (!agoraCredentials) return;
 
     const client = AgoraRTC.createClient({ 
       mode: 'rtc', 
@@ -60,7 +99,7 @@ export const useAgoraAudio = (config: AgoraConfig) => {
     });
 
     // Enhanced audio settings for voice chat
-    AgoraRTC.setLogLevel(2); // Warning level
+    AgoraRTC.setLogLevel(1); // Error level only
     
     clientRef.current = client;
 
@@ -72,11 +111,12 @@ export const useAgoraAudio = (config: AgoraConfig) => {
     client.on('connection-state-changed', handleConnectionStateChanged);
     client.on('network-quality', handleNetworkQuality);
     client.on('exception', handleException);
+    client.on('token-privilege-will-expire', handleTokenExpiring);
 
     return () => {
       cleanup();
     };
-  }, [config.appId, config.channel]);
+  }, [agoraCredentials]);
 
   const handleUserPublished = useCallback(async (user: IAgoraRTCRemoteUser, mediaType: 'audio' | 'video') => {
     if (mediaType === 'audio') {
@@ -178,19 +218,53 @@ export const useAgoraAudio = (config: AgoraConfig) => {
     });
   }, [toast]);
 
+  const handleTokenExpiring = useCallback(async () => {
+    if (!agoraCredentials) return;
+    
+    try {
+      const response = await axios.post('/api/agora/refresh-token', {
+        channelName: agoraCredentials.channelName,
+        uid: config.uid,
+        role: 'publisher'
+      });
+
+      if (response.data.success && clientRef.current) {
+        await clientRef.current.renewToken(response.data.data.token);
+        setAgoraCredentials(prev => prev ? { ...prev, token: response.data.data.token } : null);
+        
+        toast({
+          title: "Connection Renewed",
+          description: "Audio connection has been automatically renewed"
+        });
+      }
+    } catch (error) {
+      console.error('Failed to refresh token:', error);
+      toast({
+        title: "Connection Warning",
+        description: "Unable to refresh connection. You may need to rejoin.",
+        variant: "destructive"
+      });
+    }
+  }, [agoraCredentials, config.uid, toast]);
+
   const connect = useCallback(async () => {
-    if (!clientRef.current || !config.appId || !config.channel) return;
+    if (!clientRef.current || !agoraCredentials) return;
 
     setIsLoading(true);
     
     try {
       // Join channel
       await clientRef.current.join(
-        config.appId,
-        config.channel,
-        config.token || null,
+        agoraCredentials.appId,
+        agoraCredentials.channelName,
+        agoraCredentials.token,
         config.uid || null
       );
+
+      // Setup token refresh timer (refresh 5 minutes before expiry)
+      tokenRefreshTimeoutRef.current = setTimeout(() => {
+        handleTokenExpiring();
+      }, 55 * 60 * 1000); // 55 minutes
 
       toast({
         title: "Connected",
@@ -207,7 +281,7 @@ export const useAgoraAudio = (config: AgoraConfig) => {
     } finally {
       setIsLoading(false);
     }
-  }, [config, toast]);
+  }, [agoraCredentials, config.uid, handleTokenExpiring, toast]);
 
   const disconnect = useCallback(async () => {
     if (!clientRef.current) return;
@@ -324,16 +398,29 @@ export const useAgoraAudio = (config: AgoraConfig) => {
       reconnectTimeoutRef.current = null;
     }
 
+    if (tokenRefreshTimeoutRef.current) {
+      clearTimeout(tokenRefreshTimeoutRef.current);
+      tokenRefreshTimeoutRef.current = null;
+    }
+
     // Close local tracks
     if (localAudioTrackRef.current) {
-      localAudioTrackRef.current.close();
+      try {
+        localAudioTrackRef.current.close();
+      } catch (error) {
+        console.warn('Error closing audio track:', error);
+      }
       localAudioTrackRef.current = null;
     }
 
     // Leave channel and cleanup
     if (clientRef.current) {
-      await clientRef.current.leave();
-      clientRef.current.removeAllListeners();
+      try {
+        await clientRef.current.leave();
+        clientRef.current.removeAllListeners();
+      } catch (error) {
+        console.warn('Error leaving Agora channel:', error);
+      }
       clientRef.current = null;
     }
 
@@ -342,6 +429,7 @@ export const useAgoraAudio = (config: AgoraConfig) => {
     setIsMuted(true);
     setParticipants([]);
     setConnectionQuality('disconnected');
+    setAgoraCredentials(null);
     reconnectAttemptsRef.current = 0;
   }, []);
 

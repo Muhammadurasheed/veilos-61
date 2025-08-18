@@ -35,6 +35,16 @@ const sanctuarySessionSchema = new mongoose.Schema({
   hostIp: {
     type: String
   },
+  agoraChannelName: {
+    type: String
+  },
+  agoraToken: {
+    type: String
+  },
+  maxParticipants: {
+    type: Number,
+    default: 100
+  },
   createdAt: {
     type: Date,
     default: Date.now
