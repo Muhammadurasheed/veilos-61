@@ -26,6 +26,7 @@ const sessionRatingRoutes = require('./routes/sessionRatingRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const enhancedAdminRoutes = require('./routes/enhancedAdminRoutes');
 const recommendationRoutes = require('./routes/recommendationRoutes');
+const healthRoutes = require('./routes/healthRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -36,6 +37,10 @@ const io = initializeSocket(server);
 
 // Import middleware
 const responseHandler = require('./middleware/responseHandler');
+const { securityHeaders, sanitizeInput, generalLimiter } = require('./middleware/security');
+const { performanceMiddleware, errorTrackingMiddleware, initializeMonitoring } = require('./middleware/performanceMonitor');
+const cacheService = require('./services/cacheService');
+const auditLogger = require('./services/auditLogger');
 const { connectDB } = require('./config/database');
 
 // Initialize database connection
@@ -66,6 +71,15 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
+
+// Security middleware
+app.use(securityHeaders);
+app.use(sanitizeInput);
+app.use(generalLimiter);
+
+// Performance monitoring
+app.use(performanceMiddleware);
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(responseHandler);
@@ -102,10 +116,17 @@ app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/consultations', consultationRoutes);
 app.use('/api/stripe', stripeRoutes);
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok' });
-});
+// Health and monitoring routes
+app.use('/', healthRoutes);
+
+// Cache middleware for frequently accessed endpoints
+app.use('/api/experts', cacheService.middleware({ ttl: 300 })); // 5 minutes
+app.use('/api/posts', cacheService.middleware({ ttl: 180 })); // 3 minutes
+
+// Basic health check is now handled by healthRoutes
+
+// Error tracking middleware
+app.use(errorTrackingMiddleware);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -176,9 +197,26 @@ app.use((err, req, res, next) => {
   });
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Socket.io server initialized`);
+  
+  // Initialize monitoring and caching
+  initializeMonitoring();
+  
+  // Warm cache with frequently accessed data
+  setTimeout(() => {
+    cacheService.warmCache();
+  }, 5000); // Wait 5 seconds for DB connection to stabilize
+  
+  // Log system startup
+  await auditLogger.logSystemEvent('startup', true, {
+    port: PORT,
+    nodeVersion: process.version,
+    environment: process.env.NODE_ENV || 'development'
+  });
+  
+  console.log('Production-ready monitoring and caching initialized');
 });
 
 module.exports = app;
