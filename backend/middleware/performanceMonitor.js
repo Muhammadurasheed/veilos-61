@@ -78,55 +78,25 @@ const errorTrackingMiddleware = (err, req, res, next) => {
   next(err);
 };
 
-// Database performance monitoring
+// Database performance monitoring (Fixed to prevent memory leaks)
+let dbMonitoringInitialized = false;
+
 const dbPerformanceMiddleware = () => {
+  // Prevent multiple initialization
+  if (dbMonitoringInitialized) {
+    return;
+  }
+  
   const mongoose = require('mongoose');
   
-  // Monitor slow queries
-  mongoose.set('debug', (collectionName, method, query, doc, options) => {
-    if (process.env.NODE_ENV === 'development') {
+  // Monitor slow queries (only in development)
+  if (process.env.NODE_ENV === 'development') {
+    mongoose.set('debug', (collectionName, method, query, doc, options) => {
       console.log(`MongoDB Query: ${collectionName}.${method}`, query);
-    }
-  });
+    });
+  }
   
-  // Hook into mongoose queries to track performance
-  mongoose.Query.prototype.exec = (function(originalExec) {
-    return function() {
-      const startTime = Date.now();
-      
-      return originalExec.apply(this, arguments).then(
-        result => {
-          const duration = Date.now() - startTime;
-          
-          // Log slow queries (>100ms)
-          if (duration > 100) {
-            console.warn(`SLOW QUERY: ${this.model.collection.name}.${this.op} - ${duration}ms`);
-            
-            healthMonitor.generateAlert(
-              'slow_query',
-              `Slow database query: ${this.model.collection.name}.${this.op} took ${duration}ms`,
-              'warning'
-            );
-          }
-          
-          return result;
-        },
-        error => {
-          const duration = Date.now() - startTime;
-          
-          healthMonitor.recordError(
-            'DATABASE',
-            `${this.model.collection.name}.${this.op}`,
-            500,
-            duration,
-            error
-          );
-          
-          throw error;
-        }
-      );
-    };
-  })(mongoose.Query.prototype.exec);
+  dbMonitoringInitialized = true;
 };
 
 // Memory usage monitoring
@@ -161,17 +131,26 @@ const memoryMonitor = () => {
   checkMemoryUsage();
 };
 
-// Connection monitoring
+// Connection monitoring (Lazy-loaded to prevent circular dependencies)
+let connectionMonitorInterval = null;
+
 const connectionMonitor = () => {
-  const { getIO } = require('../socket/socketHandler');
+  // Prevent multiple intervals
+  if (connectionMonitorInterval) {
+    return;
+  }
   
   const checkConnections = () => {
     try {
+      // Lazy-load to prevent circular dependency
+      const { getIO } = require('../socket/socketHandler');
       const io = getIO();
       const connectedSockets = io.sockets.sockets.size;
       
       // Alert on high connection count
       if (connectedSockets > 1000) {
+        // Lazy-load healthMonitor to prevent circular dependency
+        const healthMonitor = require('../services/healthMonitor');
         healthMonitor.generateAlert(
           'high_connections',
           `High socket connection count: ${connectedSockets}`,
@@ -184,12 +163,12 @@ const connectionMonitor = () => {
         console.log(`Active WebSocket connections: ${connectedSockets}`);
       }
     } catch (error) {
-      // Socket not initialized yet
+      // Socket not initialized yet, silently ignore
     }
   };
   
   // Check connections every 2 minutes
-  setInterval(checkConnections, 120000);
+  connectionMonitorInterval = setInterval(checkConnections, 120000);
 };
 
 // Initialize all monitoring

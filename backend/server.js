@@ -201,22 +201,38 @@ server.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Socket.io server initialized`);
   
-  // Initialize monitoring and caching
-  initializeMonitoring();
-  
-  // Warm cache with frequently accessed data
-  setTimeout(() => {
-    cacheService.warmCache();
-  }, 5000); // Wait 5 seconds for DB connection to stabilize
+  // Initialize monitoring with proper sequencing
+  setTimeout(async () => {
+    try {
+      // Wait for database connection to be stable
+      if (mongoose.connection.readyState === 1) {
+        initializeMonitoring();
+        console.log('Performance monitoring initialized');
+        
+        // Warm cache after monitoring is stable
+        setTimeout(() => {
+          cacheService.warmCache();
+        }, 2000);
+        
+        console.log('Production-ready monitoring and caching initialized');
+      } else {
+        console.log('Database not ready, skipping monitoring initialization');
+      }
+    } catch (error) {
+      console.error('Error initializing monitoring:', error.message);
+    }
+  }, 3000); // Wait 3 seconds for everything to stabilize
   
   // Log system startup
-  await auditLogger.logSystemEvent('startup', true, {
-    port: PORT,
-    nodeVersion: process.version,
-    environment: process.env.NODE_ENV || 'development'
-  });
-  
-  console.log('Production-ready monitoring and caching initialized');
+  try {
+    await auditLogger.logSystemEvent('startup', true, {
+      port: PORT,
+      nodeVersion: process.version,
+      environment: process.env.NODE_ENV || 'development'
+    });
+  } catch (error) {
+    console.log('Audit logging not available yet, skipping startup log');
+  }
 });
 
 module.exports = app;

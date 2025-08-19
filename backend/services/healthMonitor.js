@@ -1,6 +1,5 @@
 // FAANG-Level Health Monitoring & APM Service
 const mongoose = require('mongoose');
-const { getIO } = require('../socket/socketHandler');
 const os = require('os');
 const fs = require('fs').promises;
 
@@ -110,9 +109,11 @@ class HealthMonitor {
     }
   }
 
-  // WebSocket health assessment
+  // WebSocket health assessment (Lazy-loaded to prevent circular dependencies)
   async checkSocketHealth() {
     try {
+      // Lazy-load to prevent circular dependency
+      const { getIO } = require('../socket/socketHandler');
       const io = getIO();
       const sockets = io.sockets.sockets;
       
