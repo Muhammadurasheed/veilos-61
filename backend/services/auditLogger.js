@@ -5,14 +5,28 @@ const path = require('path');
 class AuditLogger {
   constructor() {
     this.logDir = path.join(__dirname, '../logs');
-    this.ensureLogDirectory();
     this.auditLogs = [];
     this.maxInMemoryLogs = 1000;
+    this.fileLoggingEnabled = false;
+    this.initializationPromise = null;
+  }
+
+  async initializeFileLogging() {
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+    
+    this.initializationPromise = this.ensureLogDirectory();
+    await this.initializationPromise;
+    this.fileLoggingEnabled = true;
   }
 
   async ensureLogDirectory() {
     try {
-      await fs.mkdir(this.logDir, { recursive: true });
+      // Only create logs directory in production or when explicitly enabled
+      if (process.env.NODE_ENV === 'production' || process.env.ENABLE_FILE_LOGGING === 'true') {
+        await fs.mkdir(this.logDir, { recursive: true });
+      }
     } catch (error) {
       console.error('Error creating log directory:', error);
     }
@@ -132,16 +146,18 @@ class AuditLogger {
         this.auditLogs = this.auditLogs.slice(-this.maxInMemoryLogs);
       }
 
-      // Write to daily log file
-      const date = new Date().toISOString().split('T')[0];
-      const logFile = path.join(this.logDir, `audit_${date}.json`);
-      
-      const logLine = JSON.stringify(logEntry) + '\n';
-      await fs.appendFile(logFile, logLine, 'utf8');
+      // Only write to file in production or when explicitly enabled
+      if (this.fileLoggingEnabled && (process.env.NODE_ENV === 'production' || process.env.ENABLE_FILE_LOGGING === 'true')) {
+        const date = new Date().toISOString().split('T')[0];
+        const logFile = path.join(this.logDir, `audit_${date}.json`);
+        
+        const logLine = JSON.stringify(logEntry) + '\n';
+        await fs.appendFile(logFile, logLine, 'utf8');
+      }
 
-      // Also log to console in development
+      // Log to console in development
       if (process.env.NODE_ENV === 'development') {
-        console.log(`AUDIT: ${logEntry.type} - ${logEntry.action || logEntry.event}`, logEntry);
+        console.log(`AUDIT: ${logEntry.type} - ${logEntry.action || logEntry.event}`);
       }
     } catch (error) {
       console.error('Error writing audit log:', error);

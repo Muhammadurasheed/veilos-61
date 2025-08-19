@@ -1,14 +1,18 @@
 {
-  "watch": ["backend"],
-  "ext": "js,json",
+  "watch": ["backend/**/*.js"],
+  "ext": "js",
   "ignore": [
     "backend/logs/**/*",
+    "backend/backups/**/*",
     "backend/*.log",
     "backend/node_modules/**/*",
-    "backend/uploads/**/*"
+    "backend/uploads/**/*",
+    "backend/temp/**/*"
   ],
   "env": {
-    "NODE_ENV": "development"
+    "NODE_ENV": "development",
+    "ENABLE_FILE_LOGGING": "false"
   },
-  "delay": 1000
+  "delay": 2000,
+  "verbose": true
 }

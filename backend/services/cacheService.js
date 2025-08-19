@@ -250,17 +250,24 @@ class CacheService {
     return Array.from(this.cache.keys()).filter(key => regex.test(key));
   }
 
-  // Cache warming for frequently accessed data
+  // Cache warming for frequently accessed data (non-blocking)
   warmCache() {
     console.log('Starting cache warm-up...');
     
-    // Warm up expert data
-    this.warmExpertData();
-    
-    // Warm up platform stats
-    this.warmPlatformStats();
-    
-    console.log('Cache warm-up completed');
+    // Use setTimeout to make warming non-blocking and avoid immediate database queries
+    setTimeout(async () => {
+      try {
+        // Warm up expert data
+        await this.warmExpertData();
+        
+        // Warm up platform stats
+        await this.warmPlatformStats();
+        
+        console.log('Cache warm-up completed');
+      } catch (error) {
+        console.error('Cache warm-up failed:', error.message);
+      }
+    }, 1000); // Wait 1 second for DB to be ready
   }
 
   async warmExpertData() {

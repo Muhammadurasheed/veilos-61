@@ -197,42 +197,53 @@ app.use((err, req, res, next) => {
   });
 });
 
-server.listen(PORT, async () => {
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Socket.io server initialized`);
   
-  // Initialize monitoring with proper sequencing
+  // Initialize services with proper sequencing to prevent restart loops
   setTimeout(async () => {
     try {
       // Wait for database connection to be stable
       if (mongoose.connection.readyState === 1) {
+        // Initialize audit logger file system
+        if (process.env.NODE_ENV === 'production') {
+          await auditLogger.initializeFileLogging();
+        }
+        
+        // Initialize monitoring
         initializeMonitoring();
         console.log('Performance monitoring initialized');
         
-        // Warm cache after monitoring is stable
-        setTimeout(() => {
-          cacheService.warmCache();
-        }, 2000);
+        // Start cache warming (non-blocking)
+        cacheService.warmCache();
         
         console.log('Production-ready monitoring and caching initialized');
+        
+        // Log system startup after everything is initialized
+        setTimeout(async () => {
+          try {
+            await auditLogger.logSystemEvent('startup', true, {
+              port: PORT,
+              nodeVersion: process.version,
+              environment: process.env.NODE_ENV || 'development'
+            });
+          } catch (error) {
+            console.log('Audit logging error:', error.message);
+          }
+        }, 1000);
+        
       } else {
-        console.log('Database not ready, skipping monitoring initialization');
+        console.log('Database not ready, delaying initialization...');
+        // Retry in 5 seconds if database isn't ready
+        setTimeout(() => {
+          server.emit('listen');
+        }, 5000);
       }
     } catch (error) {
-      console.error('Error initializing monitoring:', error.message);
+      console.error('Error during server initialization:', error.message);
     }
-  }, 3000); // Wait 3 seconds for everything to stabilize
-  
-  // Log system startup
-  try {
-    await auditLogger.logSystemEvent('startup', true, {
-      port: PORT,
-      nodeVersion: process.version,
-      environment: process.env.NODE_ENV || 'development'
-    });
-  } catch (error) {
-    console.log('Audit logging not available yet, skipping startup log');
-  }
+  }, 2000); // Wait 2 seconds for everything to stabilize
 });
 
 module.exports = app;
