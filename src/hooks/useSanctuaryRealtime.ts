@@ -143,7 +143,7 @@ export const useSanctuaryRealtime = ({
     if (!sanctuaryId) return;
     
     const serverUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    const token = localStorage.getItem('auth_token');
+    const token = localStorage.getItem('token');
     
     const socket = io(serverUrl, {
       auth: { token },

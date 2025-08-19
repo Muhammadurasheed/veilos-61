@@ -76,7 +76,7 @@ const EnhancedExpertManagement = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedExperts, setSelectedExperts] = useState<string[]>([]);
-  const [bulkAction, setBulkAction] = useState('');
+  const [bulkAction, setBulkAction] = useState<'approve' | 'reject' | 'suspend' | 'reactivate' | ''>('');
   const [bulkNotes, setBulkNotes] = useState('');
   const [showBulkDialog, setShowBulkDialog] = useState(false);
   const [selectedExpert, setSelectedExpert] = useState<Expert | null>(null);
@@ -84,8 +84,8 @@ const EnhancedExpertManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   
   const [filters, setFilters] = useState<ExpertFilters>({
-    status: '',
-    verificationLevel: '',
+    status: 'all_statuses',
+    verificationLevel: 'all_levels',
     specialization: '',
     search: '',
     dateFrom: null,
@@ -96,44 +96,34 @@ const EnhancedExpertManagement = () => {
   const { data: expertsData, isLoading, isError, refetch } = useQuery({
     queryKey: ['enhancedExperts', currentPage, filters],
     queryFn: async () => {
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '10',
-        ...(filters.status && { status: filters.status }),
-        ...(filters.verificationLevel && { verificationLevel: filters.verificationLevel }),
+      const { EnhancedAdminApi } = await import('@/services/adminApi');
+      
+      const params = {
+        page: currentPage,
+        limit: 10,
+        ...(filters.status !== 'all_statuses' && { status: filters.status }),
+        ...(filters.verificationLevel !== 'all_levels' && { verificationLevel: filters.verificationLevel }),
         ...(filters.specialization && { specialization: filters.specialization }),
         ...(filters.search && { search: filters.search }),
         ...(filters.dateFrom && { dateFrom: filters.dateFrom.toISOString() }),
         ...(filters.dateTo && { dateTo: filters.dateTo.toISOString() }),
-      });
+      };
 
-      const response = await fetch(`/api/admin/experts/advanced?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch experts');
-      const data = await response.json();
-      return data.data;
+      const response = await EnhancedAdminApi.getExpertsAdvanced(params);
+      if (!response.success) throw new Error(response.error || 'Failed to fetch experts');
+      return response.data;
     },
     staleTime: 30000, // Cache for 30 seconds
   });
 
   // Bulk action mutation
   const bulkActionMutation = useMutation({
-    mutationFn: async (params: { expertIds: string[]; action: string; notes?: string }) => {
-      const response = await fetch('/api/admin/experts/bulk-action', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify(params),
-      });
-
-      if (!response.ok) throw new Error('Bulk action failed');
-      return response.json();
+    mutationFn: async (params: { expertIds: string[]; action: 'approve' | 'reject' | 'suspend' | 'reactivate'; notes?: string }) => {
+      const { EnhancedAdminApi } = await import('@/services/adminApi');
+      const response = await EnhancedAdminApi.bulkExpertAction(params);
+      
+      if (!response.success) throw new Error(response.error || 'Bulk action failed');
+      return response;
     },
     onSuccess: (data) => {
       toast({
@@ -193,8 +183,8 @@ const EnhancedExpertManagement = () => {
 
   const clearFilters = () => {
     setFilters({
-      status: '',
-      verificationLevel: '',
+      status: 'all_statuses',
+      verificationLevel: 'all_levels',
       specialization: '',
       search: '',
       dateFrom: null,
@@ -291,7 +281,7 @@ const EnhancedExpertManagement = () => {
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All statuses</SelectItem>
+                  <SelectItem value="all_statuses">All statuses</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="approved">Approved</SelectItem>
                   <SelectItem value="rejected">Rejected</SelectItem>
@@ -310,7 +300,7 @@ const EnhancedExpertManagement = () => {
                   <SelectValue placeholder="All levels" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All levels</SelectItem>
+                  <SelectItem value="all_levels">All levels</SelectItem>
                   <SelectItem value="blue">Blue</SelectItem>
                   <SelectItem value="gold">Gold</SelectItem>
                   <SelectItem value="platinum">Platinum</SelectItem>
@@ -373,7 +363,7 @@ const EnhancedExpertManagement = () => {
                 <span className="text-sm font-medium">
                   {selectedExperts.length} expert{selectedExperts.length !== 1 ? 's' : ''} selected
                 </span>
-                <Select value={bulkAction} onValueChange={setBulkAction}>
+                <Select value={bulkAction} onValueChange={(value: 'approve' | 'reject' | 'suspend' | 'reactivate') => setBulkAction(value)}>
                   <SelectTrigger className="w-40">
                     <SelectValue placeholder="Choose action" />
                   </SelectTrigger>

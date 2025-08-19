@@ -7,6 +7,7 @@ import { useUserContext } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
 import Layout from '@/components/layout/Layout';
 import AdminLogin from '@/components/admin/AdminLogin';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 import EnhancedExpertManagement from '@/components/admin/EnhancedExpertManagement';
 import ContentModeration from '@/components/admin/ContentModeration';
 import EnhancedAdminDashboard from '@/components/admin/EnhancedAdminDashboard';
@@ -17,14 +18,24 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Shield } from 'lucide-react';
 
 const AdminPanel = () => {
-  const { user } = useUserContext();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAdmin, setIsAdmin] = useState(user?.role === UserRole.ADMIN);
+  const { isAuthenticated, isLoading } = useAdminAuth();
 
-  if (!isAdmin) {
-    return <AdminLogin onLoginSuccess={() => setIsAdmin(true)} />;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Verifying admin access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <AdminLogin onLoginSuccess={() => window.location.reload()} />;
   }
 
   const getCurrentTab = () => {

@@ -219,4 +219,37 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Admin token verification
+// GET /api/admin/verify
+router.get('/verify', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const user = await User.findOne({ id: req.user.id, role: 'admin' });
+    
+    if (!user) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. Admin role required.'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          alias: user.alias
+        }
+      }
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({
+      success: false,
+      error: 'Server error'
+    });
+  }
+});
+
 module.exports = router;
