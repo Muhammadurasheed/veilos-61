@@ -92,6 +92,22 @@ router.post('/sessions', getClientIp, async (req, res) => {
     });
     
     await session.save();
+
+    // Create persistent host session for anonymous hosts
+    if (hostToken) {
+      const HostSession = require('../models/HostSession');
+      const hostSessionExpiresAt = new Date();
+      hostSessionExpiresAt.setHours(hostSessionExpiresAt.getHours() + 48); // 48 hours for host recovery
+
+      await new HostSession({
+        sanctuaryId: session.id,
+        hostToken,
+        hostId,
+        hostIp: req.clientIp,
+        userAgent: req.headers['user-agent'] || '',
+        expiresAt: hostSessionExpiresAt
+      }).save();
+    }
     
     // Return the session data with host token if anonymous
     res.json({
