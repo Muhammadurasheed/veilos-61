@@ -52,6 +52,13 @@ export function OnboardingFlow({ isOpen, onComplete }: OnboardingFlowProps) {
   const { createAnonymousAccount, creationState, retryAccountCreation, isLoading } = useUserContext();
   const { markOnboardingComplete } = useAppState();
 
+  // Don't show onboarding if user is already authenticated
+  const { user } = useUserContext();
+  if (user && isOpen) {
+    onComplete();
+    return null;
+  }
+
   const handleNext = () => {
     if (currentStep < onboardingSteps.length - 1) {
       setCurrentStep(currentStep + 1);

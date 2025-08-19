@@ -13,11 +13,15 @@ const Index = () => {
   const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
-    // Show welcome only when no user; hide when user loads
-    setShowWelcome(!user);
+    // Only show welcome for new users, not on login
+    const hasShownWelcome = localStorage.getItem('veilo_welcome_shown');
+    if (!user && !hasShownWelcome) {
+      setShowWelcome(true);
+    }
   }, [user]);
 
   const handleWelcomeComplete = () => {
+    localStorage.setItem('veilo_welcome_shown', 'true');
     setShowWelcome(false);
   };
 

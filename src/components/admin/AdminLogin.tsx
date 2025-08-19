@@ -47,41 +47,37 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
     setIsLoading(true);
 
     try {
-      // For demo purposes, let's use a hardcoded admin login
-      // In production, this should use the actual API
-      if (values.email === 'admin@veilo.app' && values.password === 'admin123') {
-        // Simulate successful login
-        setTimeout(() => {
-          toast({
-            title: 'Login successful',
-            description: 'Welcome to the admin panel.',
-          });
-          onLoginSuccess();
-          setIsLoading(false);
-        }, 1000);
-        return;
+      const response = await fetch('/api/users/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.data?.user?.role === 'admin') {
+        // Store admin token
+        localStorage.setItem('admin_token', data.data.token);
+        localStorage.setItem('admin_user', JSON.stringify(data.data.user));
+        
+        toast({
+          title: 'Admin Access Granted',
+          description: 'Welcome to the admin panel.',
+        });
+        
+        onLoginSuccess();
+      } else {
+        throw new Error('Invalid admin credentials or insufficient permissions');
       }
-
-      // Actual API integration (commented out for demo)
-      /*
-      const response = await AdminApi.adminLogin(values.email, values.password);
-      
-      if (!response.success || !response.data) {
-        throw new Error(response.error || 'Invalid credentials');
-      }
-
-      // Store admin token
-      localStorage.setItem('adminToken', response.data.token);
-      onLoginSuccess();
-      */
-
-      throw new Error('Invalid credentials');
     } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Login failed',
         description: error instanceof Error ? error.message : 'An unexpected error occurred.',
       });
+    } finally {
       setIsLoading(false);
     }
   };
