@@ -77,7 +77,8 @@ const App: React.FC = () => {
                         <Route path="/sanctuary/recover" element={<SanctuaryRecover />} />
                         <Route path="/sanctuary-inbox/:id" element={<SanctuaryInbox />} />
                         <Route path="/sanctuary-host/:id" element={<SanctuaryHostDashboard />} />
-                        <Route path="/sanctuary/submit/:sessionId" element={<SanctuarySubmit />} />
+            <Route path="/sanctuary/submit/:sessionId" element={<SanctuarySubmit />} />
+            <Route path="/sanctuary/inbox/:sessionId" element={<SanctuaryInbox />} />
                         <Route path="/sanctuary/:sessionId" element={<EnhancedSanctuary />} />
                         <Route path="/phase4-test" element={<Phase4Test />} />
                         <Route path="*" element={<NotFound />} />

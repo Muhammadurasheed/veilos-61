@@ -145,35 +145,89 @@ const initializeSocket = (server) => {
       
       // Verify host authorization
       const SanctuarySession = require('../models/SanctuarySession');
+      const HostSession = require('../models/HostSession');
       let session;
+      let isAuthorized = false;
       
+      console.log(`Attempting host auth for sanctuary ${sanctuaryId}`, { 
+        hostToken: hostToken ? 'provided' : 'none',
+        userId: socket.userId,
+        isAnonymous: socket.isAnonymous
+      });
+      
+      // Check host token first (for anonymous hosts)
       if (hostToken) {
         session = await SanctuarySession.findOne({ 
           id: sanctuaryId,
           hostToken
         });
-      } else if (!socket.isAnonymous) {
+        
+        if (session) {
+          isAuthorized = true;
+          console.log(`Host authenticated via hostToken for sanctuary ${sanctuaryId}`);
+        } else {
+          // Check if host session exists in HostSession model
+          const hostSession = await HostSession.findOne({
+            sanctuaryId,
+            hostToken,
+            isActive: true,
+            expiresAt: { $gt: new Date() }
+          });
+          
+          if (hostSession) {
+            session = await SanctuarySession.findOne({ id: sanctuaryId });
+            isAuthorized = true;
+            console.log(`Host authenticated via HostSession for sanctuary ${sanctuaryId}`);
+          }
+        }
+      }
+      
+      // Check authenticated user ownership
+      if (!isAuthorized && !socket.isAnonymous) {
         session = await SanctuarySession.findOne({
           id: sanctuaryId,
           hostId: socket.userId
         });
+        if (session) {
+          isAuthorized = true;
+          console.log(`Host authenticated via userId for sanctuary ${sanctuaryId}`);
+        }
       }
       
-      if (session) {
+      if (session && isAuthorized) {
         socket.join(`sanctuary_host_${sanctuaryId}`);
         socket.currentSanctuaryHost = sanctuaryId;
         
-        // Send current submissions count
+        // Update host session last access
+        if (hostToken) {
+          await HostSession.updateOne(
+            { sanctuaryId, hostToken },
+            { lastAccessedAt: new Date() }
+          );
+        }
+        
+        // Send current submissions count and session info
         socket.emit('sanctuary_host_joined', {
           sanctuaryId,
           submissionsCount: session.submissions?.length || 0,
           lastActivity: session.submissions?.length > 0 ? 
             session.submissions[session.submissions.length - 1].timestamp : 
-            session.createdAt
+            session.createdAt,
+          sessionInfo: {
+            topic: session.topic,
+            description: session.description,
+            emoji: session.emoji,
+            expiresAt: session.expiresAt,
+            mode: session.mode
+          }
         });
         
-        console.log(`Host ${socket.userId} joined sanctuary host room ${sanctuaryId}`);
+        console.log(`Host ${socket.userId} joined sanctuary host room ${sanctuaryId} with ${session.submissions?.length || 0} submissions`);
       } else {
+        console.log(`Host auth failed for sanctuary ${sanctuaryId}`, { 
+          sessionFound: !!session,
+          isAuthorized 
+        });
         socket.emit('sanctuary_host_auth_failed', {
           sanctuaryId,
           error: 'Not authorized as host for this sanctuary'

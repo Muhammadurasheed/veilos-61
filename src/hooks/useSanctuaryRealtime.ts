@@ -142,26 +142,32 @@ export const useSanctuaryRealtime = ({
   useEffect(() => {
     if (!sanctuaryId) return;
     
-    const serverUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    const serverUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
     const token = localStorage.getItem('token');
     
     const socket = io(serverUrl, {
-      auth: { token },
+      auth: { token }, // Changed from auth_token to token
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+      forceNew: false
     });
+    
+    console.log('🔌 Sanctuary socket connecting to:', serverUrl, { hasToken: !!token });
 
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      console.log('Sanctuary socket connected:', socket.id);
+      console.log('✅ Sanctuary socket connected:', socket.id);
       setIsConnected(true);
       setConnectionQuality(prev => ({ ...prev, status: 'excellent' }));
       onConnectionChange?.(true);
       
-      // Join sanctuary host room
+      // Join sanctuary host room with detailed logging
+      console.log('🏠 Joining sanctuary host room:', { sanctuaryId, hasToken: !!hostToken });
       socket.emit('join_sanctuary_host', {
         sanctuaryId,
         hostToken
@@ -205,23 +211,29 @@ export const useSanctuaryRealtime = ({
 
     // Handle successful host room join
     socket.on('sanctuary_host_joined', (data) => {
-      console.log('Successfully joined sanctuary host room:', data);
+      console.log('✅ Successfully joined sanctuary host room:', data);
       setTotalSubmissions(data.submissionsCount);
+      
+      toast({
+        title: '🏠 Connected to Sanctuary',
+        description: `Now monitoring "${data.sessionInfo?.topic}" for new messages`,
+        duration: 3000,
+      });
     });
 
     // Handle host authorization failure
     socket.on('sanctuary_host_auth_failed', (data) => {
-      console.error('Sanctuary host auth failed:', data);
+      console.error('❌ Sanctuary host auth failed:', data);
       toast({
         variant: 'destructive',
         title: 'Authorization Failed',
-        description: 'Could not connect to sanctuary updates. You may not be the host.',
+        description: 'Could not connect to sanctuary updates. Invalid host token.',
       });
     });
 
     // Handle real-time new submissions
     socket.on('sanctuary_new_submission', (data) => {
-      console.log('New sanctuary submission received:', data);
+      console.log('📨 New sanctuary submission received:', data);
       
       const submission = data.submission;
       setTotalSubmissions(data.totalSubmissions);
@@ -232,15 +244,15 @@ export const useSanctuaryRealtime = ({
       // Show toast notification
       if (enableNotifications) {
         toast({
-          title: '📮 New Message',
+          title: '📮 New Anonymous Message',
           description: `From ${submission.alias}: ${submission.message.slice(0, 50)}${submission.message.length > 50 ? '...' : ''}`,
-          duration: 5000,
+          duration: 8000,
         });
 
         // Browser notification if permission granted
         if ('Notification' in window && Notification.permission === 'granted') {
           new Notification('New Sanctuary Message', {
-            body: `From ${submission.alias}`,
+            body: `From ${submission.alias}: ${submission.message.slice(0, 100)}${submission.message.length > 100 ? '...' : ''}`,
             icon: '/favicon-veilo.png',
             tag: sanctuaryId,
             requireInteraction: true
@@ -248,7 +260,7 @@ export const useSanctuaryRealtime = ({
         }
       }
       
-      // Call callback
+      // Call callback to update UI
       onNewSubmission?.(submission);
     });
 

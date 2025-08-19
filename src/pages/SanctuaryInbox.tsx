@@ -39,9 +39,27 @@ const SanctuaryInbox = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Check if we're the host (have host token) to show inbox view
-  const hostToken = sessionId ? localStorage.getItem(`sanctuary-host-${sessionId}`) : null;
+  // Get host token from multiple sources
+  const getHostToken = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tokenFromUrl = urlParams.get('hostToken');
+    const tokenFromStorage = sessionId ? localStorage.getItem(`sanctuary-host-${sessionId}`) : null;
+    return tokenFromUrl || tokenFromStorage;
+  };
+
+  const hostToken = getHostToken();
   const isHost = !!hostToken;
+
+  // Store host token in localStorage if from URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tokenFromUrl = urlParams.get('hostToken');
+    if (tokenFromUrl && sessionId) {
+      localStorage.setItem(`sanctuary-host-${sessionId}`, tokenFromUrl);
+      // Clean URL
+      window.history.replaceState({}, '', `/sanctuary/inbox/${sessionId}`);
+    }
+  }, [sessionId]);
 
   // If not host, show join flow first
   if (!isHost) {
@@ -53,13 +71,6 @@ const SanctuaryInbox = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
-  // Get host token from localStorage or URL params
-  const getHostToken = () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tokenFromUrl = urlParams.get('hostToken');
-    const tokenFromStorage = sessionId ? localStorage.getItem(`sanctuary-host-${sessionId}`) : null;
-    return tokenFromUrl || tokenFromStorage;
-  };
 
   const fetchInboxData = useCallback(async (showLoading = false) => {
     if (!sessionId) return;

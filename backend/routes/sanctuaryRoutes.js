@@ -423,7 +423,7 @@ router.post('/sessions/:id/submit', getClientIp, async (req, res) => {
       const latestSubmission = session.submissions[session.submissions.length - 1];
       
       // Notify host in real-time
-      io.to(`sanctuary_host_${session.id}`).emit('sanctuary_new_submission', {
+      const notificationData = {
         submission: {
           id: latestSubmission.id,
           alias: latestSubmission.alias,
@@ -432,15 +432,31 @@ router.post('/sessions/:id/submit', getClientIp, async (req, res) => {
         },
         sessionId: session.id,
         totalSubmissions: session.submissions.length
+      };
+      
+      // Send to host room
+      const roomName = `sanctuary_host_${session.id}`;
+      io.to(roomName).emit('sanctuary_new_submission', notificationData);
+      
+      // Get connected sockets in the room for debugging
+      const room = io.sockets.adapter.rooms.get(roomName);
+      const connectedClients = room ? room.size : 0;
+      
+      console.log(`📨 Real-time submission notification sent`, {
+        sessionId: session.id,
+        submissionId: latestSubmission.id,
+        roomName,
+        connectedClients,
+        totalSubmissions: session.submissions.length,
+        alias: latestSubmission.alias,
+        messagePreview: latestSubmission.message.substring(0, 50) + '...'
       });
       
-      console.log(`Real-time notification sent to host for sanctuary ${session.id}`, {
-        submissionId: latestSubmission.id,
-        hostRoom: `sanctuary_host_${session.id}`,
-        totalSubmissions: session.submissions.length
-      });
+      if (connectedClients === 0) {
+        console.warn(`⚠️  No hosts connected to room ${roomName} - message will not be delivered in real-time`);
+      }
     } catch (socketError) {
-      console.error('Socket notification error:', socketError);
+      console.error('🚨 Socket notification error:', socketError);
       // Continue execution even if socket fails
     }
     
