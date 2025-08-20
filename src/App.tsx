@@ -25,6 +25,7 @@ import Sanctuary from '@/pages/Sanctuary';
 import SanctuaryRecover from '@/pages/SanctuaryRecover';
 import SanctuaryInbox from '@/components/sanctuary/SanctuaryInbox';
 import { SanctuaryHostDashboard } from '@/components/sanctuary/SanctuaryHostDashboard';
+import MySanctuariesPage from '@/pages/MySanctuaries';
 import SanctuarySubmit from '@/pages/SanctuarySubmit';
 import EnhancedSanctuary from '@/pages/EnhancedSanctuary';
 import Phase4Test from '@/pages/Phase4Test';
@@ -80,6 +81,7 @@ const App: React.FC = () => {
         <Route path="/sanctuary/submit/:sessionId" element={<SanctuarySubmit />} />
         <Route path="/sanctuary/inbox/:sessionId" element={<SanctuaryInbox />} />
         <Route path="/sanctuary/recover/:sessionId" element={<SanctuaryRecover />} />
+        <Route path="/my-sanctuaries" element={<MySanctuariesPage />} />
                         <Route path="/sanctuary/:sessionId" element={<EnhancedSanctuary />} />
                         <Route path="/phase4-test" element={<Phase4Test />} />
                         <Route path="*" element={<NotFound />} />

@@ -60,6 +60,11 @@ export const Sidebar = ({ className }: SidebarProps) => {
       icon: Shield
     },
     {
+      name: 'My Sanctuaries',
+      href: '/my-sanctuaries',
+      icon: MessageSquare
+    },
+    {
       name: 'Beacons',
       href: '/beacons',
       icon: Shield

@@ -11,20 +11,26 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Menu, Bell, User, LogOut, Settings, Moon, Sun, Shield, Loader2 } from 'lucide-react';
+import { Menu, Bell, User, LogOut, Settings, Moon, Sun, Shield, Loader2, MessageCircle } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn, getBadgeImageForLevel } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
+import { useSanctuaryManager } from '@/hooks/useSanctuaryManager';
 
 const Header = () => {
   const { user, logout, isLoading, createAnonymousAccount } = useUserContext();
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { getSanctuaryList } = useSanctuaryManager();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+  
+  // Get active sanctuaries count
+  const activeSanctuaries = getSanctuaryList().filter(s => new Date(s.expiresAt) > new Date());
+  const hasActiveSanctuaries = activeSanctuaries.length > 0;
   
   // Determine if user is authenticated based on user object existence
   const isAuthenticated = !!user?.loggedIn;
@@ -108,6 +114,26 @@ const Header = () => {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* My Sanctuaries Quick Access - shown to all users */}
+          <Button
+            variant={hasActiveSanctuaries ? "default" : "ghost"}
+            size="sm"
+            onClick={() => navigate('/my-sanctuaries')}
+            className={cn(
+              "relative",
+              hasActiveSanctuaries && "bg-primary/10 text-primary hover:bg-primary/20"
+            )}
+            aria-label="My Sanctuaries"
+          >
+            <Shield className="h-4 w-4 mr-2" />
+            <span className="hidden sm:inline">My Sanctuaries</span>
+            {hasActiveSanctuaries && (
+              <span className="absolute -top-1 -right-1 h-5 w-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center font-bold">
+                {activeSanctuaries.length}
+              </span>
+            )}
+          </Button>
+
           <Button
             variant="ghost"
             size="icon"
@@ -169,6 +195,17 @@ const Header = () => {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/my-sanctuaries" className="flex items-center cursor-pointer">
+                    <Shield className="mr-2 h-4 w-4" />
+                    My Sanctuaries
+                    {hasActiveSanctuaries && (
+                      <span className="ml-auto bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">
+                        {activeSanctuaries.length}
+                      </span>
+                    )}
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/profile" className="flex items-center cursor-pointer">
                     <User className="mr-2 h-4 w-4" />

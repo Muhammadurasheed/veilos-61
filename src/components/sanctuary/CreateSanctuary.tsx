@@ -16,6 +16,7 @@ import { SanctuaryApi, LiveSanctuaryApi } from '@/services/api';
 import { ApiSanctuaryCreateRequest } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { useSanctuaryManager } from '@/hooks/useSanctuaryManager';
 
 // Define form schema
 const formSchema = z.object({
@@ -35,6 +36,7 @@ const emojiOptions = ["💭", "❤️", "😊", "😢", "😡", "😨", "🤔", 
 const CreateSanctuary: React.FC = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { addSanctuaryToList } = useSanctuaryManager();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [topicEthical, setTopicEthical] = useState<boolean | null>(null);
   const [validatingTopic, setValidatingTopic] = useState(false);
@@ -124,6 +126,18 @@ const CreateSanctuary: React.FC = () => {
             
             localStorage.setItem(`sanctuary-host-${response.data.id}`, response.data.hostToken);
             localStorage.setItem(`sanctuary-host-${response.data.id}-expires`, expiryDate.toISOString());
+            
+            // Add to sanctuary management list
+            addSanctuaryToList({
+              id: response.data.id,
+              topic: response.data.topic,
+              description: response.data.description,
+              emoji: response.data.emoji,
+              mode: 'anon-inbox',
+              hostToken: response.data.hostToken,
+              createdAt: new Date().toISOString(),
+              expiresAt: expiryDate.toISOString()
+            });
           }
           
           setCreatedSession(response.data);
@@ -157,6 +171,18 @@ const CreateSanctuary: React.FC = () => {
             
             localStorage.setItem(`live-sanctuary-host-${response.data.id}`, response.data.hostToken);
             localStorage.setItem(`live-sanctuary-host-${response.data.id}-expires`, expiryDate.toISOString());
+            
+            // Add to sanctuary management list
+            addSanctuaryToList({
+              id: response.data.id,
+              topic: response.data.topic,
+              description: response.data.description,
+              emoji: response.data.emoji,
+              mode: 'live-audio',
+              hostToken: response.data.hostToken,
+              createdAt: new Date().toISOString(),
+              expiresAt: expiryDate.toISOString()
+            });
           }
           
           setCreatedSession({
@@ -271,14 +297,19 @@ const CreateSanctuary: React.FC = () => {
           }}>
             Create Another
           </Button>
-          <Button variant="veilo-primary" onClick={() => {
-            const route = createdSession.type === 'live-audio' 
-              ? `/sanctuary/live/${createdSession.id}`
-              : `/sanctuary/inbox/${createdSession.id}`;
-            navigate(route);
-          }}>
-            {createdSession.type === 'live-audio' ? 'Enter Live Space' : 'View Inbox'}
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate('/my-sanctuaries')}>
+              My Sanctuaries
+            </Button>
+            <Button variant="veilo-primary" onClick={() => {
+              const route = createdSession.type === 'live-audio' 
+                ? `/sanctuary/live/${createdSession.id}`
+                : `/sanctuary/inbox/${createdSession.id}`;
+              navigate(route);
+            }}>
+              {createdSession.type === 'live-audio' ? 'Enter Live Space' : 'View Inbox'}
+            </Button>
+          </div>
         </CardFooter>
       </Card>
     );
