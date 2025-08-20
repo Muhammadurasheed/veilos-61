@@ -88,8 +88,14 @@ const FlagshipExpertManagement = () => {
     search: '',
   });
 
-  // Real-time notifications and socket connection
+  // Real-time notifications and socket connection with debugging
   const { notifications, unreadCount } = useRealTimeNotifications();
+  
+  console.log('🎯 FlagshipExpertManagement - notifications state:', {
+    notificationCount: notifications.length,
+    unreadCount,
+    latestNotification: notifications[0]
+  });
 
   // Enhanced experts query with real-time updates
   const { data: expertsData, isLoading, isError, refetch } = useQuery({

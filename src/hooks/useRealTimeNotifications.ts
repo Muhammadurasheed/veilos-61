@@ -18,27 +18,54 @@ export const useRealTimeNotifications = () => {
   const { socket, isConnected } = useSocket({ autoConnect: true });
 
   useEffect(() => {
-    if (!user || !isConnected || !socket) {
-      console.log('Real-time notifications not ready:', { user: !!user, isConnected, socket: !!socket });
+    if (!user || !socket || !isConnected) {
+      console.log('🔄 Real-time notifications not ready:', { 
+        hasUser: !!user, 
+        hasSocket: !!socket, 
+        isConnected,
+        userRole: user?.role 
+      });
       return;
     }
 
-    console.log('🚀 Setting up real-time notifications for user:', user.role);
+    console.log('🚀 Setting up real-time notifications for user:', {
+      userId: user.id,
+      role: user.role,
+      socketConnected: isConnected
+    });
 
     // Join appropriate channels based on user role
     if (user.role === 'admin') {
-      console.log('🔑 Admin joining admin panel channel...');
+      console.log('🔑 Admin user detected - joining admin panel channel...');
       
-      // Emit join admin panel - same pattern as sanctuary
-      socket.emit('join_admin_panel');
+      // Wait a moment for socket to be fully ready, then join
+      setTimeout(() => {
+        console.log('📡 Emitting join_admin_panel event...');
+        socket.emit('join_admin_panel', { 
+          userId: user.id, 
+          role: user.role,
+          timestamp: new Date().toISOString()
+        });
+      }, 100);
       
       // Listen for admin panel join confirmation
       const handleAdminPanelJoined = (data) => {
-        console.log('📢 Admin panel join response:', data);
+        console.log('📢 Admin panel join response received:', data);
         if (data.success) {
           console.log('✅ Successfully joined admin panel for real-time notifications');
+          toast({
+            title: "🎯 Admin Panel Connected",
+            description: "Real-time expert notifications are now active",
+            duration: 3000,
+          });
         } else {
           console.error('❌ Failed to join admin panel:', data.error);
+          toast({
+            title: "⚠️ Admin Panel Connection Failed",
+            description: data.error || "Could not connect to real-time notifications",
+            variant: "destructive",
+            duration: 5000,
+          });
         }
       };
       
@@ -46,7 +73,7 @@ export const useRealTimeNotifications = () => {
       
       // Listen for expert application submissions - same pattern as sanctuary submissions
       const handleExpertApplication = (data) => {
-        console.log('📨 Received expert application notification:', data);
+        console.log('📨 🚨 RECEIVED EXPERT APPLICATION NOTIFICATION! 🚨', data);
         const notification = {
           id: `expert_app_${Date.now()}`,
           type: 'expert_application' as const,
@@ -62,6 +89,13 @@ export const useRealTimeNotifications = () => {
           description: `${data.expert.name} has applied to become an expert`,
           duration: 8000,
         });
+        
+        // Force refresh of any existing queries
+        if (window.location.pathname.includes('/admin')) {
+          window.dispatchEvent(new CustomEvent('expertApplicationReceived', { 
+            detail: data 
+          }));
+        }
         
         console.log('✅ Expert application notification processed and displayed');
       };
@@ -126,7 +160,7 @@ export const useRealTimeNotifications = () => {
     }
 
     return () => {
-      console.log('🧹 Cleaning up notification listeners');
+      console.log('🧹 Cleaning up real-time notification listeners for user:', user?.role);
       if (socket) {
         socket.off('admin_panel_joined');
         socket.off('expert_application_submitted');

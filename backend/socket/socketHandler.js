@@ -27,34 +27,60 @@ const initializeSocket = (server) => {
   io.use(async (socket, next) => {
     try {
       const token = socket.handshake.auth.token;
+      console.log('🔐 Socket authentication attempt:', {
+        hasToken: !!token,
+        tokenPrefix: token ? token.substring(0, 20) + '...' : 'none',
+        socketId: socket.id
+      });
       
       if (!token) {
         // Allow anonymous connections for public spaces
         socket.userId = `anonymous_${socket.id}`;
         socket.isAnonymous = true;
+        console.log('👤 Anonymous socket connection allowed:', socket.userId);
         return next();
       }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      console.log('🔓 JWT decoded successfully:', {
+        userId: decoded.user?.id,
+        exp: new Date(decoded.exp * 1000)
+      });
+      
       const user = await User.findOne({ id: decoded.user.id });
+      console.log('👤 User lookup result:', {
+        found: !!user,
+        userId: user?.id,
+        role: user?.role,
+        alias: user?.alias
+      });
       
       if (!user) {
-        return next(new Error('Authentication error'));
+        console.log('❌ User not found in database');
+        return next(new Error('Authentication error - user not found'));
       }
 
       socket.userId = user.id;
       socket.userAlias = user.alias;
       socket.userAvatarIndex = user.avatarIndex;
+      socket.userRole = user.role; // Add role to socket for easy access
       socket.isAnonymous = false;
+      
+      console.log('✅ Socket authenticated successfully:', {
+        userId: socket.userId,
+        alias: socket.userAlias,
+        role: socket.userRole
+      });
       
       next();
     } catch (err) {
-      next(new Error('Authentication error'));
+      console.error('❌ Socket authentication failed:', err.message);
+      next(new Error('Authentication error - ' + err.message));
     }
   });
 
   io.on('connection', (socket) => {
-    console.log(`User connected: ${socket.userId} (${socket.userAlias || 'Anonymous'})`);
+    console.log(`🔌 User connected: ${socket.userId} (${socket.userAlias || 'Anonymous'}) - Role: ${socket.userRole || 'unknown'}`);
 
     // Handle joining chat sessions
     socket.on('join_chat', async (data) => {
@@ -438,18 +464,58 @@ const initializeSocket = (server) => {
 
     // Handle admin panel join for real-time notifications
     socket.on('join_admin_panel', async (data) => {
-      console.log('Admin attempting to join admin panel channel...');
-      // Verify admin role
-      const user = await User.findOne({ id: socket.userId });
-      if (user && user.role === 'admin') {
-        socket.join('admin_panel');
-        console.log(`✅ Admin ${socket.userId} (${user.alias}) successfully joined admin panel for real-time updates`);
+      console.log('🔑 Admin attempting to join admin panel channel...', {
+        socketUserId: socket.userId,
+        socketAlias: socket.userAlias,
+        data: data
+      });
+      
+      try {
+        // Verify admin role
+        const user = await User.findOne({ id: socket.userId });
+        console.log('👤 User lookup result:', {
+          found: !!user,
+          userId: user?.id,
+          role: user?.role,
+          alias: user?.alias
+        });
         
-        // Send confirmation back to client
-        socket.emit('admin_panel_joined', { success: true });
-      } else {
-        console.log(`❌ User ${socket.userId} denied access to admin panel - Role: ${user?.role || 'unknown'}`);
-        socket.emit('admin_panel_joined', { success: false, error: 'Insufficient permissions' });
+        if (user && user.role === 'admin') {
+          socket.join('admin_panel');
+          
+          // Get room info for debugging
+          const adminRoom = io.sockets.adapter.rooms.get('admin_panel');
+          const connectedAdmins = adminRoom ? adminRoom.size : 0;
+          
+          console.log(`✅ Admin ${socket.userId} (${user.alias}) successfully joined admin panel`, {
+            connectedAdmins,
+            roomSize: connectedAdmins,
+            timestamp: new Date().toISOString()
+          });
+          
+          // Send confirmation back to client
+          socket.emit('admin_panel_joined', { 
+            success: true, 
+            connectedAdmins,
+            timestamp: new Date().toISOString()
+          });
+        } else {
+          console.log(`❌ User ${socket.userId} denied access to admin panel`, {
+            userFound: !!user,
+            role: user?.role || 'unknown',
+            expected: 'admin'
+          });
+          socket.emit('admin_panel_joined', { 
+            success: false, 
+            error: 'Insufficient permissions - admin role required' 
+          });
+        }
+      } catch (error) {
+        console.error('❌ Error in join_admin_panel:', error);
+        socket.emit('admin_panel_joined', { 
+          success: false, 
+          error: 'Database error occurred' 
+        });
       }
     });
 
