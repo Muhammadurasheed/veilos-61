@@ -16,7 +16,7 @@ class SocketService {
         
         this.socket = io(serverUrl, {
           auth: {
-            token: token || localStorage.getItem('auth_token')
+            token: token || localStorage.getItem('veilo-auth-token')
           },
           autoConnect: true,
           reconnection: true,

@@ -24,7 +24,7 @@ export const useSocket = (options: UseSocketOptions = {}) => {
     isConnecting.current = true;
     
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem('veilo-auth-token');
       await socketService.connect(token);
       
       onConnect?.();

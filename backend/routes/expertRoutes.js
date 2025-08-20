@@ -67,19 +67,17 @@ router.post('/register', authMiddleware, async (req, res) => {
 
     console.log('Sending real-time notification for expert application:', expert.email);
     try {
-      // Wait a moment for the expert to be fully saved
-      setTimeout(() => {
-        notifyExpertApplicationSubmitted({
-          id: expert.id,
-          name: expert.name,
-          email: expert.email,
-          specialization: expert.specialization,
-          createdAt: expert.createdAt,
-          accountStatus: expert.accountStatus,
-          verificationLevel: expert.verificationLevel
-        });
-        console.log('Real-time notification sent successfully');
-      }, 100);
+      // Send immediate notification to admins
+      notifyExpertApplicationSubmitted({
+        id: expert.id,
+        name: expert.name,
+        email: expert.email,
+        specialization: expert.specialization,
+        createdAt: expert.createdAt,
+        accountStatus: expert.accountStatus,
+        verificationLevel: expert.verificationLevel
+      });
+      console.log('Real-time notification sent successfully for expert:', expert.id);
     } catch (notificationError) {
       console.error('Failed to send real-time notification:', notificationError);
     }

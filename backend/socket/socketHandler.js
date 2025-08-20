@@ -438,11 +438,18 @@ const initializeSocket = (server) => {
 
     // Handle admin panel join for real-time notifications
     socket.on('join_admin_panel', async (data) => {
+      console.log('Admin attempting to join admin panel channel...');
       // Verify admin role
       const user = await User.findOne({ id: socket.userId });
       if (user && user.role === 'admin') {
         socket.join('admin_panel');
-        console.log(`Admin ${socket.userId} joined admin panel for real-time updates`);
+        console.log(`✅ Admin ${socket.userId} (${user.alias}) successfully joined admin panel for real-time updates`);
+        
+        // Send confirmation back to client
+        socket.emit('admin_panel_joined', { success: true });
+      } else {
+        console.log(`❌ User ${socket.userId} denied access to admin panel - Role: ${user?.role || 'unknown'}`);
+        socket.emit('admin_panel_joined', { success: false, error: 'Insufficient permissions' });
       }
     });
 
@@ -524,14 +531,18 @@ const getIO = () => {
 
 // Notification functions for real-time updates
 const notifyExpertApplicationSubmitted = (expertData) => {
+  console.log('notifyExpertApplicationSubmitted called with:', expertData);
   if (io) {
+    console.log('Emitting expert_application_submitted to admin_panel room');
     // Notify all admins about new expert application
     io.to('admin_panel').emit('expert_application_submitted', {
       expert: expertData,
       timestamp: new Date().toISOString(),
       type: 'new_application'
     });
-    console.log('Notified admins of new expert application:', expertData.email);
+    console.log('Successfully notified admins of new expert application:', expertData.email);
+  } else {
+    console.error('Socket.io instance not available for expert application notification');
   }
 };
 

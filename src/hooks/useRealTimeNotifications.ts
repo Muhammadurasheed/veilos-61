@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useUserContext } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
 import { useSocket } from '@/hooks/useSocket';
+import socketService from '@/services/socket';
 
 interface NotificationData {
   id: string;
@@ -15,7 +16,7 @@ export const useRealTimeNotifications = () => {
   const { user } = useUserContext();
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
-  const { socket, isConnected, connect } = useSocket({ autoConnect: true });
+  const { isConnected } = useSocket({ autoConnect: true });
 
   useEffect(() => {
     if (!user || !isConnected) return;
@@ -25,7 +26,7 @@ export const useRealTimeNotifications = () => {
     // Join appropriate channels based on user role
     if (user.role === 'admin') {
       console.log('Admin joining admin panel channel...');
-      socket.emit('join_admin_panel');
+      socketService.emit('join_admin_panel');
       
       // Listen for expert application submissions
       const handleExpertApplication = (data) => {
@@ -47,7 +48,7 @@ export const useRealTimeNotifications = () => {
         });
       };
       
-      socket.on('expert_application_submitted', handleExpertApplication);
+      socketService.on('expert_application_submitted', handleExpertApplication);
       
       // Listen for admin panel updates
       const handleAdminUpdate = (data) => {
@@ -63,7 +64,7 @@ export const useRealTimeNotifications = () => {
         setNotifications(prev => [notification, ...prev.slice(0, 49)]);
       };
       
-      socket.on('admin_panel_update', handleAdminUpdate);
+      socketService.on('admin_panel_update', handleAdminUpdate);
       
       // Listen for bulk action completions
       const handleBulkAction = (data) => {
@@ -75,12 +76,12 @@ export const useRealTimeNotifications = () => {
         });
       };
       
-      socket.on('bulk_action_completed', handleBulkAction);
+      socketService.on('bulk_action_completed', handleBulkAction);
       
     } else if (user.role === 'beacon' && user.expertId) {
       // For experts, join their notification channel
       console.log('Expert joining notification channel for expertId:', user.expertId);
-      socket.emit('join_expert_notifications', { expertId: user.expertId });
+      socketService.emit('join_expert_notifications', { expertId: user.expertId });
       
       // Listen for status updates
       const handleExpertStatusUpdate = (data) => {
@@ -103,17 +104,17 @@ export const useRealTimeNotifications = () => {
         });
       };
       
-      socket.on('expert_status_updated', handleExpertStatusUpdate);
+      socketService.on('expert_status_updated', handleExpertStatusUpdate);
     }
 
     return () => {
       console.log('Cleaning up notification listeners');
-      socket.off('expert_application_submitted');
-      socket.off('expert_status_updated');
-      socket.off('admin_panel_update');  
-      socket.off('bulk_action_completed');
+      socketService.off('expert_application_submitted');
+      socketService.off('expert_status_updated');
+      socketService.off('admin_panel_update');  
+      socketService.off('bulk_action_completed');
     };
-  }, [user, isConnected, socket, toast]);
+  }, [user, isConnected, toast]);
 
   const getAdminUpdateMessage = (data: any) => {
     switch (data.type) {
