@@ -2,8 +2,8 @@ import axios from 'axios';
 import { logger } from './logger';
 import { tokenManager } from './tokenManager';
 
-// API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+// API Configuration - Use proxy in development, direct URL in production
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '' : 'http://localhost:3000');
 
 // Create axios instance with default config
 const api = axios.create({

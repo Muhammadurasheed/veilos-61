@@ -40,7 +40,7 @@ export const useSanctuarySocket = (config: SanctuarySocketConfig) => {
     if (!config.sessionId || !config.participant.id) return;
 
     const token = localStorage.getItem('auth_token');
-    const socket = io(import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000', {
+    const socket = io(import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? '' : 'http://localhost:3000'), {
       auth: { token: token || undefined },
       transports: ['websocket', 'polling']
     });
