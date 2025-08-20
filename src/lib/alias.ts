@@ -1,6 +1,8 @@
 /**
  * Generate a unique alias
  */
+
+
 export const generateAlias = (): string => {
   const adjectives = [
     'Gentle', 'Peaceful', 'Mindful', 'Brave', 'Wise', 

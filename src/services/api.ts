@@ -540,4 +540,26 @@ export const GeminiApi = {
   }
 };
 
+// Enhanced Admin API for flagship admin panel
+export const EnhancedAdminApi = {
+  async getExpertsAdvanced(params?: any) {
+    return apiRequest('GET', '/api/admin/experts/advanced', null, { params });
+  },
+
+  async bulkAction(data: { expertIds: string[]; action: string; notes?: string }) {
+    return apiRequest('POST', '/api/admin/experts/bulk-action', data);
+  },
+
+  async getPlatformOverview(params?: any) {
+    return apiRequest('GET', '/api/admin/analytics/platform-overview', null, { params });
+  },
+
+  async getApplicationMonitoring() {
+    return apiRequest('GET', '/api/admin/monitoring/expert-applications');
+  }
+};
+
+// Export temporary API fixes
+export * from './temporaryApiExports';
+
 export default api;

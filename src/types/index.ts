@@ -12,8 +12,8 @@ export interface User {
   avatarIndex: number;
   loggedIn: boolean;
   role?: UserRole;
-  isAnonymous?: boolean;
   expertId?: string;
+  isAnonymous?: boolean;
   avatarUrl?: string;
 }
 

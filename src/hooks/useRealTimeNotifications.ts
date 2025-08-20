@@ -96,10 +96,10 @@ export const useRealTimeNotifications = () => {
       
       socket.on('bulk_action_completed', handleBulkAction);
       
-    } else if (user.role === 'beacon' && user.expertId) {
+    } else if (user.role === 'beacon' && (user as any).expertId) {
       // For experts, join their notification channel
-      console.log('🎯 Expert joining notification channel for expertId:', user.expertId);
-      socket.emit('join_expert_notifications', { expertId: user.expertId });
+      console.log('🎯 Expert joining notification channel for expertId:', (user as any).expertId);
+      socket.emit('join_expert_notifications', { expertId: (user as any).expertId });
       
       // Listen for status updates
       const handleExpertStatusUpdate = (data) => {
