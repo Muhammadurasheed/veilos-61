@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 import { AdminApi } from '@/services/api';
+import { useSocket } from '@/hooks/useSocket';
 import { Expert, Post, UserRole } from '@/types';
 import { useUserContext } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
@@ -22,6 +23,9 @@ const AdminPanel = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, isLoading } = useAdminAuth();
+
+  // Initialize socket connection for real-time admin updates
+  useSocket({ autoConnect: true });
 
   if (isLoading) {
     return (

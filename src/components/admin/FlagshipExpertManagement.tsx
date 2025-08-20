@@ -88,7 +88,7 @@ const FlagshipExpertManagement = () => {
     search: '',
   });
 
-  // Real-time notifications
+  // Real-time notifications and socket connection
   const { notifications, unreadCount } = useRealTimeNotifications();
 
   // Enhanced experts query with real-time updates
@@ -110,6 +110,17 @@ const FlagshipExpertManagement = () => {
     staleTime: 10000, // Cache for 10 seconds for real-time feel
     refetchInterval: 30000, // Auto-refresh every 30 seconds
   });
+
+  // Auto-refresh when notifications are received
+  useEffect(() => {
+    if (notifications.length > 0) {
+      const latestNotification = notifications[0];
+      if (latestNotification.type === 'expert_application') {
+        console.log('New expert application received, refreshing data...');
+        refetch();
+      }
+    }
+  }, [notifications, refetch]);
 
   // Platform overview query
   const { data: platformData } = useQuery({

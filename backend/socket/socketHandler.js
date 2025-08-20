@@ -567,10 +567,13 @@ const notifyAdminPanelUpdate = (data) => {
   }
 };
 
+// Fix: Export the notification functions
 module.exports = { 
   initializeSocket, 
   getIO, 
   notifyExpertApplicationSubmitted,
   notifyExpertStatusUpdate,
-  notifyAdminPanelUpdate
+  notifyAdminPanelUpdate,
+  // Ensure io instance is accessible for notifications
+  get socketInstance() { return io; }
 };
