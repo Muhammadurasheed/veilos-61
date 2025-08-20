@@ -41,63 +41,7 @@ const ExpertVerification = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  // For demo purposes, let's create sample experts
-  const sampleExperts: Expert[] = [
-    {
-      id: '1',
-      userId: 'user-expert-1',
-      name: 'Dr. Sarah Johnson',
-      email: 'sarah.johnson@example.com',
-      avatarUrl: '/experts/expert-1.jpg',
-      specialization: 'Mental Health Counselor',
-      bio: 'Licensed therapist with 10+ years of experience helping individuals navigate anxiety, depression, and life transitions.',
-      verificationLevel: 'blue',
-      verified: false,
-      pricingModel: 'fixed',
-      pricingDetails: '$75 per session',
-      rating: 4.9,
-      testimonials: [],
-      topicsHelped: ['Anxiety', 'Depression', 'Trauma'],
-      accountStatus: 'pending',
-    },
-    {
-      id: '2',
-      userId: 'user-expert-2',
-      name: 'Pastor Michael Williams',
-      email: 'michael.williams@example.com',
-      avatarUrl: '/experts/expert-2.jpg',
-      specialization: 'Faith Counselor',
-      bio: 'Ordained minister with extensive experience in spiritual guidance and family counseling.',
-      verificationLevel: 'blue',
-      verified: false,
-      pricingModel: 'donation',
-      pricingDetails: 'Donation-based',
-      rating: 4.7,
-      testimonials: [],
-      topicsHelped: ['Faith Crisis', 'Spiritual Growth', 'Family'],
-      accountStatus: 'pending',
-    },
-    {
-      id: '3',
-      userId: 'user-expert-3',
-      name: 'Dr. Aisha Rahman',
-      email: 'aisha.rahman@example.com',
-      avatarUrl: '/experts/expert-3.jpg',
-      specialization: 'Relationship Counselor',
-      bio: 'PhD in Family Therapy with specialized training in cultural competency and relationship dynamics.',
-      verificationLevel: 'blue',
-      verified: false,
-      pricingModel: 'fixed',
-      pricingDetails: '$90 per session',
-      rating: 4.8,
-      testimonials: [],
-      topicsHelped: ['Marriage', 'Dating', 'Conflict Resolution'],
-      accountStatus: 'pending',
-    },
-  ];
-
-  // In a real app, use this query instead of the sample data
-  /*
+  // Real API query for pending experts
   const { 
     data: pendingExperts, 
     isLoading, 
@@ -107,13 +51,6 @@ const ExpertVerification = () => {
     queryKey: ['pendingExperts'],
     queryFn: () => AdminApi.getPendingExperts().then(res => res.data || []),
   });
-  */
-  
-  // For demo purposes
-  const [pendingExperts, setPendingExperts] = useState<Expert[]>(sampleExperts);
-  const isLoading = false;
-  const isError = false;
-  const refetch = () => console.log('Refetching experts...');
 
   const handleExpertReview = (expert: Expert) => {
     setSelectedExpert(expert);
@@ -127,11 +64,8 @@ const ExpertVerification = () => {
     setIsSubmitting(true);
     
     try {
-      // For demo purposes, we're just updating the local state
-      // In a real app, this would call the API
-      /*
+      // Call the real API to verify the expert
       const response = await AdminApi.verifyExpert(selectedExpert.id, {
-        expertId: selectedExpert.id,
         verificationLevel: action === 'approved' ? verificationLevel : 'blue',
         status: action,
       });
@@ -139,21 +73,9 @@ const ExpertVerification = () => {
       if (!response.success) {
         throw new Error(response.error || 'Failed to update expert status');
       }
-      */
       
-      // Update local state for demo
-      setPendingExperts(prev => 
-        prev.map(expert => 
-          expert.id === selectedExpert.id 
-            ? { 
-                ...expert, 
-                accountStatus: action,
-                verified: action === 'approved',
-                verificationLevel: action === 'approved' ? verificationLevel : 'blue'
-              } 
-            : expert
-        )
-      );
+      // Refetch the data to get updated list
+      refetch();
       
       toast({
         title: `Expert ${action === 'approved' ? 'approved' : 'rejected'}`,

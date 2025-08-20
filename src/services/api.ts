@@ -303,6 +303,14 @@ export const AdminApi = {
     return apiRequest('GET', '/api/admin/experts', null, { params });
   },
 
+  async getPendingExperts() {
+    return apiRequest('GET', '/api/admin/experts/pending');
+  },
+
+  async verifyExpert(expertId: string, data: { verificationLevel: string; status: string; feedback?: string }) {
+    return apiRequest('PATCH', `/api/admin/experts/${expertId}/verify`, data);
+  },
+
   async approveExpert(expertId: string) {
     return apiRequest('POST', `/api/admin/experts/${expertId}/approve`);
   },

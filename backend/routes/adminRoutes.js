@@ -5,6 +5,7 @@ const Expert = require('../models/Expert');
 const Post = require('../models/Post');
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
 // Get all unverified experts
@@ -12,6 +13,25 @@ const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 router.get('/experts/unverified', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const experts = await Expert.find({ verified: false });
+    
+    res.json({
+      success: true,
+      data: experts
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({
+      success: false,
+      error: 'Server error'
+    });
+  }
+});
+
+// Get pending experts for approval
+// GET /api/admin/experts/pending
+router.get('/experts/pending', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const experts = await Expert.find({ accountStatus: 'pending' });
     
     res.json({
       success: true,
@@ -177,7 +197,6 @@ router.post('/login', async (req, res) => {
     }
     
     // Find user with admin role
-    // Note: In a real app, we'd verify the password with bcrypt
     const user = await User.findOne({ 
       email: email.toLowerCase(), 
       role: 'admin' 
@@ -190,8 +209,14 @@ router.post('/login', async (req, res) => {
       });
     }
     
-    // For demo purposes, we'll return a token without proper password validation
-    // In a real app, you would verify the password with bcrypt
+    // Verify password with bcrypt
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid credentials'
+      });
+    }
     const payload = {
       user: {
         id: user.id
@@ -207,7 +232,13 @@ router.post('/login', async (req, res) => {
     res.json({
       success: true,
       data: {
-        token
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          alias: user.alias
+        }
       }
     });
   } catch (err) {

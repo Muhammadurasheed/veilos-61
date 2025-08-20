@@ -21,8 +21,8 @@ const createAdminUser = async () => {
     }
 
     // Admin user details
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@veilo.com';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'Admin123!@#';
+    const adminEmail = process.env.ADMIN_EMAIL || 'yekinirasheed2002@gmail.com';
+    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
     const adminAlias = process.env.ADMIN_ALIAS || 'Veilo Admin';
 
     // Hash password

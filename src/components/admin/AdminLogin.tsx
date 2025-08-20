@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Shield, Loader2 } from 'lucide-react';
+import { Shield, Loader2, Eye, EyeOff } from 'lucide-react';
 
 const adminLoginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address.' }),
@@ -34,11 +34,12 @@ interface AdminLoginProps {
 const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<AdminLoginValues>({
     resolver: zodResolver(adminLoginSchema),
     defaultValues: {
-      email: '',
+      email: 'yekinirasheed2002@gmail.com',
       password: '',
     },
   });
@@ -47,20 +48,15 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/users/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
+      const response = await AdminApi.login({
+        email: values.email,
+        password: values.password
       });
 
-      const data = await response.json();
-
-      if (data.success && data.data?.user?.role === 'admin') {
+      if (response.success && response.data?.user?.role === 'admin') {
         // Store admin token
-        localStorage.setItem('admin_token', data.data.token);
-        localStorage.setItem('admin_user', JSON.stringify(data.data.user));
+        localStorage.setItem('admin_token', response.data.token);
+        localStorage.setItem('admin_user', JSON.stringify(response.data.user));
         
         toast({
           title: 'Admin Access Granted',
@@ -69,7 +65,7 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
         
         onLoginSuccess();
       } else {
-        throw new Error('Invalid admin credentials or insufficient permissions');
+        throw new Error(response.error || 'Invalid admin credentials or insufficient permissions');
       }
     } catch (error) {
       toast({
@@ -105,7 +101,7 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
                       <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                          <Input placeholder="admin@veilo.app" {...field} />
+                          <Input placeholder="yekinirasheed2002@gmail.com" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -119,7 +115,27 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
                       <FormItem>
                         <FormLabel>Password</FormLabel>
                         <FormControl>
-                          <Input type="password" placeholder="••••••••" {...field} />
+                          <div className="relative">
+                            <Input 
+                              type={showPassword ? "text" : "password"} 
+                              placeholder="••••••••" 
+                              {...field} 
+                              className="pr-10"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                              onClick={() => setShowPassword(!showPassword)}
+                            >
+                              {showPassword ? (
+                                <EyeOff className="h-4 w-4 text-gray-500" />
+                              ) : (
+                                <Eye className="h-4 w-4 text-gray-500" />
+                              )}
+                            </Button>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -142,7 +158,7 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
                   </Button>
                   
                   <div className="text-center text-sm text-gray-500 mt-4">
-                    <p>For demo: admin@veilo.app / admin123</p>
+                    <p>For demo: yekinirasheed2002@gmail.com / admin123</p>
                   </div>
                 </form>
               </Form>
