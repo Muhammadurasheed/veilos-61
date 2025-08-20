@@ -8,15 +8,52 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
-// Get all unverified experts
+// Get all unverified experts with enhanced filtering
 // GET /api/admin/experts/unverified
 router.get('/experts/unverified', authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const experts = await Expert.find({ verified: false });
+    const { page = 1, limit = 10, status, search, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+    
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const limitNum = parseInt(limit);
+    
+    // Build query
+    let query = { verified: false };
+    if (status && status !== 'all_statuses') {
+      query.accountStatus = status;
+    }
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { specialization: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Build sort
+    const sort = {};
+    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+    const experts = await Expert.find(query)
+      .sort(sort)
+      .skip(skip)
+      .limit(limitNum);
+    
+    const total = await Expert.countDocuments(query);
     
     res.json({
       success: true,
-      data: experts
+      data: {
+        experts,
+        pagination: {
+          page: parseInt(page),
+          limit: limitNum,
+          total,
+          totalPages: Math.ceil(total / limitNum),
+          hasNext: skip + limitNum < total,
+          hasPrev: parseInt(page) > 1
+        }
+      }
     });
   } catch (err) {
     console.error(err.message);
@@ -46,17 +83,17 @@ router.get('/experts/pending', authMiddleware, adminMiddleware, async (req, res)
   }
 });
 
-// Verify expert
+// Verify expert with notifications
 // PATCH /api/admin/experts/:id/verify
 router.patch('/experts/:id/verify', authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const { verificationLevel, status, feedback } = req.body;
+    const { verificationLevel, status, feedback, adminNotes } = req.body;
     
     // Validation
-    if (!verificationLevel || !status) {
+    if (!status) {
       return res.status(400).json({
         success: false,
-        error: 'Verification level and status are required'
+        error: 'Status is required'
       });
     }
     
@@ -70,21 +107,73 @@ router.patch('/experts/:id/verify', authMiddleware, adminMiddleware, async (req,
     }
     
     // Update expert
-    expert.verificationLevel = verificationLevel;
+    if (verificationLevel) {
+      expert.verificationLevel = verificationLevel;
+    }
     expert.verified = status === 'approved';
     expert.accountStatus = status;
+    expert.lastUpdated = new Date();
+    
+    // Add admin note
+    if (adminNotes || feedback) {
+      expert.adminNotes.push({
+        id: require('nanoid').nanoid(8),
+        note: adminNotes || feedback,
+        category: 'verification',
+        date: new Date(),
+        adminId: req.user.id,
+        action: status
+      });
+    }
     
     // Update all documents to approved/rejected
     expert.verificationDocuments.forEach(doc => {
-      doc.status = status;
+      doc.status = status === 'approved' ? 'approved' : 'rejected';
     });
     
     await expert.save();
+
+    // Send notification to expert via email/socket (future implementation)
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        // Real-time notification to expert
+        io.to(`expert_${expert.userId}`).emit('application_update', {
+          type: 'application_decision',
+          status,
+          verificationLevel,
+          message: status === 'approved' 
+            ? 'Congratulations! Your expert application has been approved.' 
+            : 'Your expert application needs attention.',
+          timestamp: new Date()
+        });
+
+        // Notification to admin panel
+        io.to('admin_panel').emit('expert_verified', {
+          expertId: expert.id,
+          expertName: expert.name,
+          status,
+          timestamp: new Date()
+        });
+      }
+    } catch (notificationError) {
+      console.warn('Notification sending failed:', notificationError.message);
+    }
     
     res.json({
       success: true,
       data: {
-        success: true
+        expert: {
+          id: expert.id,
+          name: expert.name,
+          status: expert.accountStatus,
+          verificationLevel: expert.verificationLevel,
+          verified: expert.verified
+        },
+        notification: {
+          sent: true,
+          type: status === 'approved' ? 'approval' : 'rejection'
+        }
       }
     });
   } catch (err) {
@@ -210,7 +299,7 @@ router.post('/login', async (req, res) => {
     }
     
     // Verify password with bcrypt
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) {
       return res.status(401).json({
         success: false,

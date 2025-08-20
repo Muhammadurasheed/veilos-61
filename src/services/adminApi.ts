@@ -59,5 +59,10 @@ export const EnhancedAdminApi = {
   // Expert performance analytics
   async getExpertPerformance() {
     return apiRequest('GET', '/api/admin/analytics/expert-performance');
+  },
+
+  // Real-time expert application monitoring
+  async getExpertApplications() {
+    return apiRequest('GET', '/api/admin/monitoring/expert-applications');
   }
 };

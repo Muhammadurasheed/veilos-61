@@ -33,7 +33,7 @@ const createAdminUser = async () => {
     const adminUser = new User({
       id: `admin-${nanoid(8)}`,
       email: adminEmail.toLowerCase(),
-      password: hashedPassword,
+      passwordHash: hashedPassword,
       alias: adminAlias,
       role: 'admin',
       isActive: true,
