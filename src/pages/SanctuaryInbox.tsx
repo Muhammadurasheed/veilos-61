@@ -39,25 +39,56 @@ const SanctuaryInbox = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Get host token from multiple sources
+  // Get host token from multiple sources with expiry check
   const getHostToken = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const tokenFromUrl = urlParams.get('hostToken');
-    const tokenFromStorage = sessionId ? localStorage.getItem(`sanctuary-host-${sessionId}`) : null;
-    return tokenFromUrl || tokenFromStorage;
+    
+    if (sessionId) {
+      const tokenFromStorage = localStorage.getItem(`sanctuary-host-${sessionId}`);
+      const expiryTime = localStorage.getItem(`sanctuary-host-${sessionId}-expires`);
+      
+      // Check if stored token is expired (48 hours)
+      if (tokenFromStorage && expiryTime) {
+        const expiryDate = new Date(expiryTime);
+        const now = new Date();
+        
+        if (now > expiryDate) {
+          // Token expired, clear it
+          localStorage.removeItem(`sanctuary-host-${sessionId}`);
+          localStorage.removeItem(`sanctuary-host-${sessionId}-expires`);
+          console.log('Host token expired and cleared');
+          return tokenFromUrl;
+        }
+        
+        return tokenFromUrl || tokenFromStorage;
+      }
+      
+      return tokenFromUrl || tokenFromStorage;
+    }
+    
+    return tokenFromUrl;
   };
 
   const hostToken = getHostToken();
   const isHost = !!hostToken;
 
-  // Store host token in localStorage if from URL
+  // Store host token in localStorage if from URL with expiry
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tokenFromUrl = urlParams.get('hostToken');
     if (tokenFromUrl && sessionId) {
+      // Set expiry to 48 hours from now
+      const expiryDate = new Date();
+      expiryDate.setHours(expiryDate.getHours() + 48);
+      
       localStorage.setItem(`sanctuary-host-${sessionId}`, tokenFromUrl);
+      localStorage.setItem(`sanctuary-host-${sessionId}-expires`, expiryDate.toISOString());
+      
       // Clean URL
       window.history.replaceState({}, '', `/sanctuary/inbox/${sessionId}`);
+      
+      console.log('Host token stored with 48-hour expiry');
     }
   }, [sessionId]);
 

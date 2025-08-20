@@ -117,9 +117,13 @@ const CreateSanctuary: React.FC = () => {
         const response = await SanctuaryApi.createSession(sanctuaryData);
         
         if (response.success && response.data) {
-          // Store host token in localStorage if this is an anonymous host
+          // Store host token in localStorage with expiry if this is an anonymous host
           if (response.data.hostToken) {
+            const expiryDate = new Date();
+            expiryDate.setHours(expiryDate.getHours() + 48); // 48 hours
+            
             localStorage.setItem(`sanctuary-host-${response.data.id}`, response.data.hostToken);
+            localStorage.setItem(`sanctuary-host-${response.data.id}-expires`, expiryDate.toISOString());
           }
           
           setCreatedSession(response.data);
@@ -146,9 +150,13 @@ const CreateSanctuary: React.FC = () => {
         const response = await LiveSanctuaryApi.createSession(liveSanctuaryData);
         
         if (response.success && response.data) {
-          // Store host token for anonymous hosts
+          // Store host token for anonymous hosts with expiry
           if (response.data.hostToken) {
+            const expiryDate = new Date();
+            expiryDate.setHours(expiryDate.getHours() + 48); // 48 hours
+            
             localStorage.setItem(`live-sanctuary-host-${response.data.id}`, response.data.hostToken);
+            localStorage.setItem(`live-sanctuary-host-${response.data.id}-expires`, expiryDate.toISOString());
           }
           
           setCreatedSession({

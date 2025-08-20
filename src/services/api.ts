@@ -452,8 +452,13 @@ export const SanctuaryApi = {
   },
 
   async getSubmissions(sessionId: string, hostToken?: string) {
+    const headers: Record<string, string> = {};
+    if (hostToken) {
+      headers['x-host-token'] = hostToken;
+    }
     return apiRequest('GET', `/api/sanctuary/sessions/${sessionId}/submissions`, null, { 
-      params: hostToken ? { hostToken } : {} 
+      headers,
+      params: hostToken ? { hostToken } : {}
     });
   }
 };

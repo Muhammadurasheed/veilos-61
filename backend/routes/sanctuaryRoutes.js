@@ -439,6 +439,78 @@ router.post('/sessions/:id/remove-participant', getClientIp, async (req, res) =>
   }
 });
 
+// Get submissions for sanctuary session (host only)
+// GET /api/sanctuary/sessions/:sessionId/submissions
+router.get('/sessions/:sessionId/submissions', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const hostToken = req.query.hostToken || req.headers['x-host-token'];
+    
+    if (!hostToken) {
+      return res.status(401).json({
+        success: false,
+        error: 'Host token required to access submissions'
+      });
+    }
+    
+    // Verify host authorization
+    const HostSession = require('../models/HostSession');
+    const hostSession = await HostSession.findOne({
+      sanctuaryId: sessionId,
+      hostToken,
+      isActive: true,
+      expiresAt: { $gt: new Date() }
+    });
+    
+    if (!hostSession) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid or expired host token'
+      });
+    }
+    
+    // Find the sanctuary session
+    const session = await SanctuarySession.findOne({
+      id: sessionId,
+      isActive: true
+    });
+    
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found or expired'
+      });
+    }
+    
+    // Update host session access time
+    await hostSession.updateAccess();
+    
+    // Return structured response
+    res.json({
+      success: true,
+      data: {
+        session: {
+          id: session.id,
+          topic: session.topic,
+          description: session.description,
+          emoji: session.emoji,
+          mode: session.mode,
+          createdAt: session.createdAt,
+          expiresAt: session.expiresAt
+        },
+        submissions: session.submissions || []
+      }
+    });
+    
+  } catch (err) {
+    console.error('Error fetching submissions:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Server error retrieving submissions'
+    });
+  }
+});
+
 // Submit anonymous message to sanctuary inbox
 // POST /api/sanctuary/sessions/:id/submit
 router.post('/sessions/:id/submit', getClientIp, async (req, res) => {
@@ -544,79 +616,6 @@ router.post('/sessions/:id/submit', getClientIp, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Server error submitting message'
-    });
-  }
-});
-
-// Get submissions for host (anonymous inbox)
-// GET /api/sanctuary/sessions/:id/submissions
-router.get('/sessions/:id/submissions', getClientIp, async (req, res) => {
-  try {
-    const { hostToken } = req.query;
-    let session;
-    
-    // Authentication logic similar to other host-only endpoints
-    if (hostToken) {
-      session = await SanctuarySession.findOne({ 
-        id: req.params.id,
-        hostToken
-      });
-    }
-    
-    if (!session && req.headers['x-auth-token']) {
-      try {
-        const decoded = require('jsonwebtoken').verify(
-          req.headers['x-auth-token'], 
-          process.env.JWT_SECRET
-        );
-        
-        session = await SanctuarySession.findOne({
-          id: req.params.id,
-          hostId: decoded.user.id
-        });
-      } catch (err) {
-        // Invalid token
-      }
-    }
-    
-    if (!session) {
-      session = await SanctuarySession.findOne({
-        id: req.params.id,
-        hostIp: req.clientIp
-      });
-    }
-    
-    if (!session) {
-      return res.status(403).json({
-        success: false,
-        error: 'Not authorized to view submissions'
-      });
-    }
-    
-    // Return submissions with session info
-    res.json({
-      success: true,
-      data: {
-        session: {
-          id: session.id,
-          topic: session.topic,
-          description: session.description,
-          emoji: session.emoji,
-          mode: session.mode,
-          createdAt: session.createdAt,
-          expiresAt: session.expiresAt,
-          agoraChannelName: session.agoraChannelName,
-          maxParticipants: session.maxParticipants
-        },
-        submissions: session.submissions || []
-      }
-    });
-    
-  } catch (err) {
-    console.error('Get submissions error:', err);
-    res.status(500).json({
-      success: false,
-      error: 'Server error retrieving submissions'
     });
   }
 });
