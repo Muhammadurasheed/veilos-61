@@ -48,6 +48,9 @@ router.post('/sessions', getClientIp, async (req, res) => {
     // Always generate a host token for session management (even for authenticated users)
     hostToken = nanoid(32);
     
+    // Also get client IP for host session tracking
+    const clientIp = req.clientIp || req.ip;
+    
     // Calculate expiration (default 1 hour, max 24 hours)
     const hours = Math.min(Math.max(1, expireHours), 24);
     const expiresAt = new Date();

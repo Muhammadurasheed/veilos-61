@@ -41,7 +41,8 @@ export const SanctuaryDashboard: React.FC<SanctuaryDashboardProps> = ({ classNam
         return;
       }
 
-      const response = await fetch('/api/host-recovery/my-sanctuaries', {
+      const apiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+      const response = await fetch(`${apiUrl}/api/host-recovery/my-sanctuaries`, {
         headers: {
           'x-auth-token': token,
           'Content-Type': 'application/json',

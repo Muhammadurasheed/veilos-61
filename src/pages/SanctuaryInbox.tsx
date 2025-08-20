@@ -152,7 +152,8 @@ const SanctuaryInbox = () => {
         }
         
         // Try to access as host
-        const response = await fetch(`/api/sanctuary/sessions/${sessionId}/host`, {
+        const apiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+        const response = await fetch(`${apiUrl}/api/sanctuary/sessions/${sessionId}/host`, {
           headers: {
             'x-host-token': hostToken,
             'Content-Type': 'application/json',
