@@ -1,16 +1,16 @@
 import Layout from '@/components/layout/Layout';
-import MySanctuaries from '@/components/sanctuary/MySanctuaries';
+import MySanctuariesEnhanced from '@/components/sanctuary/MySanctuariesEnhanced';
 import { SEOHead } from '@/components/seo/SEOHead';
 
 const MySanctuariesPage = () => {
   return (
     <Layout>
       <SEOHead
-        title="My Sanctuaries - Manage Your Anonymous Spaces | Veilo"
-        description="Access and manage all your created sanctuary spaces. View messages, share links, and track your anonymous feedback collections."
-        keywords="my sanctuaries, sanctuary management, anonymous feedback, sanctuary dashboard"
+        title="My Sanctuaries - Flagship Sanctuary Management | Veilo"
+        description="Advanced sanctuary management dashboard with real-time analytics, engagement tracking, and comprehensive host tools for anonymous feedback collection."
+        keywords="sanctuary management, anonymous feedback, real-time analytics, sanctuary dashboard, engagement tracking"
       />
-      <MySanctuaries />
+      <MySanctuariesEnhanced />
     </Layout>
   );
 };
