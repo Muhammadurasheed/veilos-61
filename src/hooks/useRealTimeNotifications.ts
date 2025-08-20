@@ -24,12 +24,17 @@ export const useRealTimeNotifications = () => {
       console.log('🔑 Admin token check:', { 
         hasAdminToken: !!adminToken, 
         tokenPrefix: adminToken?.substring(0, 20),
-        userRole: user?.role 
+        userRole: user?.role,
+        userId: user?.id
       });
       
-      if (user?.role === 'admin' && adminToken && !isConnected) {
-        console.log('🚀 Connecting admin to socket...');
-        await connect();
+      if (user?.role === 'admin' && adminToken) {
+        if (!isConnected) {
+          console.log('🚀 Connecting admin to socket...');
+          await connect();
+        } else {
+          console.log('🔄 Socket already connected, checking admin panel join...');
+        }
       }
     };
 
@@ -68,15 +73,21 @@ export const useRealTimeNotifications = () => {
           userId: user.id,
           role: user.role,
           email: user.email,
-          alias: user.alias
-        });
-        socket.emit('join_admin_panel', { 
-          userId: user.id, 
-          role: user.role,
-          email: user.email,
           alias: user.alias,
-          timestamp: new Date().toISOString()
+          socketConnected: socket.isSocketConnected()
         });
+        
+        if (socket.isSocketConnected()) {
+          socket.emit('join_admin_panel', { 
+            userId: user.id, 
+            role: user.role,
+            email: user.email,
+            alias: user.alias,
+            timestamp: new Date().toISOString()
+          });
+        } else {
+          console.error('❌ Socket not connected when trying to join admin panel');
+        }
       }, 500);
       
       // Listen for admin panel join confirmation

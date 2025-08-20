@@ -57,3 +57,40 @@ export interface UserCreationState {
   creating: boolean;
   error?: string;
 }
+
+// Token management functions
+export const getAuthToken = (): string | null => {
+  // Priority: admin_token > veilo-auth-token > token
+  return localStorage.getItem('admin_token') || 
+         localStorage.getItem('veilo-auth-token') || 
+         localStorage.getItem('token');
+};
+
+export const setAdminToken = (token: string): void => {
+  localStorage.setItem('admin_token', token);
+  localStorage.setItem('veilo-auth-token', token);
+  localStorage.setItem('token', token);
+  // Update axios default header
+  if (typeof window !== 'undefined') {
+    try {
+      const axios = require('axios');
+      axios.defaults.headers.common['x-auth-token'] = token;
+    } catch (e) {
+      // Ignore axios import errors
+    }
+  }
+};
+
+export const removeAuthToken = (): void => {
+  localStorage.removeItem('veilo-auth-token');
+  localStorage.removeItem('admin_token');
+  localStorage.removeItem('token');
+  if (typeof window !== 'undefined') {
+    try {
+      const axios = require('axios');
+      delete axios.defaults.headers.common['x-auth-token'];
+    } catch (e) {
+      // Ignore axios import errors
+    }
+  }
+};

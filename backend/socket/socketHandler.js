@@ -471,13 +471,25 @@ const initializeSocket = (server) => {
       });
       
       try {
-        // Verify admin role
-        const user = await User.findOne({ id: socket.userId });
+        // Verify admin role - check both socket user and provided data user
+        let user = await User.findOne({ id: socket.userId });
+        
+        // If socket user doesn't match the provided data, check if provided user exists and is admin
+        if (!user || user.role !== 'admin') {
+          console.log('🔄 Socket user not admin, checking provided user data...');
+          if (data?.userId) {
+            user = await User.findOne({ id: data.userId, role: 'admin' });
+          }
+        }
+        
         console.log('👤 User lookup result:', {
+          socketUserId: socket.userId,
+          providedUserId: data?.userId,
           found: !!user,
           userId: user?.id,
           role: user?.role,
-          alias: user?.alias
+          alias: user?.alias,
+          email: user?.email
         });
         
         if (user && user.role === 'admin') {

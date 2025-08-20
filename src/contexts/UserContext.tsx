@@ -184,7 +184,23 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   }, [updateCreationState]);
 
   useEffect(() => {
+    // Handle admin login success event
+    const handleAdminLogin = (event: CustomEvent) => {
+      const { user: adminUser } = event.detail;
+      console.log('🎯 Admin login event received:', adminUser);
+      setUser({
+        ...adminUser,
+        loggedIn: true
+      });
+      setIsLoading(false);
+    };
+
+    window.addEventListener('adminLoginSuccess', handleAdminLogin as EventListener);
     initializeUser();
+
+    return () => {
+      window.removeEventListener('adminLoginSuccess', handleAdminLogin as EventListener);
+    };
   }, [initializeUser]);
 
   // Enhanced anonymous account creation with perfect backend sync

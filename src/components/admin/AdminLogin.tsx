@@ -54,9 +54,29 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
       });
 
       if (response.success && response.data?.user?.role === 'admin') {
-        // Store admin token
-        localStorage.setItem('admin_token', response.data.token);
+        // Store admin token using centralized function
+        const { setAdminToken } = await import('@/services/api');
+        setAdminToken(response.data.token);
         localStorage.setItem('admin_user', JSON.stringify(response.data.user));
+        
+        // Update user context with admin user
+        const { useUserContext } = await import('@/contexts/UserContext');
+        // Force context update by dispatching a custom event
+        window.dispatchEvent(new CustomEvent('adminLoginSuccess', { 
+          detail: { 
+            user: response.data.user,
+            token: response.data.token 
+          } 
+        }));
+        
+        // Force socket service to reconnect with new admin token
+        const socketService = (await import('@/services/socket')).default;
+        if (socketService.isSocketConnected()) {
+          socketService.disconnect();
+        }
+        setTimeout(() => {
+          socketService.connect();
+        }, 100);
         
         toast({
           title: 'Admin Access Granted',

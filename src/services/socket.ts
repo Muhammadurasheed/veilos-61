@@ -17,11 +17,13 @@ class SocketService {
         // Prioritize admin token, then provided token, then regular auth token
         const authToken = token || 
           localStorage.getItem('admin_token') || 
-          localStorage.getItem('veilo-auth-token');
+          localStorage.getItem('veilo-auth-token') ||
+          localStorage.getItem('token');
         
         console.log('🔌 Socket connecting with token:', { 
           hasToken: !!authToken, 
-          tokenPrefix: authToken?.substring(0, 20) 
+          tokenPrefix: authToken?.substring(0, 20),
+          isAdminToken: !!localStorage.getItem('admin_token')
         });
         
         this.socket = io(serverUrl, {

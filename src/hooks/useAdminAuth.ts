@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AdminApi } from '@/services/api';
+import { AdminApi, setAdminToken } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 
 export const useAdminAuth = () => {
@@ -56,10 +56,8 @@ export const useAdminAuth = () => {
       const response = await AdminApi.login({ email, password });
       
       if (response.success && response.data?.token) {
-        // Store both admin_token and veilo-auth-token for socket compatibility
-        localStorage.setItem('admin_token', response.data.token);
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('veilo-auth-token', response.data.token);
+        // Use centralized admin token setting
+        setAdminToken(response.data.token);
         
         setIsAuthenticated(true);
         setUser(response.data.admin || response.data.user);
