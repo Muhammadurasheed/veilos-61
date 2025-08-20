@@ -531,19 +531,41 @@ const getIO = () => {
 
 // Notification functions for real-time updates
 const notifyExpertApplicationSubmitted = (expertData) => {
-  console.log('notifyExpertApplicationSubmitted called with:', expertData);
-  if (io) {
-    console.log('Emitting expert_application_submitted to admin_panel room');
-    // Notify all admins about new expert application
-    io.to('admin_panel').emit('expert_application_submitted', {
-      expert: expertData,
-      timestamp: new Date().toISOString(),
-      type: 'new_application'
-    });
-    console.log('Successfully notified admins of new expert application:', expertData.email);
-  } else {
-    console.error('Socket.io instance not available for expert application notification');
+  console.log('🚀 notifyExpertApplicationSubmitted called with:', expertData);
+  if (!io) {
+    console.error('❌ Socket.io instance not available for expert application notification');
+    return;
   }
+
+  // Get connected admins for debugging
+  const adminRoom = io.sockets.adapter.rooms.get('admin_panel');
+  const connectedAdmins = adminRoom ? adminRoom.size : 0;
+  
+  console.log(`📊 Admin panel room status:`, {
+    roomName: 'admin_panel',
+    connectedAdmins,
+    hasRoom: !!adminRoom
+  });
+  
+  if (connectedAdmins === 0) {
+    console.warn('⚠️  No admins connected to admin_panel room - notification will not be delivered in real-time');
+  }
+
+  // Notify all admins about new expert application
+  const notificationData = {
+    expert: expertData,
+    timestamp: new Date().toISOString(),
+    type: 'new_application'
+  };
+  
+  io.to('admin_panel').emit('expert_application_submitted', notificationData);
+  
+  console.log('✅ Expert application notification sent to admin_panel room:', {
+    expertId: expertData.id,
+    expertEmail: expertData.email,
+    connectedAdmins,
+    timestamp: notificationData.timestamp
+  });
 };
 
 const notifyExpertStatusUpdate = (expertId, status, adminNotes) => {

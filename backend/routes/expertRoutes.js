@@ -65,21 +65,57 @@ router.post('/register', authMiddleware, async (req, res) => {
       }
     );
 
-    console.log('Sending real-time notification for expert application:', expert.email);
+    console.log('🚀 Sending real-time notification for expert application:', expert.email);
+    
+    // Send immediate notification to admins using the same pattern as sanctuary submissions
     try {
-      // Send immediate notification to admins
-      notifyExpertApplicationSubmitted({
+      // Use getIO() method for consistency with sanctuary pattern  
+      const { getIO } = require('../socket/socketHandler');
+      const io = getIO();
+      
+      const expertData = {
         id: expert.id,
         name: expert.name,
         email: expert.email,
         specialization: expert.specialization,
+        bio: expert.bio,
+        pricingModel: expert.pricingModel,
+        pricingDetails: expert.pricingDetails,
+        phoneNumber: expert.phoneNumber,
         createdAt: expert.createdAt,
         accountStatus: expert.accountStatus,
-        verificationLevel: expert.verificationLevel
+        verificationLevel: expert.verificationLevel,
+        verificationDocuments: expert.verificationDocuments || []
+      };
+      
+      // Get connected admins for debugging
+      const adminRoom = io.sockets.adapter.rooms.get('admin_panel');
+      const connectedAdmins = adminRoom ? adminRoom.size : 0;
+      
+      console.log(`📊 Real-time notification status:`, {
+        expertId: expert.id,
+        expertEmail: expert.email,
+        roomName: 'admin_panel',
+        connectedAdmins,
+        timestamp: new Date().toISOString()
       });
-      console.log('Real-time notification sent successfully for expert:', expert.id);
+      
+      if (connectedAdmins === 0) {
+        console.warn('⚠️  No admins connected - expert application notification will not be delivered in real-time');
+      }
+      
+      // Send to admin panel room (matching sanctuary pattern)
+      io.to('admin_panel').emit('expert_application_submitted', {
+        expert: expertData,
+        timestamp: new Date().toISOString(),
+        type: 'new_application'
+      });
+      
+      console.log('✅ Real-time expert application notification sent successfully to', connectedAdmins, 'admins');
+      
     } catch (notificationError) {
-      console.error('Failed to send real-time notification:', notificationError);
+      console.error('❌ Failed to send real-time notification:', notificationError);
+      // Continue execution even if notification fails
     }
     
     res.json({
