@@ -15,10 +15,34 @@ export const useRealTimeNotifications = () => {
   const { user } = useUserContext();
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
-  const { socket, isConnected } = useSocket({ autoConnect: true });
+  const { socket, isConnected, connect } = useSocket({ autoConnect: false });
 
   useEffect(() => {
-    if (!user || !socket || !isConnected) {
+    // For admin users, ensure they have a token and connect to socket
+    const initializeAdminConnection = async () => {
+      const adminToken = localStorage.getItem('admin_token') || localStorage.getItem('veilo-auth-token');
+      console.log('🔑 Admin token check:', { 
+        hasAdminToken: !!adminToken, 
+        tokenPrefix: adminToken?.substring(0, 20),
+        userRole: user?.role 
+      });
+      
+      if (user?.role === 'admin' && adminToken && !isConnected) {
+        console.log('🚀 Connecting admin to socket...');
+        await connect();
+      }
+    };
+
+    if (!user) {
+      console.log('🔄 No user available for real-time notifications');
+      return;
+    }
+
+    if (user.role === 'admin') {
+      initializeAdminConnection();
+    }
+
+    if (!socket || !isConnected) {
       console.log('🔄 Real-time notifications not ready:', { 
         hasUser: !!user, 
         hasSocket: !!socket, 
@@ -40,13 +64,20 @@ export const useRealTimeNotifications = () => {
       
       // Wait a moment for socket to be fully ready, then join
       setTimeout(() => {
-        console.log('📡 Emitting join_admin_panel event...');
+        console.log('📡 Emitting join_admin_panel event with user data:', {
+          userId: user.id,
+          role: user.role,
+          email: user.email,
+          alias: user.alias
+        });
         socket.emit('join_admin_panel', { 
           userId: user.id, 
           role: user.role,
+          email: user.email,
+          alias: user.alias,
           timestamp: new Date().toISOString()
         });
-      }, 100);
+      }, 500);
       
       // Listen for admin panel join confirmation
       const handleAdminPanelJoined = (data) => {

@@ -80,6 +80,35 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   // Initialize user from token on mount with enhanced logging
   const initializeUser = useCallback(async () => {
     try {
+      // Check for admin token first
+      const adminToken = localStorage.getItem('admin_token') || localStorage.getItem('veilo-auth-token');
+      if (adminToken) {
+        logger.info('Checking admin token authentication');
+        try {
+          const response = await fetch('/api/admin/verify', {
+            headers: {
+              'Authorization': `Bearer ${adminToken}`,
+              'x-auth-token': adminToken
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.data?.user?.role === 'admin') {
+              console.log('🔑 Admin user authenticated successfully:', data.data.user);
+              setUser({
+                ...data.data.user,
+                loggedIn: true
+              });
+              setIsLoading(false);
+              return;
+            }
+          }
+        } catch (error) {
+          console.log('🔓 Admin token verification failed:', error);
+        }
+      }
+
       // 1) Attempt with existing access token
       if (tokenManager.hasToken()) {
         logger.info('Initializing user with existing token');

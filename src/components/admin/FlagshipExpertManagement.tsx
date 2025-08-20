@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Expert } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { useUserContext } from '@/contexts/UserContext';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { EnhancedAdminApi } from '@/services/adminApi';
 import {
   Card,
@@ -73,6 +75,8 @@ interface PaginationData {
 }
 
 const FlagshipExpertManagement = () => {
+  const { user, setUser } = useUserContext();
+  const { isAuthenticated, isLoading: authLoading, user: adminUser } = useAdminAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedExperts, setSelectedExperts] = useState<string[]>([]);
@@ -87,6 +91,17 @@ const FlagshipExpertManagement = () => {
     verificationLevel: 'all_levels',
     search: '',
   });
+
+  // Ensure admin user is set in UserContext for socket connection
+  useEffect(() => {
+    if (isAuthenticated && adminUser && (!user || user.role !== 'admin')) {
+      console.log('🔑 Setting admin user in UserContext for socket connection:', adminUser);
+      setUser({
+        ...adminUser,
+        loggedIn: true
+      });
+    }
+  }, [isAuthenticated, adminUser, user, setUser]);
 
   // Real-time notifications and socket connection with debugging
   const { notifications, unreadCount } = useRealTimeNotifications();

@@ -56,10 +56,13 @@ export const useAdminAuth = () => {
       const response = await AdminApi.login({ email, password });
       
       if (response.success && response.data?.token) {
+        // Store both admin_token and veilo-auth-token for socket compatibility
         localStorage.setItem('admin_token', response.data.token);
         localStorage.setItem('token', response.data.token);
+        localStorage.setItem('veilo-auth-token', response.data.token);
         
         setIsAuthenticated(true);
+        setUser(response.data.admin || response.data.user);
         
         toast({
           title: 'Login Successful',
@@ -78,6 +81,7 @@ export const useAdminAuth = () => {
   const logout = () => {
     localStorage.removeItem('admin_token');
     localStorage.removeItem('token');
+    localStorage.removeItem('veilo-auth-token');
     setIsAuthenticated(false);
     setUser(null);
     navigate('/admin');

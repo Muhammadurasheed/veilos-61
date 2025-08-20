@@ -14,9 +14,19 @@ class SocketService {
       try {
         const serverUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
         
+        // Prioritize admin token, then provided token, then regular auth token
+        const authToken = token || 
+          localStorage.getItem('admin_token') || 
+          localStorage.getItem('veilo-auth-token');
+        
+        console.log('🔌 Socket connecting with token:', { 
+          hasToken: !!authToken, 
+          tokenPrefix: authToken?.substring(0, 20) 
+        });
+        
         this.socket = io(serverUrl, {
           auth: {
-            token: token || localStorage.getItem('veilo-auth-token')
+            token: authToken
           },
           autoConnect: true,
           reconnection: true,
