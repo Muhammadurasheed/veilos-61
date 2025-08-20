@@ -5,11 +5,12 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/layout/Layout";
 import { useUserContext } from "@/contexts/UserContext";
 import { motion } from "framer-motion";
-import { RefreshCw, Shield, CalendarDays, MessageSquare, Loader2, Upload, User, Camera } from "lucide-react";
+import { RefreshCw, Shield, CalendarDays, MessageSquare, Loader2, Upload, User, Camera, Home } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -189,75 +190,96 @@ const Profile = () => {
               </motion.div>
             </CardHeader>
             
-            <CardContent className="space-y-8 mt-6">
+            <CardContent className="space-y-6 mt-6">
+              {/* Tabs for different sections */}
               <motion.div variants={itemVariants}>
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm">
-                    <div className="flex flex-col items-center">
-                      <MessageSquare className="h-6 w-6 text-veilo-purple mb-2" />
-                      <span className="text-xl font-bold text-gray-800 dark:text-gray-200">{userStats.postsCreated}</span>
-                      <span className="text-xs text-gray-500">Posts</span>
+                <Tabs defaultValue="overview" className="w-full">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="overview" className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Overview
+                    </TabsTrigger>
+                    <TabsTrigger value="sanctuaries" className="flex items-center gap-2">
+                      <Home className="h-4 w-4" />
+                      Sanctuaries
+                    </TabsTrigger>
+                    <TabsTrigger value="settings" className="flex items-center gap-2">
+                      <Shield className="h-4 w-4" />
+                      Settings
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="overview" className="space-y-6 mt-6">
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm">
+                        <div className="flex flex-col items-center">
+                          <MessageSquare className="h-6 w-6 text-veilo-purple mb-2" />
+                          <span className="text-xl font-bold text-gray-800 dark:text-gray-200">{userStats.postsCreated}</span>
+                          <span className="text-xs text-gray-500">Posts</span>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm">
+                        <div className="flex flex-col items-center">
+                          <Shield className="h-6 w-6 text-veilo-blue mb-2" />
+                          <span className="text-xl font-bold text-gray-800 dark:text-gray-200">{userStats.sessionsJoined}</span>
+                          <span className="text-xs text-gray-500">Sessions</span>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm">
+                        <div className="flex flex-col items-center">
+                          <CalendarDays className="h-6 w-6 text-veilo-green mb-2" />
+                          <span className="text-xl font-bold text-gray-800 dark:text-gray-200">{userStats.daysSinceJoined}</span>
+                          <span className="text-xs text-gray-500">Days</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm">
-                    <div className="flex flex-col items-center">
-                      <Shield className="h-6 w-6 text-veilo-blue mb-2" />
-                      <span className="text-xl font-bold text-gray-800 dark:text-gray-200">{userStats.sessionsJoined}</span>
-                      <span className="text-xs text-gray-500">Sessions</span>
+                  </TabsContent>
+
+                  <TabsContent value="sanctuaries" className="mt-6">
+                    <SanctuaryDashboard />
+                  </TabsContent>
+
+                  <TabsContent value="settings" className="space-y-6 mt-6">
+                    <div className="flex flex-col items-center space-y-4">
+                      <div className="flex flex-col w-full max-w-xs space-y-4">
+                        {user.isAnonymous && (
+                          <Button 
+                            onClick={handleRefreshIdentity}
+                            variant="outline"
+                            className="border-veilo-blue text-veilo-blue hover:bg-veilo-blue hover:text-white transition-colors"
+                            disabled={rotating}
+                          >
+                            <RefreshCw 
+                              className={`h-5 w-5 mr-2 ${rotating ? 'animate-spin' : ''}`} 
+                            />
+                            Refresh Identity
+                          </Button>
+                        )}
+                        
+                        <Button 
+                          onClick={handleLogout}
+                          variant="destructive"
+                          className="shadow-sm"
+                        >
+                          End {user.isAnonymous ? 'Anonymous' : ''} Session
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm">
-                    <div className="flex flex-col items-center">
-                      <CalendarDays className="h-6 w-6 text-veilo-green mb-2" />
-                      <span className="text-xl font-bold text-gray-800 dark:text-gray-200">{userStats.daysSinceJoined}</span>
-                      <span className="text-xs text-gray-500">Days</span>
-                    </div>
-                  </div>
-                </div>
+                    
+                    {user.isAnonymous && (
+                      <div className="bg-veilo-blue-light bg-opacity-30 rounded-xl p-5 text-sm shadow-inner">
+                        <h3 className="font-medium mb-2 text-veilo-blue-dark dark:text-veilo-blue">Identity Protection</h3>
+                        <p className="text-gray-700 dark:text-gray-300">
+                          Refreshing your identity will give you a new alias and avatar. This helps maintain your anonymity while using Veilo. 
+                          Your previous posts and comments will remain, but won't be connected to your new identity.
+                        </p>
+                      </div>
+                    )}
+                  </TabsContent>
+                </Tabs>
               </motion.div>
-                
-              <motion.div 
-                className="flex flex-col items-center space-y-4"
-                variants={itemVariants}
-              >
-                <div className="flex flex-col w-full max-w-xs space-y-4">
-                  {user.isAnonymous && (
-                    <Button 
-                      onClick={handleRefreshIdentity}
-                      variant="outline"
-                      className="border-veilo-blue text-veilo-blue hover:bg-veilo-blue hover:text-white transition-colors"
-                      disabled={rotating}
-                    >
-                      <RefreshCw 
-                        className={`h-5 w-5 mr-2 ${rotating ? 'animate-spin' : ''}`} 
-                      />
-                      Refresh Identity
-                    </Button>
-                  )}
-                  
-                  <Button 
-                    onClick={handleLogout}
-                    variant="destructive"
-                    className="shadow-sm"
-                  >
-                    End {user.isAnonymous ? 'Anonymous' : ''} Session
-                  </Button>
-                </div>
-              </motion.div>
-              
-              {user.isAnonymous && (
-                <motion.div variants={itemVariants}>
-                  <div className="bg-veilo-blue-light bg-opacity-30 rounded-xl p-5 text-sm shadow-inner">
-                    <h3 className="font-medium mb-2 text-veilo-blue-dark dark:text-veilo-blue">Identity Protection</h3>
-                    <p className="text-gray-700 dark:text-gray-300">
-                      Refreshing your identity will give you a new alias and avatar. This helps maintain your anonymity while using Veilo. 
-                      Your previous posts and comments will remain, but won't be connected to your new identity.
-                    </p>
-                  </div>
-                </motion.div>
-              )}
             </CardContent>
           </Card>
         </motion.div>

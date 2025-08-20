@@ -146,7 +146,7 @@ export const useSanctuaryRealtime = ({
     const token = localStorage.getItem('token');
     
     const socket = io(serverUrl, {
-      auth: { token }, // Changed from auth_token to token
+      auth: { token },
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: 10,

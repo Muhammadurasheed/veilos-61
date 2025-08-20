@@ -1,238 +1,247 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
 import Layout from '@/components/layout/Layout';
-import { useHostRecovery } from '@/hooks/useHostRecovery';
-import { Shield, Clock, Users, MessageSquare, Copy, Check, ArrowRight } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { Shield, Mail, Key, Home, ArrowLeft } from 'lucide-react';
 
-const SanctuaryRecover = () => {
-  const [searchParams] = useSearchParams();
+interface SanctuarySession {
+  id: string;
+  topic: string;
+  description?: string;
+  emoji?: string;
+  mode: string;
+  createdAt: string;
+  expiresAt: string;
+  submissionCount: number;
+  participantCount: number;
+  lastActivity: string;
+  timeRemaining: number;
+}
+
+const SanctuaryRecover: React.FC = () => {
+  const { sessionId } = useParams<{ sessionId: string }>();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const [hostToken, setHostToken] = useState('');
-  const [copiedToken, setCopiedToken] = useState(false);
-  const { isLoading, sanctuaryInfo, mySanctuaries, verifyHostToken, getMySanctuaries } = useHostRecovery();
+  const [recoveryEmail, setRecoveryEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [sanctuary, setSanctuary] = useState<SanctuarySession | null>(null);
 
-  // Get token from URL params if present
   useEffect(() => {
-    const tokenFromUrl = searchParams.get('hostToken');
-    if (tokenFromUrl) {
-      setHostToken(tokenFromUrl);
-      verifyHostToken(tokenFromUrl);
+    // Check if we already have a host token in localStorage
+    if (sessionId) {
+      const storedToken = localStorage.getItem(`sanctuary-host-${sessionId}`);
+      if (storedToken) {
+        // Automatically attempt recovery with stored token
+        attemptTokenRecovery(storedToken);
+      }
     }
-  }, [searchParams, verifyHostToken]);
+  }, [sessionId]);
 
-  const handleTokenSubmit = (e: React.FormEvent) => {
+  const attemptTokenRecovery = async (token: string) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/host-recovery/recover-by-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          hostToken: token,
+          sanctuaryId: sessionId
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success && data.sanctuary) {
+        // Store the token again and redirect to inbox
+        localStorage.setItem(`sanctuary-host-${sessionId}`, token);
+        navigate(`/sanctuary/inbox/${sessionId}`);
+        
+        toast({
+          title: "Sanctuary recovered!",
+          description: "Redirecting to your inbox...",
+        });
+      } else {
+        throw new Error(data.error || 'Token recovery failed');
+      }
+    } catch (error) {
+      console.error('Token recovery error:', error);
+      // Don't show error toast for automatic recovery attempts
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTokenSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (hostToken.trim()) {
-      verifyHostToken(hostToken.trim());
+    
+    if (!hostToken.trim()) {
+      toast({
+        title: "Host token required",
+        description: "Please enter your sanctuary host token.",
+        variant: "destructive"
+      });
+      return;
     }
+
+    await attemptTokenRecovery(hostToken.trim());
   };
 
-  const handleViewSanctuary = (sanctuaryId: string) => {
-    navigate(`/sanctuary/${sanctuaryId}/host?hostToken=${encodeURIComponent(hostToken)}`);
-  };
+  const handleEmailRecovery = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!recoveryEmail.trim()) {
+      toast({
+        title: "Email required",
+        description: "Please enter your recovery email.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-  const copyTokenToClipboard = () => {
-    navigator.clipboard.writeText(hostToken);
-    setCopiedToken(true);
-    setTimeout(() => setCopiedToken(false), 2000);
-  };
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/host-recovery/recover-by-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: recoveryEmail.trim(),
+          sanctuaryId: sessionId
+        }),
+      });
 
-  const loadMySanctuaries = () => {
-    if (hostToken.trim()) {
-      getMySanctuaries(hostToken.trim());
+      const data = await response.json();
+      
+      if (data.success) {
+        toast({
+          title: "Recovery email sent!",
+          description: "Check your email for recovery instructions.",
+        });
+      } else {
+        throw new Error(data.error || 'Email recovery failed');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Recovery failed",
+        description: error.message || "Unable to send recovery email",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="space-y-8">
-          {/* Header */}
-          <div className="text-center space-y-4">
-            <div className="flex justify-center">
-              <div className="p-3 rounded-full bg-primary/10 text-primary">
-                <Shield className="h-8 w-8" />
-              </div>
-            </div>
-            <h1 className="text-3xl font-bold">Recover Your Sanctuary</h1>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Enter your host token to regain access to your sanctuary spaces and anonymous inbox
-            </p>
-          </div>
-
-          {/* Token Input Form */}
+      <div className="container py-16">
+        <div className="max-w-md mx-auto">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Host Token Verification
+                <Shield className="h-5 w-5 text-veilo-purple" />
+                Recover Sanctuary Access
               </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Enter your host token or email to regain access to your sanctuary inbox.
+              </p>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
+              {/* Host Token Recovery */}
               <form onSubmit={handleTokenSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="hostToken">Host Token</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="hostToken"
-                      type="text"
-                      placeholder="Enter your host token..."
-                      value={hostToken}
-                      onChange={(e) => setHostToken(e.target.value)}
-                      className="font-mono"
-                    />
-                    {hostToken && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={copyTokenToClipboard}
-                      >
-                        {copiedToken ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                      </Button>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    This is the secure token provided when you created your sanctuary
+                  <Label htmlFor="hostToken" className="flex items-center gap-2">
+                    <Key className="h-4 w-4" />
+                    Host Token
+                  </Label>
+                  <Input
+                    id="hostToken"
+                    type="text"
+                    placeholder="Enter your sanctuary host token"
+                    value={hostToken}
+                    onChange={(e) => setHostToken(e.target.value)}
+                    disabled={loading}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    The token provided when you created the sanctuary
                   </p>
                 </div>
-                <div className="flex gap-2">
-                  <Button type="submit" disabled={!hostToken.trim() || isLoading}>
-                    {isLoading ? 'Verifying...' : 'Verify Token'}
+                <Button 
+                  type="submit" 
+                  className="w-full"
+                  disabled={loading}
+                >
+                  {loading ? 'Recovering...' : 'Recover with Token'}
+                </Button>
+              </form>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">Or</span>
+                </div>
+              </div>
+
+              {/* Email Recovery */}
+              <form onSubmit={handleEmailRecovery} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="recoveryEmail" className="flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    Recovery Email
+                  </Label>
+                  <Input
+                    id="recoveryEmail"
+                    type="email"
+                    placeholder="Enter your recovery email"
+                    value={recoveryEmail}
+                    onChange={(e) => setRecoveryEmail(e.target.value)}
+                    disabled={loading}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    The email you provided when creating the sanctuary
+                  </p>
+                </div>
+                <Button 
+                  type="submit" 
+                  variant="outline"
+                  className="w-full"
+                  disabled={loading}
+                >
+                  {loading ? 'Sending...' : 'Send Recovery Email'}
+                </Button>
+              </form>
+
+              <div className="pt-4 border-t">
+                <div className="flex items-center justify-between">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => navigate('/')}
+                    className="flex items-center gap-2"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Home
                   </Button>
                   <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={loadMySanctuaries}
-                    disabled={!hostToken.trim() || isLoading}
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => navigate('/sanctuary')}
+                    className="flex items-center gap-2"
                   >
-                    View All My Sanctuaries
+                    <Home className="h-4 w-4" />
+                    Create New
                   </Button>
                 </div>
-              </form>
-            </CardContent>
-          </Card>
-
-          {/* Recovered Sanctuary Info */}
-          {sanctuaryInfo && (
-            <Card className="border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/20">
-              <CardHeader>
-                <CardTitle className="text-green-700 dark:text-green-300 flex items-center gap-2">
-                  <Check className="h-5 w-5" />
-                  Sanctuary Recovered Successfully
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <h3 className="font-semibold flex items-center gap-2">
-                      {sanctuaryInfo.emoji} {sanctuaryInfo.topic}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {sanctuaryInfo.description || 'No description provided'}
-                    </p>
-                    <Badge variant="secondary">
-                      {sanctuaryInfo.mode === 'anon-inbox' ? 'Anonymous Inbox' : 
-                       sanctuaryInfo.mode === 'live-audio' ? 'Live Audio' : 'Text Room'}
-                    </Badge>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm">
-                      <MessageSquare className="h-4 w-4" />
-                      <span>{sanctuaryInfo.submissionsCount} submissions</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Users className="h-4 w-4" />
-                      <span>{sanctuaryInfo.participantsCount} participants</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Clock className="h-4 w-4" />
-                      <span>Expires {formatDistanceToNow(new Date(sanctuaryInfo.expiresAt), { addSuffix: true })}</span>
-                    </div>
-                  </div>
-                </div>
-                <Separator />
-                <div className="flex gap-2">
-                  <Button onClick={() => handleViewSanctuary(sanctuaryInfo.sanctuaryId)} className="flex items-center gap-2">
-                    Enter Sanctuary
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* My Sanctuaries List */}
-          {mySanctuaries && mySanctuaries.sanctuaries.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Your Active Sanctuaries ({mySanctuaries.count})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {mySanctuaries.sanctuaries.map((sanctuary) => (
-                    <div key={sanctuary.sanctuaryId} className="p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-2">
-                          <h3 className="font-semibold flex items-center gap-2">
-                            {sanctuary.emoji} {sanctuary.topic}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">
-                            {sanctuary.description || 'No description'}
-                          </p>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <MessageSquare className="h-3 w-3" />
-                              {sanctuary.submissionsCount}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Users className="h-3 w-3" />
-                              {sanctuary.participantsCount}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              Expires {formatDistanceToNow(new Date(sanctuary.expiresAt), { addSuffix: true })}
-                            </span>
-                          </div>
-                        </div>
-                        <Button 
-                          size="sm" 
-                          onClick={() => handleViewSanctuary(sanctuary.sanctuaryId)}
-                          className="flex items-center gap-1"
-                        >
-                          Enter
-                          <ArrowRight className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Help Section */}
-          <Card className="bg-muted/50">
-            <CardHeader>
-              <CardTitle className="text-lg">Need Help?</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                • Your host token was provided when you first created a sanctuary
-              </p>
-              <p className="text-sm text-muted-foreground">
-                • Host tokens are valid for 48 hours after sanctuary creation
-              </p>
-              <p className="text-sm text-muted-foreground">
-                • If you've lost your token, you'll need to create a new sanctuary
-              </p>
+              </div>
             </CardContent>
           </Card>
         </div>

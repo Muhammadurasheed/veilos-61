@@ -135,8 +135,62 @@ const SanctuaryInbox = () => {
   });
 
   useEffect(() => {
-    fetchInboxData(true);
-  }, [fetchInboxData]);
+    const fetchSession = async () => {
+      if (!sessionId) return;
+      
+      try {
+        setLoading(true);
+        
+        // Get host token from localStorage or URL params
+        const storedHostToken = localStorage.getItem(`sanctuary-host-${sessionId}`);
+        const urlHostToken = new URLSearchParams(window.location.search).get('hostToken');
+        const hostToken = urlHostToken || storedHostToken;
+        
+        if (!hostToken) {
+          navigate(`/sanctuary/recover/${sessionId}`);
+          return;
+        }
+        
+        // Try to access as host
+        const response = await fetch(`/api/sanctuary/sessions/${sessionId}/host`, {
+          headers: {
+            'x-host-token': hostToken,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!response.ok) {
+          navigate(`/sanctuary/recover/${sessionId}`);
+          return;
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+          setInboxData({
+            session: data.data,
+            submissions: data.data.submissions || []
+          });
+          
+          // Store the host token for future access
+          localStorage.setItem(`sanctuary-host-${sessionId}`, hostToken);
+          
+          // Clean URL if host token was in params
+          if (urlHostToken) {
+            window.history.replaceState({}, '', `/sanctuary/inbox/${sessionId}`);
+          }
+        } else {
+          navigate(`/sanctuary/recover/${sessionId}`);
+        }
+      } catch (error) {
+        console.error('Error fetching session:', error);
+        navigate(`/sanctuary/recover/${sessionId}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchSession();
+  }, [sessionId, navigate]);
 
   const copyShareLink = () => {
     const shareUrl = `${window.location.origin}/sanctuary/submit/${sessionId}`;

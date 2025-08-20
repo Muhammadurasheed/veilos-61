@@ -45,10 +45,8 @@ router.post('/sessions', getClientIp, async (req, res) => {
       }
     }
     
-    // If no valid auth, generate a host token for session management
-    if (!hostId) {
-      hostToken = nanoid(32);
-    }
+    // Always generate a host token for session management (even for authenticated users)
+    hostToken = nanoid(32);
     
     // Calculate expiration (default 1 hour, max 24 hours)
     const hours = Math.min(Math.max(1, expireHours), 24);
@@ -131,6 +129,76 @@ router.post('/sessions', getClientIp, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Server error creating sanctuary session'
+    });
+  }
+});
+
+// Get session by ID as host (with host token)
+router.get('/sessions/:sessionId/host', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const hostToken = req.headers['x-host-token'];
+    
+    if (!hostToken) {
+      return res.status(401).json({
+        success: false,
+        error: 'Host token required'
+      });
+    }
+    
+    // Verify host token
+    const HostSession = require('../models/HostSession');
+    const hostSession = await HostSession.findOne({
+      sanctuaryId: sessionId,
+      hostToken,
+      isActive: true,
+      expiresAt: { $gt: new Date() }
+    });
+    
+    if (!hostSession) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid or expired host token'
+      });
+    }
+    
+    // Find the sanctuary session
+    const session = await SanctuarySession.findOne({
+      id: sessionId,
+      isActive: true
+    });
+    
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found'
+      });
+    }
+    
+    // Update host session access time
+    await hostSession.updateAccess();
+    
+    res.json({
+      success: true,
+      data: {
+        id: session.id,
+        topic: session.topic,
+        description: session.description,
+        emoji: session.emoji,
+        mode: session.mode,
+        createdAt: session.createdAt,
+        expiresAt: session.expiresAt,
+        submissions: session.submissions || [],
+        participants: session.participants || [],
+        isHost: true
+      }
+    });
+    
+  } catch (err) {
+    console.error('Error fetching host session:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Server error retrieving session'
     });
   }
 });
