@@ -106,8 +106,7 @@ const MySanctuariesEnhanced = () => {
         }
       }
 
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || 
-                     (import.meta.env.DEV ? '/api' : 'http://localhost:3000/api');
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
       
       const params = new URLSearchParams();
       if (hostTokens.length > 0) {
@@ -449,7 +448,7 @@ const MySanctuariesEnhanced = () => {
                                   </div>
                                 )}
                                 
-                                {/* Enhanced Metrics */}
+                                 {/* Enhanced Metrics */}
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-muted-foreground">
                                   <div className="flex items-center gap-1">
                                     <MessageCircle className="h-3 w-3" />
@@ -458,6 +457,14 @@ const MySanctuariesEnhanced = () => {
                                   <div className="flex items-center gap-1">
                                     <Users className="h-3 w-3" />
                                     <span>{sanctuary.uniqueParticipants} unique</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Activity className="h-3 w-3" />
+                                    <span>Score: {sanctuary.engagementScore}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    <span>{formatDistanceToNow(new Date(sanctuary.createdAt), { addSuffix: false })}</span>
                                   </div>
                                   <div className="flex items-center gap-1">
                                     <Activity className="h-3 w-3" />
