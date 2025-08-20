@@ -106,7 +106,8 @@ const MySanctuariesEnhanced = () => {
         }
       }
 
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || 
+                     (import.meta.env.DEV ? 'http://localhost:3000' : 'http://localhost:3000');
       
       const params = new URLSearchParams();
       if (hostTokens.length > 0) {
@@ -123,7 +124,7 @@ const MySanctuariesEnhanced = () => {
         headers['x-auth-token'] = authToken;
       }
 
-      const response = await fetch(`${apiUrl}/host-recovery/my-sanctuaries?${params.toString()}`, {
+      const response = await fetch(`${apiUrl}/api/host-recovery/my-sanctuaries?${params.toString()}`, {
         headers
       });
 
