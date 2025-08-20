@@ -3,6 +3,7 @@ const router = express.Router();
 const Expert = require('../models/Expert');
 const User = require('../models/User');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
+const { notifyExpertStatusUpdate, notifyAdminPanelUpdate } = require('../socket/socketHandler');
 const { nanoid } = require('nanoid');
 
 // Enhanced Admin API Routes for flagship admin panel
@@ -211,32 +212,19 @@ router.post('/experts/bulk-action', authMiddleware, adminMiddleware, async (req,
     );
     
     // Send real-time notifications
-    try {
-      const io = req.app.get('io');
-      if (io) {
-        const experts = await Expert.find({ id: { $in: expertIds } });
-        
-        experts.forEach(expert => {
-          // Notify each expert
-          io.to(`expert_${expert.userId}`).emit('application_update', {
-            type: 'bulk_action',
-            action,
-            message: `Your application status has been updated: ${action}`,
-            timestamp: new Date()
-          });
-        });
-        
-        // Notify admin panel
-        io.to('admin_panel').emit('bulk_action_completed', {
-          action,
-          expertCount: expertIds.length,
-          adminId: req.user.id,
-          timestamp: new Date()
-        });
-      }
-    } catch (notificationError) {
-      console.warn('Bulk notification failed:', notificationError.message);
-    }
+    const experts = await Expert.find({ id: { $in: expertIds } });
+    
+    experts.forEach(expert => {
+      notifyExpertStatusUpdate(expert.id, expert.accountStatus, notes || `Bulk action: ${action}`);
+    });
+    
+    // Send bulk update notification to admin panel
+    notifyAdminPanelUpdate({
+      type: 'bulk_action_completed',
+      action,
+      expertCount: expertIds.length,
+      adminId: req.user.id
+    });
     
     res.json({
       success: true,

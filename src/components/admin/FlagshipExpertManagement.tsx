@@ -55,6 +55,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useRealTimeNotifications } from '@/hooks/useRealTimeNotifications';
 
 interface ExpertFilters {
   status: string;
@@ -87,9 +88,8 @@ const FlagshipExpertManagement = () => {
     search: '',
   });
 
-  // Real-time notifications state
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  // Real-time notifications
+  const { notifications, unreadCount } = useRealTimeNotifications();
 
   // Enhanced experts query with real-time updates
   const { data: expertsData, isLoading, isError, refetch } = useQuery({
@@ -138,16 +138,6 @@ const FlagshipExpertManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['platformOverview'] });
       setSelectedExperts([]);
       setShowBulkDialog(false);
-      
-      // Add to notifications
-      setNotifications(prev => [{
-        id: Date.now(),
-        type: 'bulk_action',
-        message: `Bulk ${data.data.action} completed for ${data.data.expertIds.length} experts`,
-        timestamp: new Date(),
-        read: false
-      }, ...prev.slice(0, 9)]);
-      setUnreadCount(prev => prev + 1);
     },
     onError: (error) => {
       toast({
@@ -261,7 +251,6 @@ const FlagshipExpertManagement = () => {
                 variant="ghost"
                 size="icon"
                 className="relative bg-white/10 hover:bg-white/20 text-white"
-                onClick={() => setUnreadCount(0)}
               >
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (

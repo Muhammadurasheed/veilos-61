@@ -4,6 +4,7 @@ const router = express.Router();
 const Expert = require('../models/Expert');
 const User = require('../models/User');
 const { authMiddleware, optionalAuthMiddleware } = require('../middleware/auth');
+const { notifyExpertApplicationSubmitted } = require('../socket/socketHandler');
 const upload = require('../middleware/upload');
 const path = require('path');
 const fs = require('fs');
@@ -63,6 +64,17 @@ router.post('/register', authMiddleware, async (req, res) => {
         expertId: expert.id
       }
     );
+
+    // Send real-time notification to admins
+    notifyExpertApplicationSubmitted({
+      id: expert.id,
+      name: expert.name,
+      email: expert.email,
+      specialization: expert.specialization,
+      createdAt: expert.createdAt,
+      accountStatus: expert.accountStatus,
+      verificationLevel: expert.verificationLevel
+    });
     
     res.json({
       success: true,

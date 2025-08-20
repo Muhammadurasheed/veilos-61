@@ -6,6 +6,7 @@ const Post = require('../models/Post');
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const { notifyExpertStatusUpdate, notifyAdminPanelUpdate } = require('../socket/socketHandler');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
 // Get all unverified experts with enhanced filtering
@@ -133,32 +134,14 @@ router.patch('/experts/:id/verify', authMiddleware, adminMiddleware, async (req,
     
     await expert.save();
 
-    // Send notification to expert via email/socket (future implementation)
-    try {
-      const io = req.app.get('io');
-      if (io) {
-        // Real-time notification to expert
-        io.to(`expert_${expert.userId}`).emit('application_update', {
-          type: 'application_decision',
-          status,
-          verificationLevel,
-          message: status === 'approved' 
-            ? 'Congratulations! Your expert application has been approved.' 
-            : 'Your expert application needs attention.',
-          timestamp: new Date()
-        });
-
-        // Notification to admin panel
-        io.to('admin_panel').emit('expert_verified', {
-          expertId: expert.id,
-          expertName: expert.name,
-          status,
-          timestamp: new Date()
-        });
-      }
-    } catch (notificationError) {
-      console.warn('Notification sending failed:', notificationError.message);
-    }
+    // Send real-time notifications
+    notifyExpertStatusUpdate(expert.id, status, adminNotes || feedback);
+    notifyAdminPanelUpdate({
+      type: 'expert_verified',
+      expertId: expert.id,
+      status: status,
+      verificationLevel
+    });
     
     res.json({
       success: true,

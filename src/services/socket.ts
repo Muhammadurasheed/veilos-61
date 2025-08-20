@@ -194,6 +194,26 @@ class SocketService {
     this.socket?.on('voice_chat_response', callback);
   }
 
+  // General socket methods for notifications
+  emit(event: string, data?: any): void {
+    if (!this.socket) return;
+    this.socket.emit(event, data);
+  }
+
+  on(event: string, callback: (...args: any[]) => void): void {
+    if (!this.socket) return;
+    this.socket.on(event, callback);
+  }
+
+  off(event: string, callback?: (...args: any[]) => void): void {
+    if (!this.socket) return;
+    if (callback) {
+      this.socket.off(event, callback);
+    } else {
+      this.socket.off(event);
+    }
+  }
+
   // Remove event listeners
   removeAllListeners(): void {
     this.socket?.removeAllListeners();

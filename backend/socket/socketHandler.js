@@ -436,6 +436,25 @@ const initializeSocket = (server) => {
       });
     });
 
+    // Handle admin panel join for real-time notifications
+    socket.on('join_admin_panel', async (data) => {
+      // Verify admin role
+      const user = await User.findOne({ id: socket.userId });
+      if (user && user.role === 'admin') {
+        socket.join('admin_panel');
+        console.log(`Admin ${socket.userId} joined admin panel for real-time updates`);
+      }
+    });
+
+    // Handle expert joining for notifications
+    socket.on('join_expert_notifications', async (data) => {
+      const { expertId } = data;
+      if (expertId) {
+        socket.join(`expert_${expertId}`);
+        console.log(`Expert ${expertId} joined for notifications`);
+      }
+    });
+
     // Handle disconnection
     socket.on('disconnect', () => {
       console.log(`User disconnected: ${socket.userId}`);
@@ -503,4 +522,55 @@ const getIO = () => {
   return io;
 };
 
-module.exports = { initializeSocket, getIO };
+// Notification functions for real-time updates
+const notifyExpertApplicationSubmitted = (expertData) => {
+  if (io) {
+    // Notify all admins about new expert application
+    io.to('admin_panel').emit('expert_application_submitted', {
+      expert: expertData,
+      timestamp: new Date().toISOString(),
+      type: 'new_application'
+    });
+    console.log('Notified admins of new expert application:', expertData.email);
+  }
+};
+
+const notifyExpertStatusUpdate = (expertId, status, adminNotes) => {
+  if (io) {
+    // Notify specific expert about status change
+    io.to(`expert_${expertId}`).emit('expert_status_updated', {
+      status,
+      adminNotes,
+      timestamp: new Date().toISOString(),
+      type: 'status_update'
+    });
+    
+    // Also notify all admins about the status change
+    io.to('admin_panel').emit('expert_status_changed', {
+      expertId,
+      status,
+      adminNotes,
+      timestamp: new Date().toISOString(),
+      type: 'status_change'
+    });
+    
+    console.log(`Notified expert ${expertId} of status update:`, status);
+  }
+};
+
+const notifyAdminPanelUpdate = (data) => {
+  if (io) {
+    io.to('admin_panel').emit('admin_panel_update', {
+      ...data,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+module.exports = { 
+  initializeSocket, 
+  getIO, 
+  notifyExpertApplicationSubmitted,
+  notifyExpertStatusUpdate,
+  notifyAdminPanelUpdate
+};
