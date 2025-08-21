@@ -274,10 +274,10 @@ router.get('/:id', async (req, res) => {
     // Ensure avatarUrl is properly set with full path for uploads
     if (expert.avatarUrl) {
       if (expert.avatarUrl.startsWith('/uploads/')) {
-        expert.avatarUrl = `http://localhost:3001${expert.avatarUrl}`;
+        expert.avatarUrl = `http://localhost:3000${expert.avatarUrl}`;
       } else if (!expert.avatarUrl.startsWith('http')) {
         // Static expert images
-        expert.avatarUrl = `http://localhost:3001${expert.avatarUrl}`;
+        expert.avatarUrl = `http://localhost:3000${expert.avatarUrl}`;
       }
     }
     

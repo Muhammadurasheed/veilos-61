@@ -47,7 +47,7 @@ const ExpertCard = ({ expert }: ExpertCardProps) => {
           <Avatar className="h-16 w-16 border-2 border-white shadow-sm">
             <AvatarImage 
               src={expert.avatarUrl?.startsWith('http') ? expert.avatarUrl : 
-                    expert.avatarUrl?.startsWith('/uploads/') ? `http://localhost:3001${expert.avatarUrl}` : 
+                    expert.avatarUrl?.startsWith('/uploads/') ? `http://localhost:3000${expert.avatarUrl}` : 
                     expert.avatarUrl || `/experts/default.jpg`} 
               alt={expert.name} 
             />

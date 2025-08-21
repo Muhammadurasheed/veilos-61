@@ -245,7 +245,7 @@ const ExpertProfile = () => {
                       <Avatar className="h-40 w-40 border-4 border-white shadow-xl ring-4 ring-primary/10">
                         <AvatarImage 
                           src={expert.avatarUrl?.startsWith('http') ? expert.avatarUrl : 
-                                expert.avatarUrl?.startsWith('/uploads/') ? `http://localhost:3001${expert.avatarUrl}` : 
+                                expert.avatarUrl?.startsWith('/uploads/') ? `http://localhost:3000${expert.avatarUrl}` : 
                                 expert.avatarUrl || `/experts/default.jpg`} 
                           alt={expert.name}
                           className="object-cover"
