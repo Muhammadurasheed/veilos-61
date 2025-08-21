@@ -258,6 +258,14 @@ export const ExpertApi = {
     return apiRequest('GET', `/api/experts/${id}`);
   },
 
+  async getById(id: string) {
+    return apiRequest('GET', `/api/expert/${id}`);
+  },
+
+  async getAll() {
+    return apiRequest('GET', '/api/experts');
+  },
+
   async updateExpert(id: string, updates: any) {
     return apiRequest('PUT', `/api/experts/${id}`, updates);
   },

@@ -5,10 +5,12 @@ import { useSocket } from '@/hooks/useSocket';
 
 interface NotificationData {
   id: string;
-  type: 'expert_application' | 'status_update' | 'bulk_action' | 'admin_update';
+  type: 'expert_application' | 'status_update' | 'bulk_action' | 'admin_update' | 'expert_status_update' | 'expert_approved';
+  title?: string;
   message: string;
   timestamp: string;
   data?: any;
+  read?: boolean;
 }
 
 export const useRealTimeNotifications = () => {

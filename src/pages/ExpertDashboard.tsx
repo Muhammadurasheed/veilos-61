@@ -1,18 +1,69 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useUserContext } from '@/contexts/UserContext';
-import { Calendar, User, MessageSquare, Video, Clock, Edit, Settings } from 'lucide-react';
+import { useRealTimeNotifications } from '@/hooks/useRealTimeNotifications';
+import { ExpertApi } from '@/services/api';
+import { Calendar, User, MessageSquare, Video, Clock, Edit, Settings, CheckCircle, AlertCircle } from 'lucide-react';
 import { ExpertMatcher } from '@/components/recommendations/ExpertMatcher';
 
 const ExpertDashboard = () => {
   const { user } = useUserContext();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [currentView, setCurrentView] = useState('dashboard'); // Add a state variable to control views
+  const [currentView, setCurrentView] = useState('dashboard');
+  const [expertStatus, setExpertStatus] = useState<string>('pending');
+  const [expertData, setExpertData] = useState<any>(null);
+  
+  // Listen for real-time notifications
+  const { notifications } = useRealTimeNotifications();
+
+  // Load expert data and status
+  useEffect(() => {
+    const loadExpertData = async () => {
+      if (user?.expertId) {
+        try {
+          setIsLoading(true);
+          const response = await ExpertApi.getById(user.expertId);
+          if (response.success && response.data) {
+            setExpertData(response.data);
+            setExpertStatus(response.data.accountStatus || 'pending');
+          }
+        } catch (error) {
+          console.error('Failed to load expert data:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadExpertData();
+  }, [user?.expertId]);
+
+  // Listen for status updates via notifications
+  useEffect(() => {
+    if (notifications.length > 0) {
+      const statusUpdate = notifications.find(n => 
+        n.type === 'expert_status_update' && n.data?.expertId === user?.expertId
+      );
+      
+      if (statusUpdate) {
+        setExpertStatus(statusUpdate.data.status);
+        // Refresh expert data
+        if (user?.expertId) {
+          ExpertApi.getById(user.expertId).then(response => {
+            if (response.success && response.data) {
+              setExpertData(response.data);
+            }
+          });
+        }
+      }
+    }
+  }, [notifications, user?.expertId]);
 
   // Stats would normally come from API
   const stats = {
@@ -25,6 +76,39 @@ const ExpertDashboard = () => {
     },
     averageRating: 4.8
   };
+
+  const getStatusInfo = (status: string) => {
+    const statusMap: Record<string, { icon: any; color: string; text: string; description: string }> = {
+      pending: {
+        icon: Clock,
+        color: 'bg-amber-100 text-amber-800 border-amber-300',
+        text: 'Pending Review',
+        description: 'Your expert profile is currently under review. This usually takes 1-3 business days.'
+      },
+      approved: {
+        icon: CheckCircle,
+        color: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+        text: 'Approved',
+        description: 'Your expert profile has been approved! You can now accept sessions and help users.'
+      },
+      rejected: {
+        icon: AlertCircle,
+        color: 'bg-red-100 text-red-800 border-red-300',
+        text: 'Application Rejected',
+        description: 'Your application needs additional information. Please contact support for details.'
+      },
+      suspended: {
+        icon: AlertCircle,
+        color: 'bg-gray-100 text-gray-800 border-gray-300',
+        text: 'Account Suspended',
+        description: 'Your account has been temporarily suspended. Please contact support for assistance.'
+      }
+    };
+
+    return statusMap[status] || statusMap.pending;
+  };
+
+  const statusInfo = getStatusInfo(expertStatus);
 
   return (
     <Layout>
@@ -57,28 +141,39 @@ const ExpertDashboard = () => {
           </div>
         </div>
 
-        {/* Status Card - Shows verification status */}
+        {/* Status Card - Shows real-time verification status */}
         <Card className="mb-8 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm">
           <CardContent className="py-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-center">
-                <div className="w-12 h-12 rounded-full bg-veilo-blue-light dark:bg-veilo-blue-dark/30 flex items-center justify-center mr-4">
-                  <User className="h-6 w-6 text-veilo-blue" />
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center mr-4 ${
+                  expertStatus === 'approved' ? 'bg-emerald-100' : 
+                  expertStatus === 'rejected' ? 'bg-red-100' : 
+                  'bg-amber-100'
+                }`}>
+                  <statusInfo.icon className={`h-6 w-6 ${
+                    expertStatus === 'approved' ? 'text-emerald-600' : 
+                    expertStatus === 'rejected' ? 'text-red-600' : 
+                    'text-amber-600'
+                  }`} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Account Status: Pending Verification</h2>
+                  <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
+                    Account Status: {statusInfo.text}
+                  </h2>
                   <p className="text-gray-500 dark:text-gray-400">
-                    Your expert profile is currently under review. This usually takes 1-3 business days.
+                    {statusInfo.description}
                   </p>
+                  {expertData?.lastUpdated && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Last updated: {new Date(expertData.lastUpdated).toLocaleString()}
+                    </p>
+                  )}
                 </div>
               </div>
-              <div className="bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300 py-1 px-3 rounded-full text-sm font-medium inline-flex items-center">
-                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm0-9a1 1 0 011 1v3a1 1 0 11-2 0v-3a1 1 0 011-1z" clipRule="evenodd"></path>
-                  <path fillRule="evenodd" d="M10 6a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd"></path>
-                </svg>
-                Pending Approval
-              </div>
+              <Badge variant="outline" className={statusInfo.color}>
+                {statusInfo.text}
+              </Badge>
             </div>
           </CardContent>
         </Card>

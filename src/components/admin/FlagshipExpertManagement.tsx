@@ -58,6 +58,7 @@ import {
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useRealTimeNotifications } from '@/hooks/useRealTimeNotifications';
+import { ExpertApplicationDetails } from './ExpertApplicationDetails';
 
 interface ExpertFilters {
   status: string;
@@ -91,6 +92,8 @@ const FlagshipExpertManagement = () => {
     verificationLevel: 'all_levels',
     search: '',
   });
+  const [selectedExpertForReview, setSelectedExpertForReview] = useState<Expert | null>(null);
+  const [showExpertDetails, setShowExpertDetails] = useState(false);
 
   // Ensure admin user is set in UserContext for socket connection
   useEffect(() => {
@@ -247,6 +250,18 @@ const FlagshipExpertManagement = () => {
     setActiveTab(value);
     setCurrentPage(1);
     setFilters(prev => ({ ...prev, status: value }));
+  };
+
+  const handleViewExpert = (expert: Expert) => {
+    setSelectedExpertForReview(expert);
+    setShowExpertDetails(true);
+  };
+
+  const handleExpertStatusUpdate = () => {
+    // Refresh the data when an expert's status is updated
+    refetch();
+    queryClient.invalidateQueries({ queryKey: ['flagshipExperts'] });
+    queryClient.invalidateQueries({ queryKey: ['platformOverview'] });
   };
 
   // Auto-refresh interval effect
@@ -542,16 +557,20 @@ const FlagshipExpertManagement = () => {
                               }
                             </div>
                           </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              <Button variant="ghost" size="sm">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
+                           <TableCell>
+                             <div className="flex items-center gap-1">
+                               <Button 
+                                 variant="ghost" 
+                                 size="sm"
+                                 onClick={() => handleViewExpert(expert)}
+                               >
+                                 <Eye className="h-4 w-4" />
+                               </Button>
+                               <Button variant="ghost" size="sm">
+                                 <MoreHorizontal className="h-4 w-4" />
+                               </Button>
+                             </div>
+                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -635,6 +654,14 @@ const FlagshipExpertManagement = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Expert Application Details Dialog */}
+      <ExpertApplicationDetails
+        expert={selectedExpertForReview}
+        open={showExpertDetails}
+        onOpenChange={setShowExpertDetails}
+        onStatusUpdate={handleExpertStatusUpdate}
+      />
     </div>
   );
 };

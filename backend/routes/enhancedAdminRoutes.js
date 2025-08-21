@@ -215,7 +215,16 @@ router.post('/experts/bulk-action', authMiddleware, adminMiddleware, async (req,
     const experts = await Expert.find({ id: { $in: expertIds } });
     
     experts.forEach(expert => {
-      notifyExpertStatusUpdate(expert.id, expert.accountStatus, notes || `Bulk action: ${action}`);
+      notifyExpertStatusUpdate(
+        expert.id, 
+        expert.accountStatus, 
+        notes || `Bulk action: ${action}`,
+        {
+          name: expert.name,
+          email: expert.email,
+          specialization: expert.specialization
+        }
+      );
     });
     
     // Send bulk update notification to admin panel
