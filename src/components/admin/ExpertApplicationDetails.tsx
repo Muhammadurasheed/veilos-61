@@ -46,13 +46,36 @@ const DocumentViewer = ({ document }: DocumentViewerProps) => {
   const handleViewDocument = async () => {
     setIsLoading(true);
     try {
-      // In a real app, this would open a secure document viewer
-      window.open(document.fileUrl, '_blank');
+      // Use the secure document endpoint for admin viewing
+      const token = localStorage.getItem('token');
+      const secureUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/documents/uploads/${document.fileUrl.split('/').pop()}`;
+      
+      // Add authorization header by creating a fetch request first
+      const response = await fetch(secureUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        // Create blob URL for secure viewing
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+        
+        // Clean up the blob URL after a delay
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+      } else {
+        throw new Error('Failed to load document');
+      }
     } catch (error) {
+      console.error('Document view error:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to open document',
+        description: 'Failed to open document. Please check if you have proper permissions.',
       });
     } finally {
       setIsLoading(false);

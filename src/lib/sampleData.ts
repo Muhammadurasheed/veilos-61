@@ -83,89 +83,53 @@ export const samplePosts: Post[] = [
 
 export const sampleExperts: Expert[] = [
   {
-    id: 'expert-1',
+    id: 'expert-7zZgxwFk',
     userId: 'user-expert-1',
-    name: 'Dr. Emma Harris',
-    email: 'emma.harris@example.com',
+    name: 'James S',
+    email: 'james@veilo.com',
     avatarUrl: '/experts/expert-1.jpg',
-    specialization: 'Clinical Psychologist',
+    specialization: 'Mental Health Counselor',
     verificationLevel: 'platinum',
-    bio: 'Specializing in anxiety, depression, and trauma recovery. My approach combines cognitive behavioral therapy with mindfulness practices.',
+    bio: 'Licensed mental health counselor with over 10 years of experience in anxiety, depression, and trauma therapy. I believe in creating a safe, non-judgmental space for healing.',
     pricingModel: 'fixed',
-    pricingDetails: 'Sliding scale available',
-    rating: 4.9,
-    testimonials: [
-      {
-        id: 'test-1',
-        text: 'Dr. Harris helped me understand my anxiety in a way that finally made sense. Her gentle guidance has been transformative.',
-        user: {
-          alias: 'SilentWind67',
-          avatarIndex: 4
-        }
-      },
-      {
-        id: 'test-2',
-        text: 'I felt truly heard for the first time. Dr. Harris created such a safe space for me to explore difficult emotions.',
-        user: {
-          alias: 'PeacefulMeadow78',
-          avatarIndex: 2
-        }
-      }
-    ],
-    topicsHelped: ['Anxiety', 'Depression', 'Trauma', 'Self-esteem'],
+    pricingDetails: '$75/hour - Professional therapy sessions with flexible payment options',
+    rating: 4.8,
+    testimonials: [],
+    topicsHelped: ['Anxiety', 'Depression', 'Trauma', 'Relationship Issues'],
     verified: true,
-    accountStatus: 'approved'
+    accountStatus: 'approved',
+    totalRatings: 47,
+    totalSessions: 156,
+    completedSessions: 149,
+    profileViews: 1240,
+    profileViewsThisMonth: 89,
+    followersCount: 234,
+    lastUpdated: '2024-03-15T10:30:00Z',
+    createdAt: '2023-01-15T08:00:00Z'
   },
   {
-    id: 'expert-2',
+    id: 'expert-t9Im9JCJ',
     userId: 'user-expert-2',
-    name: 'Michael Chen, LMFT',
-    email: 'michael.chen@example.com',
+    name: 'Sarah Johnson',
+    email: 'sarah@veilo.com',
     avatarUrl: '/experts/expert-2.jpg',
-    specialization: 'Family Therapist',
+    specialization: 'Life Coach & Therapist',
     verificationLevel: 'gold',
-    bio: 'Helping individuals and families navigate relationship challenges. I believe in the power of healthy connections to transform lives.',
+    bio: 'Certified life coach and therapist helping people overcome obstacles and achieve their personal goals.',
     pricingModel: 'free',
     pricingDetails: 'Free initial consultation',
-    rating: 4.8,
-    testimonials: [
-      {
-        id: 'test-3',
-        text: 'Michael helped me repair my relationship with my teenage daughter. His strategies for communication were simple but powerful.',
-        user: {
-          alias: 'GentleRain33',
-          avatarIndex: 5
-        }
-      }
-    ],
-    topicsHelped: ['Family Conflict', 'Communication Skills', 'Parenting', 'Couples Therapy'],
+    rating: 4.6,
+    testimonials: [],
+    topicsHelped: ['Life Coaching', 'Goal Setting', 'Career Development', 'Self Improvement'],
     verified: true,
-    accountStatus: 'approved'
-  },
-  {
-    id: 'expert-3',
-    userId: 'user-expert-3',
-    name: 'Sophia Williams',
-    email: 'sophia.williams@example.com',
-    avatarUrl: '/experts/expert-3.jpg',
-    specialization: 'Grief Counselor',
-    verificationLevel: 'blue',
-    bio: 'Supporting people through grief and loss. Certified in trauma-informed care and mindfulness-based grief therapy.',
-    pricingModel: 'donation',
-    pricingDetails: 'Pay what you can',
-    rating: 5.0,
-    testimonials: [
-      {
-        id: 'test-4',
-        text: 'Sophia gave me permission to grieve in my own way. Her compassion created space for healing I didn\'t think was possible.',
-        user: {
-          alias: 'DreamyLight29',
-          avatarIndex: 7
-        }
-      }
-    ],
-    topicsHelped: ['Grief', 'Loss', 'Life Transitions', 'Healing'],
-    verified: true,
-    accountStatus: 'approved'
+    accountStatus: 'approved',
+    totalRatings: 23,
+    totalSessions: 78,
+    completedSessions: 71,
+    profileViews: 890,
+    profileViewsThisMonth: 45,
+    followersCount: 156,
+    lastUpdated: '2024-03-10T14:20:00Z',
+    createdAt: '2023-06-20T09:30:00Z'
   }
 ];

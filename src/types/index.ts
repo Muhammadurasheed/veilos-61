@@ -55,23 +55,108 @@ export interface Expert {
   name: string;
   email: string;
   avatarUrl?: string;
+  phoneNumber?: string;
   specialization: string;
   bio: string;
-  verificationLevel: "blue" | "gold" | "platinum" | "none";
+  headline?: string;
+  location?: {
+    city?: string;
+    state?: string;
+    country?: string;
+  };
+  timezone?: string;
+  languages?: string[];
+  verificationLevel: 'blue' | 'gold' | 'platinum' | 'none';
   verified: boolean;
-  pricingModel: "free" | "donation" | "fixed";
+  pricingModel: 'free' | 'donation' | 'fixed';
   pricingDetails?: string;
-  phoneNumber?: string;
+  hourlyRate?: number;
   rating: number;
-  testimonials: Testimonial[];
-  topicsHelped: string[];
-  accountStatus: "pending" | "approved" | "rejected" | "suspended";
-  verificationDocuments?: VerificationDocument[];
-  adminNotes?: AdminNote[];
-  lastUpdated?: string | Date;
-  createdAt?: string | Date;
+  totalRatings: number;
+  totalSessions: number;
+  completedSessions: number;
+  responseTime?: string;
+  isOnline?: boolean;
+  lastActive?: string;
+  testimonials?: Array<{
+    id: string;
+    text: string;
+    user: {
+      alias: string;
+      avatarIndex: number;
+    };
+  }>;
+  topicsHelped?: string[];
+  skills?: string[];
+  certifications?: string[];
+  workExperience?: Array<{
+    id: string;
+    jobTitle: string;
+    company: string;
+    startDate: string;
+    endDate?: string;
+    isCurrent: boolean;
+    description?: string;
+    skills?: string[];
+  }>;
+  education?: Array<{
+    id: string;
+    institution: string;
+    degree: string;
+    fieldOfStudy?: string;
+    startDate?: string;
+    endDate?: string;
+    grade?: string;
+  }>;
+  availability?: Array<{
+    day: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+    timeSlots: Array<{
+      start: string;
+      end: string;
+      available: boolean;
+    }>;
+  }>;
+  sessionPreferences?: {
+    voiceMasking: boolean;
+    allowRecording: boolean;
+    sessionTypes: {
+      chat: boolean;
+      voice: boolean;
+      video: boolean;
+    };
+    minDuration: number;
+    maxDuration: number;
+  };
+  verificationDocuments?: Array<{
+    id: string;
+    type: 'id' | 'credential' | 'certificate' | 'other' | 'photo' | 'resume' | 'cv';
+    fileName: string;
+    fileUrl: string;
+    uploadedAt: string;
+    status: 'pending' | 'approved' | 'rejected';
+  }>;
+  accountStatus: 'pending' | 'approved' | 'rejected' | 'suspended';
+  adminNotes?: Array<{
+    id: string;
+    note: string;
+    category: string;
+    date: string;
+    adminId: string;
+    action: string;
+  }>;
+  profileViews: number;
+  profileViewsThisMonth: number;
+  lastUpdated: string;
+  createdAt: string;
   followers?: string[];
-  followersCount?: number;
+  followersCount: number;
+  socialLinks?: {
+    linkedin?: string;
+    twitter?: string;
+    website?: string;
+  };
+  achievements?: string[];
+  yearsOfExperience?: number;
   // Enhanced resume-based fields
   resumeData?: {
     personalInfo?: {

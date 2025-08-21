@@ -6,7 +6,7 @@ import { ErrorBoundary } from '@/components/ui/error-boundary';
 import Index from '@/pages/Index';
 import Feed from '@/pages/Feed';
 import BeaconsList from '@/pages/BeaconsList';
-import ExpertProfile from '@/pages/ExpertProfile';
+import { ExpertProfileEnhanced } from '@/pages/ExpertProfileEnhanced';
 import ExpertRegistration from '@/pages/ExpertRegistration';
 import ExpertDashboard from '@/pages/ExpertDashboard';
 import Chat from '@/pages/Chat';
@@ -31,8 +31,8 @@ const IndexRefactored = () => {
           <Route path="/" element={<Index />} />
           <Route path="/feed" element={<Feed />} />
           <Route path="/beacons" element={<BeaconsList />} />
-          <Route path="/beacons/:expertId" element={<ExpertProfile />} />
-          <Route path="/expert/:expertId" element={<ExpertProfile />} />
+          <Route path="/beacons/:expertId" element={<ExpertProfileEnhanced />} />
+          <Route path="/expert/:expertId" element={<ExpertProfileEnhanced />} />
           <Route path="/chat/:sessionId?" element={<Chat />} />
           <Route path="/sessions" element={<SessionHub />} />
           <Route path="/profile" element={<Profile />} />
