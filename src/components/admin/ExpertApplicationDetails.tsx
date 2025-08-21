@@ -330,7 +330,7 @@ export function ExpertApplicationDetails({
                             </div>
                             <div>
                               <label className="text-sm font-medium text-gray-500">Timezone</label>
-                              <p className="text-sm">{expert.location.timezone || expert.timezone || 'UTC'}</p>
+                              <p className="text-sm">{expert.timezone || 'UTC'}</p>
                             </div>
                           </div>
                         ) : (
@@ -501,8 +501,8 @@ export function ExpertApplicationDetails({
                                 {edu.fieldOfStudy && (
                                   <p className="text-sm text-gray-600">{edu.fieldOfStudy}</p>
                                 )}
-                                {edu.description && (
-                                  <p className="text-sm text-gray-700 mt-1">{edu.description}</p>
+                                {edu.grade && (
+                                  <p className="text-sm text-gray-700 mt-1">Grade: {edu.grade}</p>
                                 )}
                               </div>
                               <div className="text-right text-sm text-gray-500 ml-4">
@@ -756,7 +756,7 @@ export function ExpertApplicationDetails({
                   <CardContent className="space-y-4">
                     <div>
                       <label className="text-sm font-medium mb-2 block">Action</label>
-                      <Select value={reviewAction} onValueChange={setReviewAction}>
+                      <Select value={reviewAction} onValueChange={(value) => setReviewAction(value as "" | "approve" | "reject")}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select action" />
                         </SelectTrigger>
