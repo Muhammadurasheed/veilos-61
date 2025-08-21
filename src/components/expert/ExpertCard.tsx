@@ -125,6 +125,12 @@ const ExpertCard = ({ expert }: ExpertCardProps) => {
           <Button className="flex-1" onClick={handleViewProfile}>
             View Profile
           </Button>
+          <Button 
+            className="flex-1" 
+            onClick={() => navigate(`/book/${expert.id}`)}
+          >
+            Book Session
+          </Button>
         </div>
       </CardFooter>
     </Card>

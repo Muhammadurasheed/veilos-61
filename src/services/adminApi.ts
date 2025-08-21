@@ -1,7 +1,12 @@
 import { apiRequest } from './api';
 
-// Enhanced Admin API methods
-export const EnhancedAdminApi = {
+// Admin API methods
+export const AdminApi = {
+  // Admin login
+  async login(credentials: { email: string; password: string }) {
+    return apiRequest('POST', '/api/auth/admin/login', credentials);
+  },
+
   // Get experts with advanced filtering and pagination
   async getExpertsAdvanced(params: {
     page?: number;
@@ -66,3 +71,6 @@ export const EnhancedAdminApi = {
     return apiRequest('GET', '/api/admin/monitoring/expert-applications');
   }
 };
+
+// Enhanced Admin API methods
+export const EnhancedAdminApi = AdminApi;

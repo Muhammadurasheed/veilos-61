@@ -266,6 +266,78 @@ router.put('/profile',
   }
 );
 
+// Admin login
+router.post('/admin/login',
+  authLimiter,
+  validate([
+    body('email').isEmail().normalizeEmail(),
+    body('password').notEmpty(),
+  ]),
+  async (req, res) => {
+    try {
+      const { email, password } = req.body;
+
+      // Find user by email
+      const user = await User.findOne({ email });
+      if (!user || !user.passwordHash) {
+        return res.error('Invalid credentials', 401);
+      }
+
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        return res.error('Access denied - admin role required', 403);
+      }
+
+      // Verify password
+      const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+      if (!isValidPassword) {
+        return res.error('Invalid credentials', 401);
+      }
+
+      // Generate tokens
+      const accessToken = jwt.sign(
+        { 
+          user: {
+            id: user.id
+          }
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      );
+
+      const refreshToken = jwt.sign(
+        { user: { id: user.id } },
+        process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' }
+      );
+
+      // Save refresh token
+      user.refreshToken = refreshToken;
+      user.lastLoginAt = new Date();
+      await user.save();
+
+      return res.success({
+        token: accessToken,
+        refreshToken,
+        user: {
+          id: user.id,
+          alias: user.alias,
+          avatarIndex: user.avatarIndex,
+          role: user.role,
+          isExpert: user.isExpert,
+          avatarUrl: user.avatarUrl,
+          email: user.email,
+          isAnonymous: user.isAnonymous
+        }
+      }, 'Admin login successful');
+
+    } catch (error) {
+      console.error('Admin login error:', error);
+      return res.error('Admin login failed', 500);
+    }
+  }
+);
+
 // Update avatar
 router.post('/avatar',
   authMiddleware,

@@ -21,6 +21,7 @@ import Settings from '@/pages/Settings';
 import SessionHub from '@/pages/SessionHub';
 import NotFound from '@/pages/NotFound';
 import AdminPanel from '@/pages/AdminPanel';
+import BookSession from '@/pages/BookSession';
 import Sanctuary from '@/pages/Sanctuary';
 import SanctuaryRecover from '@/pages/SanctuaryRecover';
 import SanctuaryInbox from '@/components/sanctuary/SanctuaryInbox';
@@ -70,6 +71,7 @@ const App: React.FC = () => {
                         <Route path="/beacons/:expertId" element={<ExpertProfile />} />
                         <Route path="/followed-experts" element={<FollowedExperts />} />
                         <Route path="/expert/:expertId" element={<ExpertProfile />} />
+                        <Route path="/book/:expertId" element={<BookSession />} />
                         <Route path="/chat/:sessionId?" element={<Chat />} />
                         <Route path="/sessions" element={<SessionHub />} />
                         <Route path="/profile" element={<Profile />} />

@@ -1,14 +1,14 @@
 
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
+const { authMiddleware } = require('../middleware/auth');
 const Booking = require('../models/Booking');
 const Expert = require('../models/Expert');
 const ChatSession = require('../models/ChatSession');
 const { nanoid } = require('nanoid');
 
 // Create a new booking
-router.post('/create', authenticateToken, async (req, res) => {
+router.post('/create', authMiddleware, async (req, res) => {
   try {
     const {
       expertId,
@@ -155,7 +155,7 @@ router.post('/create', authenticateToken, async (req, res) => {
 });
 
 // Get user's bookings
-router.get('/my-bookings', authenticateToken, async (req, res) => {
+router.get('/my-bookings', authMiddleware, async (req, res) => {
   try {
     const { status, page = 1, limit = 10 } = req.query;
     
@@ -209,7 +209,7 @@ router.get('/my-bookings', authenticateToken, async (req, res) => {
 });
 
 // Get expert's bookings (for experts)
-router.get('/expert-bookings', authenticateToken, async (req, res) => {
+router.get('/expert-bookings', authMiddleware, async (req, res) => {
   try {
     const { status, page = 1, limit = 10 } = req.query;
     
@@ -258,7 +258,7 @@ router.get('/expert-bookings', authenticateToken, async (req, res) => {
 });
 
 // Confirm booking (expert action)
-router.patch('/:bookingId/confirm', authenticateToken, async (req, res) => {
+router.patch('/:bookingId/confirm', authMiddleware, async (req, res) => {
   try {
     const { bookingId } = req.params;
     const { notes } = req.body;
@@ -341,7 +341,7 @@ router.patch('/:bookingId/confirm', authenticateToken, async (req, res) => {
 });
 
 // Cancel booking
-router.patch('/:bookingId/cancel', authenticateToken, async (req, res) => {
+router.patch('/:bookingId/cancel', authMiddleware, async (req, res) => {
   try {
     const { bookingId } = req.params;
     const { reason } = req.body;
@@ -413,7 +413,7 @@ router.patch('/:bookingId/cancel', authenticateToken, async (req, res) => {
 });
 
 // Start session (when it's time for the booking)
-router.post('/:bookingId/start-session', authenticateToken, async (req, res) => {
+router.post('/:bookingId/start-session', authMiddleware, async (req, res) => {
   try {
     const { bookingId } = req.params;
 

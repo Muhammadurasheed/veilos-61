@@ -1,14 +1,14 @@
 
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
+const { authMiddleware } = require('../middleware/auth');
 const ChatSession = require('../models/ChatSession');
 const Expert = require('../models/Expert');
 const Booking = require('../models/Booking');
 const { nanoid } = require('nanoid');
 
 // Get or create chat session
-router.post('/session', authenticateToken, async (req, res) => {
+router.post('/session', authMiddleware, async (req, res) => {
   try {
     const { expertId, topic, description, sessionType = 'consultation' } = req.body;
 
@@ -120,7 +120,7 @@ router.post('/session', authenticateToken, async (req, res) => {
 });
 
 // Get chat session details
-router.get('/session/:sessionId', authenticateToken, async (req, res) => {
+router.get('/session/:sessionId', authMiddleware, async (req, res) => {
   try {
     const { sessionId } = req.params;
 
@@ -169,7 +169,7 @@ router.get('/session/:sessionId', authenticateToken, async (req, res) => {
 });
 
 // Send message to chat session
-router.post('/session/:sessionId/message', authenticateToken, async (req, res) => {
+router.post('/session/:sessionId/message', authMiddleware, async (req, res) => {
   try {
     const { sessionId } = req.params;
     const { content, type = 'text', attachment } = req.body;
@@ -261,7 +261,7 @@ router.post('/session/:sessionId/message', authenticateToken, async (req, res) =
 });
 
 // Get chat messages with pagination
-router.get('/session/:sessionId/messages', authenticateToken, async (req, res) => {
+router.get('/session/:sessionId/messages', authMiddleware, async (req, res) => {
   try {
     const { sessionId } = req.params;
     const { page = 1, limit = 50 } = req.query;
@@ -315,7 +315,7 @@ router.get('/session/:sessionId/messages', authenticateToken, async (req, res) =
 });
 
 // Mark message as read
-router.patch('/session/:sessionId/message/:messageId/read', authenticateToken, async (req, res) => {
+router.patch('/session/:sessionId/message/:messageId/read', authMiddleware, async (req, res) => {
   try {
     const { sessionId, messageId } = req.params;
 
@@ -353,7 +353,7 @@ router.patch('/session/:sessionId/message/:messageId/read', authenticateToken, a
 });
 
 // End chat session
-router.patch('/session/:sessionId/end', authenticateToken, async (req, res) => {
+router.patch('/session/:sessionId/end', authMiddleware, async (req, res) => {
   try {
     const { sessionId } = req.params;
     const { reason = 'completed', feedback } = req.body;
@@ -428,7 +428,7 @@ router.patch('/session/:sessionId/end', authenticateToken, async (req, res) => {
 });
 
 // Get user's chat sessions
-router.get('/my-sessions', authenticateToken, async (req, res) => {
+router.get('/my-sessions', authMiddleware, async (req, res) => {
   try {
     const { status, page = 1, limit = 10 } = req.query;
     
