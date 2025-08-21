@@ -80,3 +80,6 @@ exports.adminMiddleware = async (req, res, next) => {
     });
   }
 };
+
+// Backward compatibility aliases
+exports.authenticateToken = exports.authMiddleware;
