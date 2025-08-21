@@ -41,25 +41,30 @@ const ExpertProfile = () => {
   const [followState, setFollowState] = useState({ isFollowing: false, isLoading: false });
   const [activeTab, setActiveTab] = useState('about');
 
-  // Load expert data
+  // Load expert data and follow status
   useEffect(() => {
     const loadExpertData = async () => {
       if (!expertId) return;
       
       setIsLoading(true);
       try {
-        // First try to find in cached experts
-        const cachedExpert = experts.find(e => e.id === expertId);
-        if (cachedExpert) {
-          setExpert(cachedExpert);
-          setIsLoading(false);
-          return;
-        }
-
-        // If not cached, fetch from API
+        // Always fetch from API to get latest data
         const response = await apiRequest('GET', `/api/experts/${expertId}`);
         if (response.success && response.data) {
           setExpert(response.data);
+          
+          // Load follow status
+          try {
+            const followResponse = await apiRequest('GET', `/api/experts/${expertId}/following-status`);
+            if (followResponse.success && followResponse.data) {
+              setFollowState(prev => ({
+                ...prev,
+                isFollowing: followResponse.data.isFollowing
+              }));
+            }
+          } catch (followError) {
+            console.error('Error loading follow status:', followError);
+          }
         } else {
           setExpert(null);
         }
@@ -72,7 +77,7 @@ const ExpertProfile = () => {
     };
 
     loadExpertData();
-  }, [expertId, experts]);
+  }, [expertId]);
 
   // Handle follow functionality
   const handleToggleFollow = async () => {

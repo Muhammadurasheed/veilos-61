@@ -69,7 +69,10 @@ const userSchema = new mongoose.Schema({
   isExpert: {
     type: Boolean,
     default: false
-  }
+  },
+  followedExperts: [{
+    type: String // Expert IDs that this user follows
+  }]
 });
 
 module.exports = mongoose.model('User', userSchema);

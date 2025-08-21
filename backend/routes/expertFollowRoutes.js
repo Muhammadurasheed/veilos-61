@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Expert = require('../models/Expert');
 const User = require('../models/User');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, optionalAuthMiddleware } = require('../middleware/auth');
 
 // Follow an expert
 router.post('/:expertId/follow', authMiddleware, async (req, res) => {
@@ -149,11 +149,21 @@ router.get('/following', authMiddleware, async (req, res) => {
 });
 
 // Check if user is following an expert
-router.get('/:expertId/following-status', authMiddleware, async (req, res) => {
+router.get('/:expertId/following-status', optionalAuthMiddleware, async (req, res) => {
   try {
     const { expertId } = req.params;
-    const userId = req.user.id;
+    
+    // If no user is authenticated, return not following
+    if (!req.user || !req.user.id) {
+      return res.json({
+        success: true,
+        data: {
+          isFollowing: false
+        }
+      });
+    }
 
+    const userId = req.user.id;
     const user = await User.findOne({ id: userId });
     const isFollowing = user && user.followedExperts && user.followedExperts.includes(expertId);
 

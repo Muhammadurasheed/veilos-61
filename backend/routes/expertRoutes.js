@@ -241,7 +241,7 @@ router.get('/', async (req, res) => {
 // GET /api/experts/:id
 router.get('/:id', async (req, res) => {
   try {
-    const expert = await Expert.findOne({ id: req.params.id })
+    const expert = await Expert.findOne({ id: req.params.id, accountStatus: 'approved' })
       .select('-__v -userId -email -phoneNumber');
     
     if (!expert) {
@@ -250,6 +250,9 @@ router.get('/:id', async (req, res) => {
         error: 'Expert not found'
       });
     }
+    
+    // Calculate followers count
+    expert.followersCount = expert.followers ? expert.followers.length : 0;
     
     res.json({
       success: true,

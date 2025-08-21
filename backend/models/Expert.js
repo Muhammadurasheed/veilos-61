@@ -130,6 +130,13 @@ const expertSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  followers: [{
+    type: String // User IDs who follow this expert
+  }],
+  followersCount: {
+    type: Number,
+    default: 0
   }
 });
 
