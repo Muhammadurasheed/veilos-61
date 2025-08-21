@@ -44,13 +44,23 @@ const ExpertProfile = () => {
   // Load expert data and follow status
   useEffect(() => {
     const loadExpertData = async () => {
-      if (!expertId) return;
+      if (!expertId) {
+        console.error('No expertId provided');
+        setIsLoading(false);
+        return;
+      }
       
+      console.log(`Loading expert data for ID: ${expertId}`);
       setIsLoading(true);
+      
       try {
         // Always fetch from API to get latest data
+        console.log(`Making API call to: /api/experts/${expertId}`);
         const response = await apiRequest('GET', `/api/experts/${expertId}`);
+        console.log('Expert API response:', response);
+        
         if (response.success && response.data) {
+          console.log('Expert loaded successfully:', response.data);
           setExpert(response.data);
           
           // Load follow status
@@ -66,6 +76,7 @@ const ExpertProfile = () => {
             console.error('Error loading follow status:', followError);
           }
         } else {
+          console.error('Expert not found in API response:', response);
           setExpert(null);
         }
       } catch (error) {
@@ -233,13 +244,13 @@ const ExpertProfile = () => {
                     <div className="relative mb-6">
                       <Avatar className="h-40 w-40 border-4 border-white shadow-xl ring-4 ring-primary/10">
                         <AvatarImage 
-                          src={expert.avatarUrl || `/experts/default.jpg`} 
+                          src={expert.avatarUrl?.startsWith('http') ? expert.avatarUrl : 
+                                expert.avatarUrl?.startsWith('/uploads/') ? `http://localhost:3001${expert.avatarUrl}` : 
+                                expert.avatarUrl || `/experts/default.jpg`} 
                           alt={expert.name}
                           className="object-cover"
                         />
-                        <AvatarFallback className="text-3xl bg-gradient-to-br from-primary to-purple-600 text-white">
-                          {expert.name.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
+                        <AvatarFallback className="text-3xl bg-gradient-to-br from-primary to-purple-600 text-white">{expert.name.substring(0, 2).toUpperCase()}</AvatarFallback>
                       </Avatar>
                       {expert.verificationLevel && (
                         <div className="absolute -bottom-2 -right-2">

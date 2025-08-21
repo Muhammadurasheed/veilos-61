@@ -70,6 +70,8 @@ export interface Expert {
   adminNotes?: AdminNote[];
   lastUpdated?: string | Date;
   createdAt?: string | Date;
+  followers?: string[];
+  followersCount?: number;
   // Enhanced resume-based fields
   resumeData?: {
     personalInfo?: {

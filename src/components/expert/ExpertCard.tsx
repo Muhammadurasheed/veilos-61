@@ -45,7 +45,12 @@ const ExpertCard = ({ expert }: ExpertCardProps) => {
       <CardContent className="pt-6">
         <div className="flex items-center mb-4">
           <Avatar className="h-16 w-16 border-2 border-white shadow-sm">
-            <AvatarImage src={expert.avatarUrl || `/experts/default.jpg`} alt={expert.name} />
+            <AvatarImage 
+              src={expert.avatarUrl?.startsWith('http') ? expert.avatarUrl : 
+                    expert.avatarUrl?.startsWith('/uploads/') ? `http://localhost:3001${expert.avatarUrl}` : 
+                    expert.avatarUrl || `/experts/default.jpg`} 
+              alt={expert.name} 
+            />
             <AvatarFallback>{expert.name.substring(0, 2).toUpperCase()}</AvatarFallback>
           </Avatar>
           <div className="ml-3">

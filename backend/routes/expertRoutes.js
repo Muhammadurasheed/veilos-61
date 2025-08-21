@@ -241,28 +241,57 @@ router.get('/', async (req, res) => {
 // GET /api/experts/:id
 router.get('/:id', async (req, res) => {
   try {
+    console.log(`🔍 Looking for expert with ID: ${req.params.id}`);
+    
+    // First, check all experts (including non-approved) for debugging
+    const allExperts = await Expert.find({ id: req.params.id });
+    console.log(`📊 All experts with ID ${req.params.id}:`, allExperts.map(e => ({
+      id: e.id,
+      name: e.name,
+      accountStatus: e.accountStatus,
+      createdAt: e.createdAt
+    })));
+    
     const expert = await Expert.findOne({ id: req.params.id, accountStatus: 'approved' })
       .select('-__v -userId -email -phoneNumber');
     
     if (!expert) {
+      console.log(`❌ Expert not found or not approved: ${req.params.id}`);
       return res.status(404).json({
         success: false,
-        error: 'Expert not found'
+        error: 'Expert not found or not approved',
+        debug: {
+          searchedId: req.params.id,
+          allExpertsWithId: allExperts.length,
+          message: allExperts.length > 0 ? 'Expert exists but not approved' : 'Expert does not exist'
+        }
       });
     }
     
     // Calculate followers count
     expert.followersCount = expert.followers ? expert.followers.length : 0;
     
+    // Ensure avatarUrl is properly set
+    if (!expert.avatarUrl || expert.avatarUrl === '/experts/default.jpg') {
+      // Check if they have a photo document
+      const photoDoc = expert.verificationDocuments?.find(doc => doc.type === 'photo');
+      if (photoDoc) {
+        expert.avatarUrl = `http://localhost:3001${photoDoc.fileUrl}`;
+      }
+    }
+    
+    console.log(`✅ Expert found and returned: ${expert.name} (${expert.id})`);
+    
     res.json({
       success: true,
       data: expert
     });
   } catch (err) {
-    console.error(err.message);
+    console.error('❌ Error in expert route:', err.message);
     res.status(500).json({
       success: false,
-      error: 'Server error'
+      error: 'Server error',
+      debug: err.message
     });
   }
 });

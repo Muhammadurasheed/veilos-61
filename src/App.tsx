@@ -29,6 +29,7 @@ import MySanctuariesPage from '@/pages/MySanctuaries';
 import SanctuarySubmit from '@/pages/SanctuarySubmit';
 import EnhancedSanctuary from '@/pages/EnhancedSanctuary';
 import Phase4Test from '@/pages/Phase4Test';
+import FollowedExperts from '@/pages/FollowedExperts';
 import { SessionProvider } from '@/contexts/SessionContext';
 
 import './App.css';
@@ -67,6 +68,7 @@ const App: React.FC = () => {
                         <Route path="/feed" element={<Feed />} />
                         <Route path="/beacons" element={<BeaconsList />} />
                         <Route path="/beacons/:expertId" element={<ExpertProfile />} />
+                        <Route path="/followed-experts" element={<FollowedExperts />} />
                         <Route path="/expert/:expertId" element={<ExpertProfile />} />
                         <Route path="/chat/:sessionId?" element={<Chat />} />
                         <Route path="/sessions" element={<SessionHub />} />
