@@ -50,17 +50,18 @@ const ExpertProfile = () => {
         return;
       }
       
-      console.log(`Loading expert data for ID: ${expertId}`);
+      console.log(`🔍 Loading expert data for ID: ${expertId}`);
+      console.log(`🌐 Current window location: ${window.location.href}`);
       setIsLoading(true);
       
       try {
         // Always fetch from API to get latest data
-        console.log(`Making API call to: /api/experts/${expertId}`);
+        console.log(`📡 Making API call to: /api/experts/${expertId}`);
         const response = await apiRequest('GET', `/api/experts/${expertId}`);
-        console.log('Expert API response:', response);
+        console.log('📊 Expert API response:', response);
         
         if (response.success && response.data) {
-          console.log('Expert loaded successfully:', response.data);
+          console.log('✅ Expert loaded successfully:', response.data);
           setExpert(response.data);
           
           // Load follow status
@@ -76,11 +77,13 @@ const ExpertProfile = () => {
             console.error('Error loading follow status:', followError);
           }
         } else {
-          console.error('Expert not found in API response:', response);
+          console.error('❌ Expert not found in API response:', response);
+          console.error('❌ Response error:', response?.error);
           setExpert(null);
         }
       } catch (error) {
-        console.error('Error loading expert:', error);
+        console.error('💥 Error loading expert:', error);
+        console.error('💥 Error details:', error.response?.data || error.message);
         setExpert(null);
       } finally {
         setIsLoading(false);
