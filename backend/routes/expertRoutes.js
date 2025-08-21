@@ -20,7 +20,17 @@ router.post('/register', authMiddleware, async (req, res) => {
       bio,
       pricingModel,
       pricingDetails,
-      phoneNumber
+      phoneNumber,
+      // Enhanced fields (optional)
+      location,
+      timezone,
+      voiceMasking,
+      skills,
+      certifications,
+      workExperience,
+      education,
+      availability,
+      sessionPreferences
     } = req.body;
     
     // Validation
@@ -50,6 +60,14 @@ router.post('/register', authMiddleware, async (req, res) => {
       pricingModel,
       pricingDetails,
       phoneNumber,
+      // Enhanced fields (optional)
+      location: location ? { ...location, timezone: location.timezone || timezone || 'UTC' } : (timezone ? { timezone } : undefined),
+      skills: Array.isArray(skills) ? skills : undefined,
+      certifications: Array.isArray(certifications) ? certifications : undefined,
+      workExperience: Array.isArray(workExperience) ? workExperience : undefined,
+      education: Array.isArray(education) ? education : undefined,
+      availability: Array.isArray(availability) ? availability : undefined,
+      sessionPreferences: sessionPreferences || (voiceMasking !== undefined ? { voiceMasking } : undefined),
       topicsHelped: [],
       testimonials: []
     });

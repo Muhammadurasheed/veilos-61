@@ -9,6 +9,8 @@ const { instrument } = require('@socket.io/admin-ui');
 
 dotenv.config();
 
+const responseHandler = require('./middleware/responseHandler');
+
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -39,6 +41,8 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+// Attach standardized response helpers (res.success, res.error, res.paginated)
+app.use(responseHandler);
 
 // ✅ Fixed MongoDB Connection (use correct env variable)
 const dbUrl = process.env.MONGODB_URI;

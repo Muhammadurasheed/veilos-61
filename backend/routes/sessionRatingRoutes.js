@@ -61,9 +61,11 @@ router.post('/rating', authMiddleware, async (req, res) => {
     const sessionRating = new SessionRating({
       sessionId,
       userId,
+      userAlias: req.user?.alias || 'Anonymous',
       expertId: session.expertId,
       rating,
       feedback: feedback?.trim() || '',
+      isAnonymous: !!req.user?.isAnonymous,
       createdAt: new Date(),
       updatedAt: new Date()
     });
@@ -98,7 +100,6 @@ router.get('/session/:sessionId/ratings', authMiddleware, async (req, res) => {
     const { sessionId } = req.params;
 
     const ratings = await SessionRating.find({ sessionId })
-      .populate('userId', 'name')
       .sort({ createdAt: -1 })
       .lean();
 
@@ -123,7 +124,6 @@ router.get('/expert/:expertId/ratings', async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
 
     const ratings = await SessionRating.find({ expertId })
-      .populate('userId', 'name')
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit)
