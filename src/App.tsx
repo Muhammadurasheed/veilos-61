@@ -71,7 +71,8 @@ const App: React.FC = () => {
                         <Route path="/beacons/:expertId" element={<ExpertProfile />} />
                         <Route path="/followed-experts" element={<FollowedExperts />} />
                         <Route path="/expert/:expertId" element={<ExpertProfile />} />
-                        <Route path="/book/:expertId" element={<BookSession />} />
+                        <Route path="/sessions/book/:expertId" element={<BookSession />} />
+                        <Route path="/call/:expertId/:type" element={<Chat />} />
                         <Route path="/chat/:sessionId?" element={<Chat />} />
                         <Route path="/sessions" element={<SessionHub />} />
                         <Route path="/profile" element={<Profile />} />

@@ -127,7 +127,7 @@ const ExpertCard = ({ expert }: ExpertCardProps) => {
           </Button>
           <Button 
             className="flex-1" 
-            onClick={() => navigate(`/book/${expert.id}`)}
+            onClick={() => navigate(`/sessions/book/${expert.id}`)}
           >
             Book Session
           </Button>

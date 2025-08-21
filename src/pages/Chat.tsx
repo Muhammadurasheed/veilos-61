@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
+import RealTimeChat from '@/components/session/RealTimeChat';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -72,10 +73,22 @@ interface MeetingRequest {
 }
 
 const ChatPage = () => {
-  const { sessionId } = useParams();
+  const { sessionId, expertId, type } = useParams<{ sessionId?: string; expertId?: string; type?: string }>();
   const { user } = useUserContext();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // If this is an expert call route, use RealTimeChat component
+  if (expertId) {
+    return (
+      <Layout>
+        <RealTimeChat 
+          expertId={expertId} 
+          callType={type as 'voice' | 'video'} 
+        />
+      </Layout>
+    );
+  }
   
   // Real-time socket connection
   const { socket, isConnected } = useSocket({ autoConnect: true });

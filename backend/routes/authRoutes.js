@@ -12,6 +12,71 @@ const { generateAlias } = require('../utils/helpers');
 
 const router = express.Router();
 
+// Admin login route
+router.post('/admin/login', 
+  authLimiter,
+  validate([
+    body('email').isEmail().normalizeEmail(),
+    body('password').isLength({ min: 6 }),
+  ]),
+  async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      // Find admin user
+      const user = await User.findOne({ 
+        email, 
+        role: 'admin' 
+      });
+      
+      if (!user || !user.passwordHash) {
+        return res.error('Invalid admin credentials', 401);
+      }
+      
+      // Check password
+      const validPassword = await bcrypt.compare(password, user.passwordHash);
+      if (!validPassword) {
+        return res.error('Invalid admin credentials', 401);
+      }
+      
+      // Generate tokens
+      const token = jwt.sign(
+        { userId: user.id, role: user.role },
+        process.env.JWT_SECRET || 'fallback-secret',
+        { expiresIn: '24h' }
+      );
+      
+      const refreshToken = jwt.sign(
+        { userId: user.id },
+        process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret',
+        { expiresIn: '7d' }
+      );
+      
+      // Update user with refresh token and last login
+      user.refreshToken = refreshToken;
+      user.lastLoginAt = new Date();
+      await user.save();
+      
+      res.success('Admin login successful', {
+        user: {
+          id: user.id,
+          alias: user.alias,
+          email: user.email,
+          role: user.role,
+          avatarIndex: user.avatarIndex,
+          avatarUrl: user.avatarUrl
+        },
+        token,
+        refreshToken
+      });
+      
+    } catch (error) {
+      console.error('Admin login error:', error);
+      res.error('Admin login failed: ' + error.message, 500);
+    }
+  }
+);
+
 // Register new user
 router.post('/register', 
   authLimiter,
