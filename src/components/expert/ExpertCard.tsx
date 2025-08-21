@@ -4,8 +4,9 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Star } from 'lucide-react';
+import { Star, Heart } from 'lucide-react';
 import { Expert } from '@/types';
+import { useExpertFollow } from '@/hooks/useExpertFollow';
 
 interface ExpertCardProps {
   expert: Expert;
@@ -13,6 +14,7 @@ interface ExpertCardProps {
 
 const ExpertCard = ({ expert }: ExpertCardProps) => {
   const navigate = useNavigate();
+  const { isFollowing, isLoading, toggleFollow } = useExpertFollow(expert.id);
   
   // Truncate bio to a reasonable length
   const truncatedBio = expert.bio.length > 150 
@@ -98,9 +100,20 @@ const ExpertCard = ({ expert }: ExpertCardProps) => {
         </div>
       </CardContent>
       <CardFooter className="bg-gray-50/70 border-t p-4">
-        <Button className="w-full" onClick={handleViewProfile}>
-          View Profile
-        </Button>
+        <div className="flex gap-2 w-full">
+          <Button 
+            variant="outline" 
+            className="flex-1" 
+            onClick={toggleFollow}
+            disabled={isLoading}
+          >
+            <Heart className={`h-4 w-4 mr-1 ${isFollowing ? 'fill-red-500 text-red-500' : ''}`} />
+            {isFollowing ? 'Following' : 'Follow'}
+          </Button>
+          <Button className="flex-1" onClick={handleViewProfile}>
+            View Profile
+          </Button>
+        </div>
       </CardFooter>
     </Card>
   );

@@ -7,10 +7,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import Layout from '@/components/layout/Layout';
 import { useVeiloData } from '@/contexts/VeiloDataContext';
+import { useExpertFollow } from '@/hooks/useExpertFollow';
+import { Heart, Calendar, MessageCircle } from 'lucide-react';
 
 const ExpertProfile = () => {
   const { expertId } = useParams<{ expertId: string }>();
   const { experts } = useVeiloData();
+  const { isFollowing, isLoading, toggleFollow } = useExpertFollow(expertId || '');
   
   const expert = experts.find(e => e.id === expertId);
   
@@ -73,9 +76,25 @@ const ExpertProfile = () => {
                     <span className="font-medium">{expert.rating.toFixed(1)}</span>
                   </div>
                   
-                  <Button className="w-full mb-2 bg-veilo-blue hover:bg-veilo-blue-dark text-white">
-                    Request Private Session
-                  </Button>
+                   <div className="space-y-2 w-full">
+                     <Button className="w-full bg-veilo-blue hover:bg-veilo-blue-dark text-white">
+                       <Calendar className="h-4 w-4 mr-2" />
+                       Book Session
+                     </Button>
+                     <Button 
+                       variant="outline" 
+                       className="w-full"
+                       onClick={toggleFollow}
+                       disabled={isLoading}
+                     >
+                       <Heart className={`h-4 w-4 mr-2 ${isFollowing ? 'fill-red-500 text-red-500' : ''}`} />
+                       {isFollowing ? 'Following' : 'Follow Expert'}
+                     </Button>
+                     <Button variant="ghost" className="w-full">
+                       <MessageCircle className="h-4 w-4 mr-2" />
+                       Send Message
+                     </Button>
+                   </div>
                   
                   <p className="text-sm text-veilo-green-dark font-medium">
                     {expert.pricingModel}

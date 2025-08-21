@@ -34,7 +34,7 @@ const EnhancedBeaconsList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('ai_recommended');
   const [filterBy, setFilterBy] = useState('all');
-  const [activeTab, setActiveTab] = useState('discover');
+  const [activeTab, setActiveTab] = useState('browse');
   const [userMood, setUserMood] = useState('');
   const [urgencyLevel, setUrgencyLevel] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [aiRecommendations, setAiRecommendations] = useState<any[]>([]);

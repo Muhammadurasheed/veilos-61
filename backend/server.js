@@ -28,6 +28,7 @@ const aiRoutes = require('./routes/aiRoutes');
 const enhancedAdminRoutes = require('./routes/enhancedAdminRoutes');
 const recommendationRoutes = require('./routes/recommendationRoutes');
 const healthRoutes = require('./routes/healthRoutes');
+const documentRoutes = require('./routes/documentRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -120,6 +121,9 @@ app.use('/api/stripe', stripeRoutes);
 
 // Health and monitoring routes
 app.use('/', healthRoutes);
+
+// Document serving routes
+app.use('/api', documentRoutes);
 
 // Cache middleware for frequently accessed endpoints
 app.use('/api/experts', cacheService.middleware({ ttl: 300 })); // 5 minutes

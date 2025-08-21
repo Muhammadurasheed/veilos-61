@@ -351,4 +351,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// Include follow/unfollow routes
+router.use('/', require('./expertFollowRoutes'));
+
 module.exports = router;
