@@ -237,31 +237,31 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get expert by ID
 // GET /api/experts/:id
 router.get('/:id', async (req, res) => {
   try {
-    console.log(`🔍 Looking for expert with ID: ${req.params.id}`);
+    const expertId = req.params.id;
+    console.log(`🔍 GET /api/experts/${expertId} - Looking for expert`);
     
     // First, check all experts (including non-approved) for debugging
-    const allExperts = await Expert.find({ id: req.params.id });
-    console.log(`📊 All experts with ID ${req.params.id}:`, allExperts.map(e => ({
+    const allExperts = await Expert.find({ id: expertId });
+    console.log(`📊 All experts with ID ${expertId}:`, allExperts.map(e => ({
       id: e.id,
       name: e.name,
       accountStatus: e.accountStatus,
       createdAt: e.createdAt
     })));
     
-    const expert = await Expert.findOne({ id: req.params.id, accountStatus: 'approved' })
+    const expert = await Expert.findOne({ id: expertId, accountStatus: 'approved' })
       .select('-__v -userId -email -phoneNumber');
     
     if (!expert) {
-      console.log(`❌ Expert not found or not approved: ${req.params.id}`);
+      console.log(`❌ Expert not found or not approved: ${expertId}`);
       return res.status(404).json({
         success: false,
         error: 'Expert not found or not approved',
         debug: {
-          searchedId: req.params.id,
+          searchedId: expertId,
           allExpertsWithId: allExperts.length,
           message: allExperts.length > 0 ? 'Expert exists but not approved' : 'Expert does not exist'
         }
@@ -271,16 +271,17 @@ router.get('/:id', async (req, res) => {
     // Calculate followers count
     expert.followersCount = expert.followers ? expert.followers.length : 0;
     
-    // Ensure avatarUrl is properly set
-    if (!expert.avatarUrl || expert.avatarUrl === '/experts/default.jpg') {
-      // Check if they have a photo document
-      const photoDoc = expert.verificationDocuments?.find(doc => doc.type === 'photo');
-      if (photoDoc) {
-        expert.avatarUrl = `http://localhost:3001${photoDoc.fileUrl}`;
+    // Ensure avatarUrl is properly set with full path for uploads
+    if (expert.avatarUrl) {
+      if (expert.avatarUrl.startsWith('/uploads/')) {
+        expert.avatarUrl = `http://localhost:3001${expert.avatarUrl}`;
+      } else if (!expert.avatarUrl.startsWith('http')) {
+        // Static expert images
+        expert.avatarUrl = `http://localhost:3001${expert.avatarUrl}`;
       }
     }
     
-    console.log(`✅ Expert found and returned: ${expert.name} (${expert.id})`);
+    console.log(`✅ Expert found and returned: ${expert.name} (${expert.id}), Avatar: ${expert.avatarUrl}`);
     
     res.json({
       success: true,
@@ -288,10 +289,11 @@ router.get('/:id', async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Error in expert route:', err.message);
+    console.error('❌ Stack trace:', err.stack);
     res.status(500).json({
       success: false,
       error: 'Server error',
-      debug: err.message
+      debug: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
   }
 });

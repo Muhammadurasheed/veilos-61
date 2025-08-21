@@ -32,7 +32,7 @@ const documentRoutes = require('./routes/documentRoutes');
 
 const app = express();
 const server = http.createServer(app);
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // Initialize Socket.io
 const io = initializeSocket(server);
@@ -86,15 +86,16 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(responseHandler);
 
-// Serve static files from uploads directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
 // Database connection is now handled by config/database.js
+
+// Cache middleware for frequently accessed endpoints (MUST be before routes)
+app.use('/api/experts', cacheService.middleware({ ttl: 300 })); // 5 minutes
+app.use('/api/posts', cacheService.middleware({ ttl: 180 })); // 3 minutes
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/users', userRoutes);
-app.use('/api/experts', expertRoutes);  
+app.use('/api/experts', expertRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/admin', adminRoutes);
@@ -126,9 +127,14 @@ app.use('/', healthRoutes);
 app.use('/api/documents', require('./routes/documentRoutes'));
 app.use('/api', documentRoutes);
 
-// Cache middleware for frequently accessed endpoints
-app.use('/api/experts', cacheService.middleware({ ttl: 300 })); // 5 minutes
-app.use('/api/posts', cacheService.middleware({ ttl: 180 })); // 3 minutes
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Serve static expert images from public directory 
+app.use('/experts', express.static(path.join(__dirname, '../public/experts')));
+
+// Serve other static files from public directory
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Basic health check is now handled by healthRoutes
 
