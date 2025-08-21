@@ -193,13 +193,13 @@ const EnhancedBeaconsList = () => {
             {/* Smart Discovery Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
               <TabsList className="grid w-full grid-cols-3 max-w-md mx-auto">
-                <TabsTrigger value="discover" className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4" />
-                  AI Match
-                </TabsTrigger>
                 <TabsTrigger value="browse" className="flex items-center gap-2">
                   <Search className="h-4 w-4" />
                   Browse All
+                </TabsTrigger>
+                <TabsTrigger value="discover" className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  AI Match
                 </TabsTrigger>
                 <TabsTrigger value="featured" className="flex items-center gap-2">
                   <Zap className="h-4 w-4" />

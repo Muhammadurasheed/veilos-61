@@ -123,6 +123,7 @@ app.use('/api/stripe', stripeRoutes);
 app.use('/', healthRoutes);
 
 // Document serving routes
+app.use('/api/documents', require('./routes/documentRoutes'));
 app.use('/api', documentRoutes);
 
 // Cache middleware for frequently accessed endpoints

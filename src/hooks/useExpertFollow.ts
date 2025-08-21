@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/services/api';
 
@@ -13,6 +13,27 @@ export const useExpertFollow = (expertId: string, initialFollowState: boolean = 
     isLoading: false,
   });
   const { toast } = useToast();
+
+  // Load follow status on mount
+  useEffect(() => {
+    const loadFollowStatus = async () => {
+      if (!expertId) return;
+      
+      try {
+        const response = await apiRequest('GET', `/api/experts/${expertId}/following-status`);
+        if (response.success && response.data) {
+          setFollowState(prev => ({
+            ...prev,
+            isFollowing: response.data.isFollowing
+          }));
+        }
+      } catch (error) {
+        console.error('Error loading follow status:', error);
+      }
+    };
+
+    loadFollowStatus();
+  }, [expertId]);
 
   const toggleFollow = useCallback(async () => {
     setFollowState(prev => ({ ...prev, isLoading: true }));
