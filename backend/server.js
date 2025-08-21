@@ -25,7 +25,7 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+    if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -40,15 +40,20 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// MongoDB Connection
-const dbUrl = process.env.MONGODB_URL;
+// ✅ Fixed MongoDB Connection (use correct env variable)
+const dbUrl = process.env.MONGODB_URI;
+
+if (!dbUrl) {
+  console.error("❌ MONGODB_URI is not defined in .env");
+  process.exit(1); // stop app if env var missing
+}
 
 mongoose.connect(dbUrl, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-.then(() => console.log('MongoDB connected'))
-.catch(err => console.error('MongoDB connection error:', err));
+.then(() => console.log('✅ MongoDB connected'))
+.catch(err => console.error('❌ MongoDB connection error:', err));
 
 // Serve static files from the 'uploads' directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -61,8 +66,6 @@ const adminRoutes = require('./routes/adminRoutes');
 const postRoutes = require('./routes/postRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const sanctuaryRoutes = require('./routes/sanctuaryRoutes');
-
-// Import new route files
 const bookingRoutes = require('./routes/bookingRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const sessionRatingRoutes = require('./routes/sessionRatingRoutes');
@@ -75,9 +78,9 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/sanctuary', sanctuaryRoutes);
-app.use('/api/bookings', bookingRoutes);  // Add booking routes
-app.use('/api/chat', chatRoutes);         // Add chat routes
-app.use('/api/sessions', sessionRatingRoutes); // Add session rating routes
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/sessions', sessionRatingRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -99,5 +102,5 @@ instrument(io, {
 
 // Start the server
 server.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+  console.log(`🚀 Server running on port ${port}`);
 });
