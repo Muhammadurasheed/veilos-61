@@ -20,6 +20,16 @@ const testimonialSchema = new mongoose.Schema({
       type: Number,
       required: true
     }
+  },
+  rating: {
+    type: Number,
+    min: 1,
+    max: 5,
+    default: 5
+  },
+  date: {
+    type: Date,
+    default: Date.now
   }
 });
 
@@ -49,6 +59,15 @@ const documentSchema = new mongoose.Schema({
     type: String,
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending'
+  },
+  reviewedBy: {
+    type: String
+  },
+  reviewedAt: {
+    type: Date
+  },
+  reviewNotes: {
+    type: String
   }
 });
 
@@ -59,9 +78,18 @@ const availabilitySchema = new mongoose.Schema({
     required: true
   },
   timeSlots: [{
-    start: String, // Format: "09:00"
-    end: String,   // Format: "17:00"
-    available: { type: Boolean, default: true }
+    start: {
+      type: String,
+      required: true
+    },
+    end: {
+      type: String,
+      required: true
+    },
+    available: {
+      type: Boolean,
+      default: true
+    }
   }]
 });
 
@@ -92,7 +120,8 @@ const workExperienceSchema = new mongoose.Schema({
   description: {
     type: String
   },
-  skills: [String]
+  skills: [String],
+  achievements: [String]
 });
 
 const educationSchema = new mongoose.Schema({
@@ -119,6 +148,9 @@ const educationSchema = new mongoose.Schema({
   },
   grade: {
     type: String
+  },
+  description: {
+    type: String
   }
 });
 
@@ -138,11 +170,21 @@ const sessionPreferencesSchema = new mongoose.Schema({
   },
   minDuration: {
     type: Number,
-    default: 15 // minutes
+    default: 15,
+    min: 15,
+    max: 240
   },
   maxDuration: {
     type: Number,
-    default: 60 // minutes
+    default: 60,
+    min: 30,
+    max: 240
+  },
+  breakBetweenSessions: {
+    type: Number,
+    default: 15,
+    min: 0,
+    max: 60
   }
 });
 
@@ -157,6 +199,7 @@ const expertSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  // Basic Information
   name: {
     type: String,
     required: true
@@ -181,18 +224,19 @@ const expertSchema = new mongoose.Schema({
     required: true
   },
   headline: {
-    type: String // Professional headline like "Senior Mental Health Counselor"
+    type: String
   },
+  
+  // Location & Contact
   location: {
     city: String,
     state: String,
-    country: String
-  },
-  timezone: {
-    type: String,
-    default: 'UTC'
+    country: String,
+    timezone: { type: String, default: 'UTC' }
   },
   languages: [String],
+  
+  // Verification & Status
   verificationLevel: {
     type: String,
     enum: ['blue', 'gold', 'platinum', 'none'],
@@ -202,6 +246,13 @@ const expertSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  accountStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected', 'suspended'],
+    default: 'pending'
+  },
+  
+  // Pricing & Business
   pricingModel: {
     type: String,
     enum: ['free', 'donation', 'fixed'],
@@ -214,9 +265,13 @@ const expertSchema = new mongoose.Schema({
     type: Number,
     min: 0
   },
+  
+  // Performance Metrics
   rating: {
     type: Number,
-    default: 0
+    default: 0,
+    min: 0,
+    max: 5
   },
   totalRatings: {
     type: Number,
@@ -234,6 +289,8 @@ const expertSchema = new mongoose.Schema({
     type: String,
     default: 'Usually responds within 1 hour'
   },
+  
+  // Online Status
   isOnline: {
     type: Boolean,
     default: false
@@ -242,20 +299,25 @@ const expertSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+  
+  // Professional Information
   testimonials: [testimonialSchema],
   topicsHelped: [String],
   skills: [String],
   certifications: [String],
   workExperience: [workExperienceSchema],
   education: [educationSchema],
+  
+  // Phase 3: Availability (Critical for booking system)
   availability: [availabilitySchema],
+  
+  // Phase 4: Session Preferences (Critical for chat/booking)
   sessionPreferences: sessionPreferencesSchema,
+  
+  // Documents & Verification
   verificationDocuments: [documentSchema],
-  accountStatus: {
-    type: String,
-    enum: ['pending', 'approved', 'rejected', 'suspended'],
-    default: 'pending'
-  },
+  
+  // Admin Management
   adminNotes: [{
     id: String,
     note: String,
@@ -264,6 +326,8 @@ const expertSchema = new mongoose.Schema({
     adminId: String,
     action: String
   }],
+  
+  // Analytics & Engagement
   profileViews: {
     type: Number,
     default: 0
@@ -272,6 +336,28 @@ const expertSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  followers: [{
+    type: String
+  }],
+  followersCount: {
+    type: Number,
+    default: 0
+  },
+  
+  // Social & Additional Info
+  socialLinks: {
+    linkedin: String,
+    twitter: String,
+    website: String,
+    instagram: String
+  },
+  achievements: [String],
+  yearsOfExperience: {
+    type: Number,
+    min: 0
+  },
+  
+  // System Timestamps
   lastUpdated: {
     type: Date,
     default: Date.now
@@ -279,24 +365,61 @@ const expertSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
-  },
-  followers: [{
-    type: String // User IDs who follow this expert
-  }],
-  followersCount: {
-    type: Number,
-    default: 0
-  },
-  socialLinks: {
-    linkedin: String,
-    twitter: String,
-    website: String
-  },
-  achievements: [String],
-  yearsOfExperience: {
-    type: Number,
-    min: 0
   }
 });
+
+// Indexes for performance
+expertSchema.index({ userId: 1 });
+expertSchema.index({ accountStatus: 1 });
+expertSchema.index({ verificationLevel: 1 });
+expertSchema.index({ specialization: 1 });
+expertSchema.index({ 'location.city': 1, 'location.state': 1 });
+expertSchema.index({ rating: -1 });
+expertSchema.index({ createdAt: -1 });
+expertSchema.index({ isOnline: 1, lastActive: -1 });
+
+// Pre-save middleware
+expertSchema.pre('save', function(next) {
+  this.lastUpdated = new Date();
+  
+  // Calculate completion percentage
+  let completionScore = 0;
+  if (this.name) completionScore += 10;
+  if (this.bio && this.bio.length > 50) completionScore += 15;
+  if (this.workExperience && this.workExperience.length > 0) completionScore += 20;
+  if (this.education && this.education.length > 0) completionScore += 15;
+  if (this.availability && this.availability.length > 0) completionScore += 15;
+  if (this.sessionPreferences) completionScore += 10;
+  if (this.verificationDocuments && this.verificationDocuments.length > 0) completionScore += 15;
+  
+  this.profileCompletion = Math.min(completionScore, 100);
+  
+  next();
+});
+
+// Instance methods
+expertSchema.methods.updateRating = function(newRating) {
+  const totalScore = (this.rating * this.totalRatings) + newRating;
+  this.totalRatings += 1;
+  this.rating = totalScore / this.totalRatings;
+  return this.save();
+};
+
+expertSchema.methods.incrementProfileViews = function() {
+  this.profileViews += 1;
+  this.profileViewsThisMonth += 1;
+  return this.save();
+};
+
+expertSchema.methods.isAvailable = function(dayOfWeek, timeSlot) {
+  const dayAvailability = this.availability.find(avail => avail.day === dayOfWeek);
+  if (!dayAvailability) return false;
+  
+  return dayAvailability.timeSlots.some(slot => 
+    slot.available && 
+    timeSlot >= slot.start && 
+    timeSlot <= slot.end
+  );
+};
 
 module.exports = mongoose.model('Expert', expertSchema);

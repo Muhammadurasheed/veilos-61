@@ -1,358 +1,412 @@
 
 const express = require('express');
 const router = express.Router();
+const path = require('path');
+const fs = require('fs');
+const { authenticateToken, requireAdminRole } = require('../middleware/auth');
 const Expert = require('../models/Expert');
-const Post = require('../models/Post');
 const User = require('../models/User');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
-const { notifyExpertStatusUpdate, notifyAdminPanelUpdate } = require('../socket/socketHandler');
-const { authMiddleware, adminMiddleware } = require('../middleware/auth');
+const { notifyExpertStatusUpdate } = require('../socket/socketHandler');
 
-// Get all unverified experts with enhanced filtering
-// GET /api/admin/experts/unverified
-router.get('/experts/unverified', authMiddleware, adminMiddleware, async (req, res) => {
+// Get all experts with enhanced details for admin management
+router.get('/experts/advanced', authenticateToken, requireAdminRole, async (req, res) => {
   try {
-    const { page = 1, limit = 10, status, search, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
-    
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const limitNum = parseInt(limit);
-    
-    // Build query
-    let query = { verified: false };
-    if (status && status !== 'all_statuses') {
-      query.accountStatus = status;
-    }
+    const { 
+      page = 1, 
+      limit = 10, 
+      status, 
+      verificationLevel, 
+      specialization,
+      search 
+    } = req.query;
+
+    const filter = {};
+    if (status && status !== 'all') filter.accountStatus = status;
+    if (verificationLevel && verificationLevel !== 'all') filter.verificationLevel = verificationLevel;
+    if (specialization && specialization !== 'all') filter.specialization = new RegExp(specialization, 'i');
     if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { specialization: { $regex: search, $options: 'i' } }
+      filter.$or = [
+        { name: new RegExp(search, 'i') },
+        { email: new RegExp(search, 'i') },
+        { specialization: new RegExp(search, 'i') }
       ];
     }
 
-    // Build sort
-    const sort = {};
-    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+    const experts = await Expert.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .lean();
 
-    const experts = await Expert.find(query)
-      .sort(sort)
-      .skip(skip)
-      .limit(limitNum);
-    
-    const total = await Expert.countDocuments(query);
-    
+    const total = await Expert.countDocuments(filter);
+
+    // Enhance expert data with additional computed fields
+    const enhancedExperts = experts.map(expert => ({
+      ...expert,
+      documentsCount: expert.verificationDocuments?.length || 0,
+      approvedDocuments: expert.verificationDocuments?.filter(doc => doc.status === 'approved')?.length || 0,
+      pendingDocuments: expert.verificationDocuments?.filter(doc => doc.status === 'pending')?.length || 0,
+      completionScore: calculateProfileCompletion(expert),
+      riskLevel: calculateRiskLevel(expert)
+    }));
+
     res.json({
       success: true,
       data: {
-        experts,
+        experts: enhancedExperts,
         pagination: {
           page: parseInt(page),
-          limit: limitNum,
+          limit: parseInt(limit),
           total,
-          totalPages: Math.ceil(total / limitNum),
-          hasNext: skip + limitNum < total,
-          hasPrev: parseInt(page) > 1
+          pages: Math.ceil(total / limit)
+        },
+        stats: {
+          total: await Expert.countDocuments(),
+          pending: await Expert.countDocuments({ accountStatus: 'pending' }),
+          approved: await Expert.countDocuments({ accountStatus: 'approved' }),
+          rejected: await Expert.countDocuments({ accountStatus: 'rejected' })
         }
       }
     });
-  } catch (err) {
-    console.error(err.message);
+  } catch (error) {
+    console.error('Enhanced experts fetch error:', error);
     res.status(500).json({
       success: false,
-      error: 'Server error'
+      error: 'Failed to fetch experts data'
     });
   }
 });
 
-// Get pending experts for approval
-// GET /api/admin/experts/pending
-router.get('/experts/pending', authMiddleware, adminMiddleware, async (req, res) => {
+// Secure document viewer with proper CORS handling
+router.get('/documents/view/:filename', authenticateToken, requireAdminRole, async (req, res) => {
   try {
-    const experts = await Expert.find({ accountStatus: 'pending' });
-    
-    res.json({
-      success: true,
-      data: experts
-    });
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({
-      success: false,
-      error: 'Server error'
-    });
-  }
-});
+    const { filename } = req.params;
+    const uploadsDir = path.join(__dirname, '../uploads');
+    const filePath = path.join(uploadsDir, filename);
 
-// Verify expert with notifications
-// PATCH /api/admin/experts/:id/verify
-router.patch('/experts/:id/verify', authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    const { verificationLevel, status, feedback, adminNotes } = req.body;
-    
-    // Validation
-    if (!status) {
-      return res.status(400).json({
+    // Security check - ensure file is within uploads directory
+    if (!filePath.startsWith(uploadsDir)) {
+      return res.status(403).json({
         success: false,
-        error: 'Status is required'
+        error: 'Access denied - invalid file path'
       });
     }
+
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        error: 'Document not found'
+      });
+    }
+
+    // Get file stats
+    const stats = fs.statSync(filePath);
+    const fileExtension = path.extname(filename).toLowerCase();
     
-    const expert = await Expert.findOne({ id: req.params.id });
+    // Set appropriate content type
+    let contentType = 'application/octet-stream';
+    switch (fileExtension) {
+      case '.pdf':
+        contentType = 'application/pdf';
+        break;
+      case '.jpg':
+      case '.jpeg':
+        contentType = 'image/jpeg';
+        break;
+      case '.png':
+        contentType = 'image/png';
+        break;
+      case '.gif':
+        contentType = 'image/gif';
+        break;
+      case '.doc':
+        contentType = 'application/msword';
+        break;
+      case '.docx':
+        contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        break;
+    }
+
+    // Set CORS headers for frontend access
+    res.set({
+      'Access-Control-Allow-Origin': process.env.FRONTEND_URL || 'http://localhost:8080',
+      'Access-Control-Allow-Credentials': 'true',
+      'Content-Type': contentType,
+      'Content-Length': stats.size,
+      'Content-Disposition': `inline; filename="${filename}"`,
+      'Cache-Control': 'private, no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+
+    // Stream the file
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
     
+    fileStream.on('error', (error) => {
+      console.error('File stream error:', error);
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          error: 'Error reading document'
+        });
+      }
+    });
+
+  } catch (error) {
+    console.error('Document view error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to load document'
+    });
+  }
+});
+
+// Update expert verification status with comprehensive handling
+router.patch('/experts/:expertId/verify', authenticateToken, requireAdminRole, async (req, res) => {
+  try {
+    const { expertId } = req.params;
+    const { verificationLevel, status, feedback, documentUpdates } = req.body;
+
+    const expert = await Expert.findOne({ id: expertId });
     if (!expert) {
       return res.status(404).json({
         success: false,
         error: 'Expert not found'
       });
     }
-    
-    // Update expert
-    if (verificationLevel) {
-      expert.verificationLevel = verificationLevel;
-    }
+
+    // Update expert verification
+    expert.verificationLevel = verificationLevel || expert.verificationLevel;
+    expert.accountStatus = status || expert.accountStatus;
     expert.verified = status === 'approved';
-    expert.accountStatus = status;
-    expert.lastUpdated = new Date();
     
     // Add admin note
-    if (adminNotes || feedback) {
+    if (feedback) {
+      expert.adminNotes = expert.adminNotes || [];
       expert.adminNotes.push({
-        id: require('nanoid').nanoid(8),
-        note: adminNotes || feedback,
+        id: `note-${Date.now()}`,
+        note: feedback,
         category: 'verification',
         date: new Date(),
         adminId: req.user.id,
         action: status
       });
     }
-    
-    // Update all documents to approved/rejected
-    expert.verificationDocuments.forEach(doc => {
-      doc.status = status === 'approved' ? 'approved' : 'rejected';
-    });
-    
+
+    // Update individual documents if provided
+    if (documentUpdates && Array.isArray(documentUpdates)) {
+      documentUpdates.forEach(update => {
+        const docIndex = expert.verificationDocuments.findIndex(doc => doc.id === update.documentId);
+        if (docIndex !== -1) {
+          expert.verificationDocuments[docIndex].status = update.status;
+        }
+      });
+    }
+
+    expert.lastUpdated = new Date();
     await expert.save();
 
-    // Send real-time notifications
-    notifyExpertStatusUpdate(expert.id, status, adminNotes || feedback);
-    notifyAdminPanelUpdate({
-      type: 'expert_verified',
-      expertId: expert.id,
-      status: status,
-      verificationLevel
-    });
-    
+    // Send real-time notification
+    notifyExpertStatusUpdate(expertId, status, feedback);
+
     res.json({
       success: true,
-      data: {
-        expert: {
-          id: expert.id,
-          name: expert.name,
-          status: expert.accountStatus,
-          verificationLevel: expert.verificationLevel,
-          verified: expert.verified
-        },
-        notification: {
-          sent: true,
-          type: status === 'approved' ? 'approval' : 'rejection'
-        }
-      }
+      message: 'Expert verification updated successfully',
+      data: expert
     });
-  } catch (err) {
-    console.error(err.message);
+
+  } catch (error) {
+    console.error('Expert verification error:', error);
     res.status(500).json({
       success: false,
-      error: 'Server error'
+      error: 'Failed to update expert verification'
     });
   }
 });
 
-// Get all experts (for admin)
-// GET /api/admin/experts
-router.get('/experts', authMiddleware, adminMiddleware, async (req, res) => {
+// Bulk expert actions for efficiency
+router.post('/experts/bulk-action', authenticateToken, requireAdminRole, async (req, res) => {
   try {
-    const experts = await Expert.find();
-    
-    res.json({
-      success: true,
-      data: experts
-    });
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({
-      success: false,
-      error: 'Server error'
-    });
-  }
-});
+    const { expertIds, action, notes } = req.body;
 
-// Get all flagged content
-// GET /api/admin/flagged
-router.get('/flagged', authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    const posts = await Post.find({ flagged: true });
-    
-    res.json({
-      success: true,
-      data: {
-        posts
-      }
-    });
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({
-      success: false,
-      error: 'Server error'
-    });
-  }
-});
-
-// Resolve flagged content
-// POST /api/admin/flagged/:id
-router.post('/flagged/:id', authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    const { action } = req.body;
-    
-    if (!action || !['approve', 'remove'].includes(action)) {
+    if (!expertIds || !Array.isArray(expertIds) || expertIds.length === 0) {
       return res.status(400).json({
         success: false,
-        error: 'Valid action is required (approve or remove)'
+        error: 'Expert IDs are required'
       });
     }
-    
-    const post = await Post.findOne({ id: req.params.id, flagged: true });
-    
-    if (!post) {
-      return res.status(404).json({
-        success: false,
-        error: 'Flagged post not found'
-      });
-    }
-    
-    if (action === 'approve') {
-      // Unflag post
-      post.flagged = false;
-      post.flagReason = null;
-      await post.save();
-    } else {
-      // Remove post
-      await Post.deleteOne({ id: req.params.id });
-    }
-    
-    res.json({
-      success: true,
-      data: {
-        success: true
-      }
-    });
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({
-      success: false,
-      error: 'Server error'
-    });
-  }
-});
 
-// Admin login
-// POST /api/admin/login
-router.post('/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        error: 'Email and password are required'
-      });
-    }
-    
-    // Find user with admin role
-    const user = await User.findOne({ 
-      email: email.toLowerCase(), 
-      role: 'admin' 
-    });
-    
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid credentials'
-      });
-    }
-    
-    // Verify password with bcrypt
-    const isMatch = await bcrypt.compare(password, user.passwordHash);
-    if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid credentials'
-      });
-    }
-    const payload = {
-      user: {
-        id: user.id
-      }
+    const updates = {};
+    const adminNote = {
+      id: `note-${Date.now()}`,
+      note: notes || `Bulk ${action} action`,
+      category: 'bulk_action',
+      date: new Date(),
+      adminId: req.user.id,
+      action
     };
-    
-    const token = jwt.sign(
-      payload,
-      process.env.JWT_SECRET,
-      { expiresIn: '1d' }
+
+    switch (action) {
+      case 'approve':
+        updates.accountStatus = 'approved';
+        updates.verified = true;
+        updates.verificationLevel = 'blue';
+        break;
+      case 'reject':
+        updates.accountStatus = 'rejected';
+        updates.verified = false;
+        break;
+      case 'suspend':
+        updates.accountStatus = 'suspended';
+        break;
+      default:
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid action'
+        });
+    }
+
+    updates.lastUpdated = new Date();
+    updates.$push = { adminNotes: adminNote };
+
+    const result = await Expert.updateMany(
+      { id: { $in: expertIds } },
+      updates
     );
-    
+
+    // Send notifications to each expert
+    expertIds.forEach(expertId => {
+      notifyExpertStatusUpdate(expertId, action, notes);
+    });
+
     res.json({
       success: true,
+      message: `Bulk ${action} completed successfully`,
       data: {
-        token,
-        user: {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-          alias: user.alias
-        }
+        modifiedCount: result.modifiedCount,
+        matchedCount: result.matchedCount
       }
     });
-  } catch (err) {
-    console.error(err.message);
+
+  } catch (error) {
+    console.error('Bulk action error:', error);
     res.status(500).json({
       success: false,
-      error: 'Server error'
+      error: 'Failed to perform bulk action'
     });
   }
 });
 
-// Admin token verification
-// GET /api/admin/verify
-router.get('/verify', authMiddleware, adminMiddleware, async (req, res) => {
+// Enhanced statistics and analytics
+router.get('/dashboard/stats', authenticateToken, requireAdminRole, async (req, res) => {
   try {
-    const user = await User.findOne({ id: req.user.id, role: 'admin' });
-    
-    if (!user) {
-      return res.status(403).json({
-        success: false,
-        error: 'Access denied. Admin role required.'
-      });
-    }
-    
+    const [
+      totalExperts,
+      pendingExperts,
+      approvedExperts,
+      rejectedExperts,
+      totalUsers,
+      activeUsers,
+      recentApplications,
+      topSpecializations
+    ] = await Promise.all([
+      Expert.countDocuments(),
+      Expert.countDocuments({ accountStatus: 'pending' }),
+      Expert.countDocuments({ accountStatus: 'approved' }),
+      Expert.countDocuments({ accountStatus: 'rejected' }),
+      User.countDocuments(),
+      User.countDocuments({ lastActive: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } }),
+      Expert.find({ createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } }).countDocuments(),
+      Expert.aggregate([
+        { $group: { _id: '$specialization', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 5 }
+      ])
+    ]);
+
     res.json({
       success: true,
       data: {
-        user: {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-          alias: user.alias
+        experts: {
+          total: totalExperts,
+          pending: pendingExperts,
+          approved: approvedExperts,
+          rejected: rejectedExperts,
+          recentApplications
+        },
+        users: {
+          total: totalUsers,
+          active: activeUsers
+        },
+        specializations: topSpecializations,
+        trends: {
+          approvalRate: totalExperts > 0 ? ((approvedExperts / totalExperts) * 100).toFixed(1) : 0,
+          rejectionRate: totalExperts > 0 ? ((rejectedExperts / totalExperts) * 100).toFixed(1) : 0
         }
       }
     });
-  } catch (err) {
-    console.error(err.message);
+
+  } catch (error) {
+    console.error('Dashboard stats error:', error);
     res.status(500).json({
       success: false,
-      error: 'Server error'
+      error: 'Failed to fetch dashboard statistics'
     });
   }
 });
+
+// Helper functions
+function calculateProfileCompletion(expert) {
+  let score = 0;
+  const maxScore = 100;
+
+  // Basic info (30%)
+  if (expert.name) score += 5;
+  if (expert.email) score += 5;
+  if (expert.bio) score += 10;
+  if (expert.specialization) score += 10;
+
+  // Documents (25%)
+  if (expert.verificationDocuments?.length > 0) score += 15;
+  if (expert.verificationDocuments?.some(doc => doc.status === 'approved')) score += 10;
+
+  // Experience (20%)
+  if (expert.workExperience?.length > 0) score += 10;
+  if (expert.education?.length > 0) score += 10;
+
+  // Availability & Preferences (15%)
+  if (expert.availability?.length > 0) score += 8;
+  if (expert.sessionPreferences) score += 7;
+
+  // Additional info (10%)
+  if (expert.skills?.length > 0) score += 5;
+  if (expert.certifications?.length > 0) score += 5;
+
+  return Math.min(score, maxScore);
+}
+
+function calculateRiskLevel(expert) {
+  let riskScore = 0;
+
+  // No documents submitted
+  if (!expert.verificationDocuments?.length) riskScore += 30;
+
+  // All documents rejected
+  if (expert.verificationDocuments?.length > 0 && 
+      expert.verificationDocuments.every(doc => doc.status === 'rejected')) {
+    riskScore += 40;
+  }
+
+  // Incomplete profile
+  if (!expert.bio || expert.bio.length < 50) riskScore += 10;
+  if (!expert.workExperience?.length) riskScore += 10;
+  if (!expert.education?.length) riskScore += 10;
+
+  if (riskScore >= 50) return 'high';
+  if (riskScore >= 25) return 'medium';
+  return 'low';
+}
 
 module.exports = router;
