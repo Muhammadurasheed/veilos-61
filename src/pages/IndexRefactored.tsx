@@ -31,6 +31,7 @@ const IndexRefactored = () => {
           <Route path="/" element={<Index />} />
           <Route path="/feed" element={<Feed />} />
           <Route path="/beacons" element={<BeaconsList />} />
+          <Route path="/beacons/:expertId" element={<ExpertProfile />} />
           <Route path="/expert/:expertId" element={<ExpertProfile />} />
           <Route path="/chat/:sessionId?" element={<Chat />} />
           <Route path="/sessions" element={<SessionHub />} />
