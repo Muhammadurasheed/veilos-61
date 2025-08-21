@@ -45,6 +45,13 @@ const expertFormSchema = z.object({
   phoneNumber: z.string().optional(),
   timezone: z.string().default('UTC'),
   voiceMasking: z.boolean().default(true),
+  // Location details
+  city: z.string().min(2, { message: 'City is required.' }),
+  state: z.string().min(2, { message: 'State/Province is required.' }),
+  country: z.string().min(2, { message: 'Country is required.' }),
+  // Skills and certifications  
+  skills: z.array(z.string()).optional(),
+  certifications: z.array(z.string()).optional(),
 });
 
 type ExpertFormValues = z.infer<typeof expertFormSchema>;
@@ -59,7 +66,7 @@ const ExpertRegistration = () => {
     id: false,
     other: false
   });
-  const [step, setStep] = useState<'details' | 'documents' | 'availability' | 'preferences' | 'verification'>('details');
+  const [step, setStep] = useState<'details' | 'experience' | 'documents' | 'availability' | 'preferences' | 'verification'>('details');
   const [expertId, setExpertId] = useState<string | null>(null);
   const [apiBaseUrl, setApiBaseUrl] = useState(() => {
     return import.meta.env.VITE_API_BASE_URL || 'https://veilo-backend.onrender.com/api';
@@ -73,6 +80,30 @@ const ExpertRegistration = () => {
     saturday: [],
     sunday: [],
   });
+
+  // Work experience and education state
+  const [workExperience, setWorkExperience] = useState([{
+    id: `exp-${Date.now()}`,
+    jobTitle: '',
+    company: '',
+    startDate: '',
+    endDate: '',
+    description: '',
+    isCurrent: false
+  }]);
+
+  const [education, setEducation] = useState([{
+    id: `edu-${Date.now()}`,
+    institution: '',
+    degree: '',
+    fieldOfStudy: '',
+    startDate: '',
+    endDate: '',
+    grade: ''
+  }]);
+
+  const [skills, setSkills] = useState<string[]>([]);
+  const [certifications, setCertifications] = useState<string[]>([]);
 
   // Initialize baseUrl for API calls
   useEffect(() => {
@@ -91,6 +122,11 @@ const ExpertRegistration = () => {
       phoneNumber: '',
       timezone: 'UTC',
       voiceMasking: true,
+      city: '',
+      state: '',
+      country: '',
+      skills: [],
+      certifications: [],
     },
   });
 
@@ -109,8 +145,20 @@ const ExpertRegistration = () => {
         pricingModel: values.pricingModel,
         pricingDetails: values.pricingDetails,
         phoneNumber: values.phoneNumber,
-        timezone: values.timezone,
-        voiceMasking: values.voiceMasking
+        timezone: values.timezone, 
+        voiceMasking: values.voiceMasking,
+        // Location details
+        location: {
+          city: values.city,
+          state: values.state,
+          country: values.country,
+          timezone: values.timezone
+        },
+        // Experience and education will be added in the next step
+        workExperience: [],
+        education: [],
+        skills: skills,
+        certifications: certifications
       });
       
       console.log('Registration response:', response);
@@ -144,7 +192,7 @@ const ExpertRegistration = () => {
       });
 
       // Now we have a token, move to the next step
-      setStep('documents');
+      setStep('experience');
       
       console.log('Expert registered successfully with ID:', response.data.expertId || response.data.userId);
     } catch (error) {
@@ -266,23 +314,23 @@ const ExpertRegistration = () => {
         {/* Progress indicator */}
         <div className="flex justify-center mb-10">
           <div className="flex items-center space-x-2">
-            {['details', 'documents', 'availability', 'preferences', 'verification'].map((stepName, index) => (
+            {['details', 'experience', 'documents', 'availability', 'preferences', 'verification'].map((stepName, index) => (
               <div key={stepName} className="flex items-center">
                 <div 
                   className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors duration-200 ${
                     step === stepName 
                       ? 'bg-veilo-blue text-white' 
-                      : index < ['details', 'documents', 'availability', 'preferences', 'verification'].indexOf(step)
+                      : index < ['details', 'experience', 'documents', 'availability', 'preferences', 'verification'].indexOf(step)
                         ? 'bg-veilo-blue text-white'
                         : 'bg-veilo-blue-light text-veilo-blue-dark dark:bg-veilo-blue-dark/30 dark:text-veilo-blue-light'
                   }`}
                 >
                   {index + 1}
                 </div>
-                {index < 4 && (
+                {index < 5 && (
                   <div 
                     className={`h-1 w-12 ${
-                      index < ['details', 'documents', 'availability', 'preferences', 'verification'].indexOf(step)
+                      index < ['details', 'experience', 'documents', 'availability', 'preferences', 'verification'].indexOf(step)
                         ? 'bg-veilo-blue' 
                         : 'bg-veilo-blue-light dark:bg-veilo-blue-dark/30'
                     }`}
@@ -297,6 +345,7 @@ const ExpertRegistration = () => {
           <CardHeader className="border-b border-gray-100 dark:border-gray-800">
             <CardTitle className="text-2xl font-semibold text-center text-veilo-blue-dark dark:text-veilo-blue-light">
               {step === 'details' && 'Expert Details'}
+              {step === 'experience' && 'Professional Background'}
               {step === 'documents' && 'Verification Documents'}
               {step === 'availability' && 'Set Your Availability'}
               {step === 'preferences' && 'Session Preferences'}
@@ -427,6 +476,64 @@ const ExpertRegistration = () => {
                       </FormItem>
                     )}
                   />
+
+                  {/* Location Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Location Information</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="city"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-gray-700 dark:text-gray-300">City</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="e.g., New York" 
+                                className="bg-white dark:bg-gray-800"
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="state"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-gray-700 dark:text-gray-300">State/Province</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="e.g., NY" 
+                                className="bg-white dark:bg-gray-800"
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="country"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-gray-700 dark:text-gray-300">Country</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="e.g., United States" 
+                                className="bg-white dark:bg-gray-800"
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
                   
                   <Button 
                     type="submit" 
@@ -443,13 +550,107 @@ const ExpertRegistration = () => {
                       </div>
                     ) : (
                       <span className="flex items-center">
-                        Continue to Document Upload
+                        Continue to Professional Background
                         <ChevronRight className="ml-1 h-4 w-4" />
                       </span>
                     )}
                   </Button>
                 </form>
               </Form>
+            )}
+
+            {step === 'experience' && (
+              <div className="space-y-6">
+                <p className="text-gray-600 dark:text-gray-300 mb-4">
+                  Tell us about your professional background, education, and skills to help users understand your expertise.
+                </p>
+                
+                {/* Work Experience Section */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Work Experience</h3>
+                  {workExperience.map((exp, index) => (
+                    <div key={exp.id} className="border rounded-lg p-4 space-y-4 bg-gray-50 dark:bg-gray-800">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Input
+                          placeholder="Job Title"
+                          value={exp.jobTitle}
+                          onChange={(e) => {
+                            const updated = [...workExperience];
+                            updated[index].jobTitle = e.target.value;
+                            setWorkExperience(updated);
+                          }}
+                        />
+                        <Input
+                          placeholder="Company/Organization"
+                          value={exp.company}
+                          onChange={(e) => {
+                            const updated = [...workExperience];
+                            updated[index].company = e.target.value;
+                            setWorkExperience(updated);
+                          }}
+                        />
+                      </div>
+                      <Textarea
+                        placeholder="Brief description of your role and achievements..."
+                        value={exp.description}
+                        onChange={(e) => {
+                          const updated = [...workExperience];
+                          updated[index].description = e.target.value;
+                          setWorkExperience(updated);
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Education Section */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Education</h3>
+                  {education.map((edu, index) => (
+                    <div key={edu.id} className="border rounded-lg p-4 space-y-4 bg-gray-50 dark:bg-gray-800">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Input
+                          placeholder="Institution"
+                          value={edu.institution}
+                          onChange={(e) => {
+                            const updated = [...education];
+                            updated[index].institution = e.target.value;
+                            setEducation(updated);
+                          }}
+                        />
+                        <Input
+                          placeholder="Degree"
+                          value={edu.degree}
+                          onChange={(e) => {
+                            const updated = [...education];
+                            updated[index].degree = e.target.value;
+                            setEducation(updated);
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-between mt-6">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setStep('details')}
+                    className="border-gray-200 dark:border-gray-700"
+                  >
+                    Back
+                  </Button>
+                  <Button 
+                    className="bg-veilo-blue hover:bg-veilo-blue-dark transition-colors"
+                    onClick={() => setStep('documents')}
+                  >
+                    <span className="flex items-center">
+                      Continue to Documents
+                      <ChevronRight className="ml-1 h-4 w-4" />
+                    </span>
+                  </Button>
+                </div>
+              </div>
             )}
 
             {step === 'documents' && (

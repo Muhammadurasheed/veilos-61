@@ -3,13 +3,13 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs');
-const { authenticateToken, requireAdminRole } = require('../middleware/auth');
+const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 const Expert = require('../models/Expert');
 const User = require('../models/User');
 const { notifyExpertStatusUpdate } = require('../socket/socketHandler');
 
 // Get all experts with enhanced details for admin management
-router.get('/experts/advanced', authenticateToken, requireAdminRole, async (req, res) => {
+router.get('/experts/advanced', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const { 
       page = 1, 
@@ -78,7 +78,7 @@ router.get('/experts/advanced', authenticateToken, requireAdminRole, async (req,
 });
 
 // Secure document viewer with proper CORS handling
-router.get('/documents/view/:filename', authenticateToken, requireAdminRole, async (req, res) => {
+router.get('/documents/view/:filename', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const { filename } = req.params;
     const uploadsDir = path.join(__dirname, '../uploads');
@@ -164,7 +164,7 @@ router.get('/documents/view/:filename', authenticateToken, requireAdminRole, asy
 });
 
 // Update expert verification status with comprehensive handling
-router.patch('/experts/:expertId/verify', authenticateToken, requireAdminRole, async (req, res) => {
+router.patch('/experts/:expertId/verify', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const { expertId } = req.params;
     const { verificationLevel, status, feedback, documentUpdates } = req.body;
@@ -227,7 +227,7 @@ router.patch('/experts/:expertId/verify', authenticateToken, requireAdminRole, a
 });
 
 // Bulk expert actions for efficiency
-router.post('/experts/bulk-action', authenticateToken, requireAdminRole, async (req, res) => {
+router.post('/experts/bulk-action', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const { expertIds, action, notes } = req.body;
 
@@ -300,7 +300,7 @@ router.post('/experts/bulk-action', authenticateToken, requireAdminRole, async (
 });
 
 // Enhanced statistics and analytics
-router.get('/dashboard/stats', authenticateToken, requireAdminRole, async (req, res) => {
+router.get('/dashboard/stats', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const [
       totalExperts,

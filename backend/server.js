@@ -65,6 +65,7 @@ const sanctuaryRoutes = require('./routes/sanctuaryRoutes');
 // Import new route files
 const bookingRoutes = require('./routes/bookingRoutes');
 const chatRoutes = require('./routes/chatRoutes');
+const sessionRatingRoutes = require('./routes/sessionRatingRoutes');
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -76,6 +77,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/sanctuary', sanctuaryRoutes);
 app.use('/api/bookings', bookingRoutes);  // Add booking routes
 app.use('/api/chat', chatRoutes);         // Add chat routes
+app.use('/api/sessions', sessionRatingRoutes); // Add session rating routes
 
 // Error handling middleware
 app.use((err, req, res, next) => {

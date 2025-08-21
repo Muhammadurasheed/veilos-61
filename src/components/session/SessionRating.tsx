@@ -1,383 +1,213 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { Star, MessageSquare, Send, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Progress } from '@/components/ui/progress';
-import { 
-  Star, 
-  Heart, 
-  ThumbsUp, 
-  MessageSquare,
-  Award,
-  Shield,
-  Users,
-  Clock
-} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
 
 interface SessionRatingProps {
   sessionId: string;
-  expertId: string;
   expertName: string;
-  onRatingSubmitted?: (rating: any) => void;
-  showDialog: boolean;
-  onClose: () => void;
+  onRatingSubmit?: (rating: number, feedback: string) => void;
+  className?: string;
 }
 
-interface RatingData {
-  rating: number;
-  feedback: string;
-  categories: {
-    professionalism: number;
-    expertise: number;
-    communication: number;
-    helpfulness: number;
-  };
-  wouldRecommend: boolean;
-  isAnonymous: boolean;
-}
-
-const ratingLabels = {
-  1: 'Poor',
-  2: 'Fair', 
-  3: 'Good',
-  4: 'Very Good',
-  5: 'Excellent'
-};
-
-const categoryDescriptions = {
-  professionalism: 'Professional conduct and approach',
-  expertise: 'Knowledge and skill in their field',
-  communication: 'Clear and effective communication',
-  helpfulness: 'Willingness to help and support'
-};
-
-export const SessionRating: React.FC<SessionRatingProps> = ({
+const SessionRating: React.FC<SessionRatingProps> = ({
   sessionId,
-  expertId,
   expertName,
-  onRatingSubmitted,
-  showDialog,
-  onClose
+  onRatingSubmit,
+  className = ''
 }) => {
-  const [step, setStep] = useState<'rating' | 'details' | 'submitted'>('rating');
-  const [loading, setLoading] = useState(false);
-  const [ratingData, setRatingData] = useState<RatingData>({
-    rating: 0,
-    feedback: '',
-    categories: {
-      professionalism: 0,
-      expertise: 0,
-      communication: 0,
-      helpfulness: 0
-    },
-    wouldRecommend: true,
-    isAnonymous: false
-  });
-  
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [feedback, setFeedback] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const { toast } = useToast();
 
-  const handleOverallRating = (rating: number) => {
-    setRatingData(prev => ({
-      ...prev,
-      rating,
-      // Auto-fill categories with the same rating as a starting point
-      categories: {
-        professionalism: rating,
-        expertise: rating,
-        communication: rating,
-        helpfulness: rating
-      }
-    }));
-    
-    if (rating > 0) {
-      setStep('details');
-    }
+  const handleStarClick = (starRating: number) => {
+    setRating(starRating);
   };
 
-  const handleCategoryRating = (category: keyof RatingData['categories'], rating: number) => {
-    setRatingData(prev => ({
-      ...prev,
-      categories: {
-        ...prev.categories,
-        [category]: rating
-      }
-    }));
+  const handleStarHover = (starRating: number) => {
+    setHoverRating(starRating);
   };
 
-  const handleSubmitRating = async () => {
-    if (ratingData.rating === 0) {
+  const handleStarLeave = () => {
+    setHoverRating(0);
+  };
+
+  const handleSubmit = async () => {
+    if (rating === 0) {
       toast({
-        title: "Rating Required",
-        description: "Please provide an overall rating",
-        variant: "destructive"
+        variant: 'destructive',
+        title: 'Rating Required',
+        description: 'Please select a star rating before submitting.',
       });
       return;
     }
 
-    setLoading(true);
+    setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/session-ratings', {
+      // Submit rating to backend
+      const response = await fetch('/api/sessions/rating', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          'x-auth-token': localStorage.getItem('veilo-auth-token') || localStorage.getItem('token') || '',
         },
         body: JSON.stringify({
           sessionId,
-          ...ratingData
-        })
+          rating,
+          feedback: feedback.trim(),
+        }),
       });
 
-      const data = await response.json();
+      if (!response.ok) {
+        throw new Error('Failed to submit rating');
+      }
 
-      if (data.success) {
-        setStep('submitted');
-        onRatingSubmitted?.(data.data);
+      const result = await response.json();
+
+      if (result.success) {
+        setIsSubmitted(true);
         toast({
-          title: "Rating Submitted",
-          description: "Thank you for your feedback!"
+          title: 'Rating Submitted',
+          description: 'Thank you for your feedback!',
         });
-        
-        // Auto-close after 3 seconds
-        setTimeout(() => {
-          onClose();
-        }, 3000);
+
+        // Call parent callback if provided
+        if (onRatingSubmit) {
+          onRatingSubmit(rating, feedback);
+        }
       } else {
-        throw new Error(data.error);
+        throw new Error(result.error || 'Failed to submit rating');
       }
     } catch (error) {
-      console.error('Error submitting rating:', error);
+      console.error('Rating submission error:', error);
       toast({
-        title: "Submission Failed",
-        description: error.message || "Failed to submit rating",
-        variant: "destructive"
+        variant: 'destructive',
+        title: 'Submission Failed',
+        description: error instanceof Error ? error.message : 'Failed to submit rating. Please try again.',
       });
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const renderStars = (
-    rating: number,
-    onRatingChange: (rating: number) => void,
-    size: 'sm' | 'md' | 'lg' = 'md'
-  ) => {
-    const sizeClasses = {
-      sm: 'h-4 w-4',
-      md: 'h-6 w-6',
-      lg: 'h-8 w-8'
-    };
+  const getRatingText = (currentRating: number): string => {
+    switch (currentRating) {
+      case 1: return 'Poor';
+      case 2: return 'Fair';
+      case 3: return 'Good';
+      case 4: return 'Very Good';
+      case 5: return 'Excellent';
+      default: return 'Select Rating';
+    }
+  };
 
+  if (isSubmitted) {
     return (
-      <div className="flex gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <button
-            key={star}
-            type="button"
-            onClick={() => onRatingChange(star)}
-            className={cn(
-              "transition-colors hover:scale-110",
-              rating >= star ? "text-yellow-400" : "text-gray-300 hover:text-yellow-400"
-            )}
-          >
-            <Star className={cn(sizeClasses[size], rating >= star && "fill-current")} />
-          </button>
-        ))}
-      </div>
+      <Card className={`bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 ${className}`}>
+        <CardContent className="pt-6">
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+              <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-green-800 dark:text-green-200 mb-2">
+                Rating Submitted
+              </h3>
+              <p className="text-sm text-green-700 dark:text-green-300">
+                Thank you for rating your session with {expertName}!
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     );
-  };
-
-  const resetRating = () => {
-    setStep('rating');
-    setRatingData({
-      rating: 0,
-      feedback: '',
-      categories: {
-        professionalism: 0,
-        expertise: 0,
-        communication: 0,
-        helpfulness: 0
-      },
-      wouldRecommend: true,
-      isAnonymous: false
-    });
-  };
-
-  const canSubmit = ratingData.rating > 0 && 
-    Object.values(ratingData.categories).every(rating => rating > 0);
+  }
 
   return (
-    <Dialog open={showDialog} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        {step === 'rating' && (
-          <>
-            <DialogHeader>
-              <DialogTitle>Rate Your Session</DialogTitle>
-              <DialogDescription>
-                How was your session with {expertName}?
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-8 py-6">
-              <div className="text-center space-y-4">
-                <div className="text-6xl mb-4">
-                  {ratingData.rating === 0 && '🤔'}
-                  {ratingData.rating === 1 && '😞'}
-                  {ratingData.rating === 2 && '😐'}
-                  {ratingData.rating === 3 && '🙂'}
-                  {ratingData.rating === 4 && '😊'}
-                  {ratingData.rating === 5 && '😍'}
-                </div>
-                
-                <div className="space-y-2">
-                  {renderStars(ratingData.rating, handleOverallRating, 'lg')}
-                  <p className="text-lg font-medium">
-                    {ratingData.rating > 0 && ratingLabels[ratingData.rating as keyof typeof ratingLabels]}
-                  </p>
-                </div>
-              </div>
-
-              <div className="text-center">
-                <p className="text-muted-foreground">
-                  Tap a star to rate your overall experience
-                </p>
-              </div>
-            </div>
-          </>
-        )}
-
-        {step === 'details' && (
-          <>
-            <DialogHeader>
-              <DialogTitle>Detailed Feedback</DialogTitle>
-              <DialogDescription>
-                Help us understand what went well and what could be improved
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-6 py-4">
-              {/* Category Ratings */}
-              <div className="space-y-4">
-                <h4 className="font-medium">Rate specific aspects:</h4>
-                
-                {Object.entries(categoryDescriptions).map(([category, description]) => (
-                  <div key={category} className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <Label className="capitalize font-medium">{category}</Label>
-                        <p className="text-xs text-muted-foreground">{description}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {renderStars(
-                          ratingData.categories[category as keyof RatingData['categories']],
-                          (rating) => handleCategoryRating(category as keyof RatingData['categories'], rating),
-                          'sm'
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Written Feedback */}
-              <div className="space-y-2">
-                <Label htmlFor="feedback">Additional Comments (Optional)</Label>
-                <Textarea
-                  id="feedback"
-                  placeholder="Share more details about your experience..."
-                  value={ratingData.feedback}
-                  onChange={(e) => setRatingData(prev => ({ ...prev, feedback: e.target.value }))}
-                  rows={4}
-                />
-              </div>
-
-              {/* Recommendation */}
-              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <ThumbsUp className="h-5 w-5 text-green-600" />
-                  <div>
-                    <p className="font-medium">Would you recommend {expertName}?</p>
-                    <p className="text-sm text-muted-foreground">Help others find great experts</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={ratingData.wouldRecommend}
-                  onCheckedChange={(checked) => setRatingData(prev => ({ ...prev, wouldRecommend: checked }))}
-                />
-              </div>
-
-              {/* Anonymous Option */}
-              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Shield className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <p className="font-medium">Submit anonymously</p>
-                    <p className="text-sm text-muted-foreground">Your name won't be shown with this review</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={ratingData.isAnonymous}
-                  onCheckedChange={(checked) => setRatingData(prev => ({ ...prev, isAnonymous: checked }))}
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={resetRating} className="flex-1">
-                Back
-              </Button>
-              <Button 
-                onClick={handleSubmitRating} 
-                disabled={!canSubmit || loading}
-                className="flex-1"
+    <Card className={`shadow-sm ${className}`}>
+      <CardHeader className="pb-4">
+        <CardTitle className="text-lg font-semibold text-center">
+          Rate Your Session
+        </CardTitle>
+        <p className="text-sm text-muted-foreground text-center">
+          How was your session with <span className="font-medium">{expertName}</span>?
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Star Rating */}
+        <div className="flex flex-col items-center space-y-3">
+          <div className="flex items-center space-x-2">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                className="transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-full p-1"
+                onClick={() => handleStarClick(star)}
+                onMouseEnter={() => handleStarHover(star)}
+                onMouseLeave={handleStarLeave}
+                aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
               >
-                {loading ? 'Submitting...' : 'Submit Rating'}
-              </Button>
+                <Star
+                  className={`h-8 w-8 transition-colors duration-200 ${
+                    star <= (hoverRating || rating)
+                      ? 'fill-yellow-400 text-yellow-400'
+                      : 'text-gray-300 dark:text-gray-600'
+                  }`}
+                />
+              </button>
+            ))}
+          </div>
+          <p className="text-sm font-medium text-center min-h-[20px]">
+            {getRatingText(hoverRating || rating)}
+          </p>
+        </div>
+
+        {/* Feedback Section */}
+        <div className="space-y-3">
+          <Label htmlFor="feedback" className="text-sm font-medium">
+            Additional Feedback (Optional)
+          </Label>
+          <Textarea
+            id="feedback"
+            placeholder="Share your thoughts about the session..."
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
+            className="min-h-[100px] resize-none"
+            maxLength={500}
+          />
+          <p className="text-xs text-muted-foreground text-right">
+            {feedback.length}/500 characters
+          </p>
+        </div>
+
+        {/* Submit Button */}
+        <Button
+          onClick={handleSubmit}
+          disabled={isSubmitting || rating === 0}
+          className="w-full"
+        >
+          {isSubmitting ? (
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <span>Submitting...</span>
             </div>
-          </>
-        )}
-
-        {step === 'submitted' && (
-          <>
-            <DialogHeader>
-              <DialogTitle className="text-center">Thank You!</DialogTitle>
-            </DialogHeader>
-
-            <div className="text-center space-y-6 py-8">
-              <div className="text-6xl">🙏</div>
-              
-              <div className="space-y-2">
-                <h3 className="text-lg font-medium">Your feedback has been submitted</h3>
-                <p className="text-muted-foreground">
-                  Your rating helps {expertName} improve and helps other users find great experts.
-                </p>
-              </div>
-
-              <Card className="bg-green-50 border-green-200">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-center gap-3 text-green-700">
-                    <Award className="h-5 w-5" />
-                    <span className="font-medium">
-                      {ratingData.rating >= 4 ? 'Excellent session!' : 'Thanks for the feedback!'}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Button onClick={onClose} className="w-full">
-                Continue
-              </Button>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <Send className="h-4 w-4" />
+              <span>Submit Rating</span>
             </div>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
+          )}
+        </Button>
+      </CardContent>
+    </Card>
   );
 };
+
+export default SessionRating;
