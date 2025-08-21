@@ -36,7 +36,14 @@ const ExpertCard = ({ expert }: ExpertCardProps) => {
   };
   
   const handleViewProfile = () => {
+    console.log(`🖱️ View Profile clicked for expert:`, {
+      expertId: expert.id,
+      expertName: expert.name,
+      targetUrl: `/beacons/${expert.id}`,
+      currentUrl: window.location.href
+    });
     navigate(`/beacons/${expert.id}`);
+    console.log(`🧭 Navigation initiated to: /beacons/${expert.id}`);
   };
 
   return (

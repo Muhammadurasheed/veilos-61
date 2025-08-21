@@ -44,8 +44,12 @@ const ExpertProfile = () => {
   // Load expert data and follow status
   useEffect(() => {
     const loadExpertData = async () => {
+      console.log(`🚀 ExpertProfile component mounted`);
+      console.log(`📍 Route params:`, { expertId });
+      console.log(`🌍 Current location:`, window.location);
+      
       if (!expertId) {
-        console.error('No expertId provided');
+        console.error('❌ No expertId provided in route params');
         setIsLoading(false);
         return;
       }
