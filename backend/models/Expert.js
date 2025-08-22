@@ -37,7 +37,7 @@ const documentSchema = new mongoose.Schema({
   id: {
     type: String,
     default: () => `doc-${nanoid(8)}`,
-    required: true
+    required: false
   },
   type: {
     type: String,
@@ -369,7 +369,7 @@ const expertSchema = new mongoose.Schema({
   }
 });
 
-// Indexes for performance
+// Indexes for performance - sparse indexes to handle null values
 expertSchema.index({ userId: 1 });
 expertSchema.index({ accountStatus: 1 });
 expertSchema.index({ verificationLevel: 1 });
@@ -378,6 +378,7 @@ expertSchema.index({ 'location.city': 1, 'location.state': 1 });
 expertSchema.index({ rating: -1 });
 expertSchema.index({ createdAt: -1 });
 expertSchema.index({ isOnline: 1, lastActive: -1 });
+expertSchema.index({ 'verificationDocuments.id': 1 }, { sparse: true });
 
 // Pre-save middleware
 expertSchema.pre('save', function(next) {

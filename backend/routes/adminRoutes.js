@@ -3,10 +3,74 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 const Expert = require('../models/Expert');
 const User = require('../models/User');
 const { notifyExpertStatusUpdate } = require('../socket/socketHandler');
+
+// Admin login route (backup route)
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.error('Email and password are required', 400);
+    }
+
+    // Find admin user
+    const user = await User.findOne({ 
+      email, 
+      role: 'admin' 
+    });
+
+    if (!user || !user.passwordHash) {
+      return res.error('Invalid admin credentials', 401);
+    }
+
+    // Check password
+    const validPassword = await bcrypt.compare(password, user.passwordHash);
+    if (!validPassword) {
+      return res.error('Invalid admin credentials', 401);
+    }
+
+    // Generate tokens
+    const token = jwt.sign(
+      { userId: user.id, role: user.role },
+      process.env.JWT_SECRET || 'fallback-secret',
+      { expiresIn: '24h' }
+    );
+
+    const refreshToken = jwt.sign(
+      { userId: user.id },
+      process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret',
+      { expiresIn: '7d' }
+    );
+
+    // Update user with refresh token and last login
+    user.refreshToken = refreshToken;
+    user.lastLoginAt = new Date();
+    await user.save();
+
+    res.success('Admin login successful', {
+      user: {
+        id: user.id,
+        alias: user.alias,
+        email: user.email,
+        role: user.role,
+        avatarIndex: user.avatarIndex,
+        avatarUrl: user.avatarUrl
+      },
+      token,
+      refreshToken
+    });
+
+  } catch (error) {
+    console.error('Admin login error:', error);
+    res.error('Admin login failed: ' + error.message, 500);
+  }
+});
 
 // Get all experts with enhanced details for admin management
 router.get('/experts/advanced', authMiddleware, adminMiddleware, async (req, res) => {
