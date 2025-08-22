@@ -36,7 +36,8 @@ const testimonialSchema = new mongoose.Schema({
 const documentSchema = new mongoose.Schema({
   id: {
     type: String,
-    default: () => `doc-${nanoid(8)}`
+    default: () => `doc-${nanoid(8)}`,
+    required: true
   },
   type: {
     type: String,

@@ -10,6 +10,8 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CountryPicker } from '@/components/ui/CountryPicker';
+import { CityPicker } from '@/components/ui/LocationPicker';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Calendar as CalendarIcon, Plus, X, MapPin, Clock, Upload, FileText } from 'lucide-react';
@@ -360,24 +362,18 @@ const EnhancedExpertRegistration = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="country">Country *</Label>
-                <Select onValueChange={(value) => setFormData(prev => ({ ...prev, country: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select country" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {COUNTRIES.map(country => (
-                      <SelectItem key={country} value={country}>{country}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <CountryPicker
+                  value={formData.country}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, country: value }))}
+                  placeholder="Select country..."
+                />
               </div>
               <div>
                 <Label htmlFor="city">City *</Label>
-                <Input
-                  id="city"
+                <CityPicker
                   value={formData.city}
-                  onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                  required
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, city: value }))}
+                  placeholder="Select city..."
                 />
               </div>
               <div>

@@ -442,4 +442,61 @@ router.post('/avatar',
   }
 );
 
+// Admin login route
+router.post('/admin/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.error('Email and password are required', 400);
+    }
+
+    // Find admin user
+    const adminUser = await User.findOne({ 
+      email, 
+      role: 'admin' 
+    });
+
+    if (!adminUser) {
+      return res.error('Invalid admin credentials', 401);
+    }
+
+    // Check password
+    const isMatch = await bcrypt.compare(password, adminUser.password);
+    if (!isMatch) {
+      return res.error('Invalid admin credentials', 401);
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { 
+        userId: adminUser.id, 
+        role: adminUser.role,
+        email: adminUser.email 
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    // Update last active
+    adminUser.lastActive = new Date();
+    await adminUser.save();
+
+    res.success({
+      token,
+      user: {
+        id: adminUser.id,
+        email: adminUser.email,
+        alias: adminUser.alias,
+        role: adminUser.role,
+        lastActive: adminUser.lastActive
+      }
+    }, 'Admin login successful');
+
+  } catch (error) {
+    console.error('Admin login error:', error);
+    res.error('Server error during admin login', 500);
+  }
+});
+
 module.exports = router;

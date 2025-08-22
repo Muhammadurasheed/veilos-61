@@ -174,10 +174,9 @@ const ExpertProfile = () => {
   };
 
   const handleBookSession = () => {
-    toast({
-      title: "Session Booking",
-      description: "Session booking system will be available soon!",
-    });
+    if (expert) {
+      navigate(`/sessions/book/${expert.id}`);
+    }
   };
 
   const handleSendMessage = () => {
