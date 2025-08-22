@@ -37,7 +37,8 @@ const documentSchema = new mongoose.Schema({
   id: {
     type: String,
     default: () => `doc-${nanoid(8)}`,
-    required: false
+    required: false,
+    sparse: true
   },
   type: {
     type: String,

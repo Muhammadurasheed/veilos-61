@@ -267,8 +267,8 @@ const ExpertProfile = () => {
                       )}
                     </div>
                     
-                    <h1 className="text-3xl font-bold mb-2 text-gray-900">{expert.name}</h1>
-                    <p className="text-gray-600 text-lg mb-4">{expert.specialization}</p>
+                    <h1 className="text-3xl font-bold mb-2 text-foreground">{expert.name}</h1>
+                    <p className="text-foreground/80 text-lg mb-4">{expert.specialization}</p>
                     
                     <div className="mb-6">{getVerificationBadge()}</div>
                     
@@ -276,10 +276,10 @@ const ExpertProfile = () => {
                     <div className="flex items-center justify-center gap-6 mb-8 text-sm">
                       <div className="flex items-center gap-1">
                         <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                        <span className="font-semibold text-lg">{expert.rating.toFixed(1)}</span>
-                        <span className="text-gray-500">({expert.testimonials.length} reviews)</span>
+                        <span className="font-semibold text-lg text-foreground">{expert.rating.toFixed(1)}</span>
+                        <span className="text-foreground/70">({expert.testimonials.length} reviews)</span>
                       </div>
-                      <div className="flex items-center gap-1 text-gray-600">
+                      <div className="flex items-center gap-1 text-foreground/80">
                         <Users className="h-4 w-4" />
                         <span>1.2k+ helped</span>
                       </div>
@@ -343,9 +343,9 @@ const ExpertProfile = () => {
 
                       <TabsContent value="about" className="space-y-6">
                         <div>
-                          <h3 className="text-xl font-semibold mb-4 text-gray-900">About {expert.name}</h3>
+                          <h3 className="text-xl font-semibold mb-4 text-foreground">About {expert.name}</h3>
                           <div className="prose prose-gray max-w-none">
-                            <p className="text-gray-700 leading-relaxed">{expert.bio}</p>
+                            <p className="text-foreground/90 leading-relaxed">{expert.bio}</p>
                           </div>
                         </div>
                         

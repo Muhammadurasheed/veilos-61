@@ -53,18 +53,19 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
         password: values.password
       });
 
-      if (response.success && response.data?.user?.role === 'admin') {
+      if (response.success && (response.data?.user?.role === 'admin' || response.data?.admin?.role === 'admin')) {
         // Store admin token using centralized function
         const { setAdminToken } = await import('@/services/api');
         setAdminToken(response.data.token);
-        localStorage.setItem('admin_user', JSON.stringify(response.data.user));
+        const adminUser = response.data.admin || response.data.user;
+        localStorage.setItem('admin_user', JSON.stringify(adminUser));
         
         // Update user context with admin user
         const { useUserContext } = await import('@/contexts/UserContext');
         // Force context update by dispatching a custom event
         window.dispatchEvent(new CustomEvent('adminLoginSuccess', { 
           detail: { 
-            user: response.data.user,
+            user: adminUser,
             token: response.data.token 
           } 
         }));
