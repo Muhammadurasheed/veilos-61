@@ -23,21 +23,32 @@ router.post('/admin/login',
     try {
       const { email, password } = req.body;
       
+      console.log('🔐 Admin login attempt:', { email, hasPassword: !!password });
+      
       // Find admin user
       const user = await User.findOne({ 
         email, 
         role: 'admin' 
       });
       
-      if (!user || !user.passwordHash) {
-        return res.error('Invalid admin credentials', 401);
+      if (!user) {
+        console.log('❌ Admin user not found for email:', email);
+        return res.error('Invalid admin credentials or insufficient permissions', 401);
+      }
+      
+      if (!user.passwordHash) {
+        console.log('❌ Admin user has no password hash:', email);
+        return res.error('Invalid admin credentials or insufficient permissions', 401);
       }
       
       // Check password
       const validPassword = await bcrypt.compare(password, user.passwordHash);
       if (!validPassword) {
-        return res.error('Invalid admin credentials', 401);
+        console.log('❌ Invalid password for admin:', email);
+        return res.error('Invalid admin credentials or insufficient permissions', 401);
       }
+      
+      console.log('✅ Admin login successful:', { userId: user.id, role: user.role });
       
       // Generate tokens
       const token = jwt.sign(
@@ -79,7 +90,7 @@ router.post('/admin/login',
       });
       
     } catch (error) {
-      console.error('Admin login error:', error);
+      console.error('❌ Admin login error:', error);
       res.error('Admin login failed: ' + error.message, 500);
     }
   }
@@ -339,77 +350,7 @@ router.put('/profile',
   }
 );
 
-// Admin login
-router.post('/admin/login',
-  authLimiter,
-  validate([
-    body('email').isEmail().normalizeEmail(),
-    body('password').notEmpty(),
-  ]),
-  async (req, res) => {
-    try {
-      const { email, password } = req.body;
-
-      // Find user by email
-      const user = await User.findOne({ email });
-      if (!user || !user.passwordHash) {
-        return res.error('Invalid credentials', 401);
-      }
-
-      // Check if user is admin
-      if (user.role !== 'admin') {
-        return res.error('Access denied - admin role required', 403);
-      }
-
-      // Verify password
-      const isValidPassword = await bcrypt.compare(password, user.passwordHash);
-      if (!isValidPassword) {
-        return res.error('Invalid credentials', 401);
-      }
-
-      // Generate tokens
-      const accessToken = jwt.sign(
-        { 
-          user: {
-            id: user.id
-          }
-        },
-        process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-      );
-
-      const refreshToken = jwt.sign(
-        { user: { id: user.id } },
-        process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' }
-      );
-
-      // Save refresh token
-      user.refreshToken = refreshToken;
-      user.lastLoginAt = new Date();
-      await user.save();
-
-      return res.success({
-        token: accessToken,
-        refreshToken,
-        user: {
-          id: user.id,
-          alias: user.alias,
-          avatarIndex: user.avatarIndex,
-          role: user.role,
-          isExpert: user.isExpert,
-          avatarUrl: user.avatarUrl,
-          email: user.email,
-          isAnonymous: user.isAnonymous
-        }
-      }, 'Admin login successful');
-
-    } catch (error) {
-      console.error('Admin login error:', error);
-      return res.error('Admin login failed', 500);
-    }
-  }
-);
+// Remove duplicate admin login route - using the one above
 
 // Update avatar
 router.post('/avatar',
@@ -449,62 +390,5 @@ router.post('/avatar',
     }
   }
 );
-
-// Admin login route
-router.post('/admin/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    
-    if (!email || !password) {
-      return res.error('Email and password are required', 400);
-    }
-
-    // Find admin user
-    const adminUser = await User.findOne({ 
-      email, 
-      role: 'admin' 
-    });
-
-    if (!adminUser) {
-      return res.error('Invalid admin credentials', 401);
-    }
-
-    // Check password
-    const isMatch = await bcrypt.compare(password, adminUser.password);
-    if (!isMatch) {
-      return res.error('Invalid admin credentials', 401);
-    }
-
-    // Generate JWT token
-    const token = jwt.sign(
-      { 
-        userId: adminUser.id, 
-        role: adminUser.role,
-        email: adminUser.email 
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-
-    // Update last active
-    adminUser.lastActive = new Date();
-    await adminUser.save();
-
-    res.success({
-      token,
-      user: {
-        id: adminUser.id,
-        email: adminUser.email,
-        alias: adminUser.alias,
-        role: adminUser.role,
-        lastActive: adminUser.lastActive
-      }
-    }, 'Admin login successful');
-
-  } catch (error) {
-    console.error('Admin login error:', error);
-    res.error('Server error during admin login', 500);
-  }
-});
 
 module.exports = router;
