@@ -85,28 +85,42 @@ const BookSession = () => {
   // Fetch expert details
   useEffect(() => {
     const fetchExpert = async () => {
-      if (!expertId) return;
+      if (!expertId) {
+        console.log('❌ No expertId provided');
+        setLoading(false);
+        return;
+      }
+      
+      console.log(`🔍 Fetching expert details for ID: ${expertId}`);
       
       try {
         const response = await apiRequest('GET', `/api/experts/${expertId}`);
-        if (response.success) {
+        console.log('📡 Expert fetch response:', { 
+          success: response.success, 
+          hasData: !!response.data,
+          expertName: response.data?.name 
+        });
+        
+        if (response.success && response.data) {
           setExpert(response.data);
+          console.log('✅ Expert loaded successfully:', response.data.name);
         } else {
+          console.log('❌ Expert not found or invalid response');
           toast({
             title: "Expert not found",
-            description: "The requested expert could not be found.",
+            description: `The expert with ID ${expertId} could not be found. Please try again or contact support.`,
             variant: "destructive",
           });
-          navigate('/');
+          navigate('/beacons');
         }
       } catch (error) {
-        console.error('Error fetching expert:', error);
+        console.error('❌ Error fetching expert:', error);
         toast({
-          title: "Error",
-          description: "Failed to load expert details.",
+          title: "Connection Error",
+          description: "Failed to load expert details. Please check your internet connection and try again.",
           variant: "destructive",
         });
-        navigate('/');
+        navigate('/beacons');
       } finally {
         setLoading(false);
       }

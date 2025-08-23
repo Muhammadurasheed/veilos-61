@@ -48,21 +48,35 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
     setIsLoading(true);
 
     try {
+      console.log('🔐 Attempting admin login with:', { email: values.email, hasPassword: !!values.password });
+      
       const response = await AdminApi.login({
         email: values.email,
         password: values.password
       });
 
-      if (response.success && (response.data?.user?.role === 'admin' || response.data?.admin?.role === 'admin')) {
+      console.log('📡 Admin login response:', { 
+        success: response.success, 
+        hasData: !!response.data,
+        hasToken: !!response.data?.token,
+        userRole: response.data?.user?.role,
+        adminRole: response.data?.admin?.role
+      });
+
+      if (response.success && response.data?.token) {
+        // Check if user has admin role from either user or admin object
+        const adminUser = response.data.admin || response.data.user;
+        
+        if (adminUser?.role !== 'admin') {
+          throw new Error('Access denied. Admin privileges required.');
+        }
+        
         // Store admin token using centralized function
         const { setAdminToken } = await import('@/services/api');
         setAdminToken(response.data.token);
-        const adminUser = response.data.admin || response.data.user;
         localStorage.setItem('admin_user', JSON.stringify(adminUser));
         
         // Update user context with admin user
-        const { useUserContext } = await import('@/contexts/UserContext');
-        // Force context update by dispatching a custom event
         window.dispatchEvent(new CustomEvent('adminLoginSuccess', { 
           detail: { 
             user: adminUser,
@@ -89,6 +103,7 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
         throw new Error(response.error || 'Invalid admin credentials or insufficient permissions');
       }
     } catch (error) {
+      console.error('❌ Admin login error:', error);
       toast({
         variant: 'destructive',
         title: 'Login failed',
