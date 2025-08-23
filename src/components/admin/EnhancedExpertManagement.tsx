@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Expert } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { AdminApi } from '@/services/api';
 import {
   Card,
   CardContent,
@@ -96,8 +97,6 @@ const EnhancedExpertManagement = () => {
   const { data: expertsData, isLoading, isError, refetch } = useQuery({
     queryKey: ['enhancedExperts', currentPage, filters],
     queryFn: async () => {
-      const { AdminApi } = await import('@/services/api');
-      
       const params = {
         page: currentPage,
         limit: 10,
@@ -109,7 +108,7 @@ const EnhancedExpertManagement = () => {
         ...(filters.dateTo && { dateTo: filters.dateTo.toISOString() }),
       };
 
-      const response = await EnhancedAdminApi.getExpertsAdvanced(params);
+      const response = await AdminApi.getExpertsAdvanced(params);
       if (!response.success) throw new Error(response.error || 'Failed to fetch experts');
       return response.data;
     },
@@ -119,7 +118,6 @@ const EnhancedExpertManagement = () => {
   // Bulk action mutation
   const bulkActionMutation = useMutation({
     mutationFn: async (params: { expertIds: string[]; action: 'approve' | 'reject' | 'suspend' | 'reactivate'; notes?: string }) => {
-      const { EnhancedAdminApi } = await import('@/services/adminApi');
       const response = await AdminApi.bulkExpertAction(params);
       
       if (!response.success) throw new Error(response.error || 'Bulk action failed');
