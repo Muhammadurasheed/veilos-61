@@ -82,8 +82,66 @@ const liveSanctuarySessionSchema = new mongoose.Schema({
   participants: [{
     id: String,
     alias: String,
-    joinedAt: Date
-  }]
+    isHost: { type: Boolean, default: false },
+    isModerator: { type: Boolean, default: false },
+    isMuted: { type: Boolean, default: false },
+    isBlocked: { type: Boolean, default: false },
+    handRaised: { type: Boolean, default: false },
+    joinedAt: { type: Date, default: Date.now },
+    avatarIndex: { type: Number, default: 1 },
+    connectionStatus: { type: String, default: 'connected' },
+    audioLevel: { type: Number, default: 0 },
+    speakingTime: { type: Number, default: 0 }
+  }],
+  hostAlias: {
+    type: String
+  },
+  startTime: {
+    type: Date,
+    default: Date.now
+  },
+  endedAt: {
+    type: Date
+  },
+  status: {
+    type: String,
+    enum: ['active', 'ended', 'paused'],
+    default: 'active'
+  },
+  isRecorded: {
+    type: Boolean,
+    default: false
+  },
+  recordingConsent: [{
+    type: String
+  }],
+  breakoutRooms: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'BreakoutRoom'
+  }],
+  moderationLevel: {
+    type: String,
+    enum: ['low', 'medium', 'high'],
+    default: 'medium'
+  },
+  emergencyProtocols: {
+    type: Boolean,
+    default: true
+  },
+  aiMonitoring: {
+    type: Boolean,
+    default: true
+  },
+  estimatedDuration: {
+    type: Number // in minutes
+  },
+  tags: [{
+    type: String
+  }],
+  language: {
+    type: String,
+    default: 'en'
+  }
 });
 
 // TTL index for auto-cleanup

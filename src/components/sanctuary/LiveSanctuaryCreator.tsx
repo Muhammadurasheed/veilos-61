@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { LiveAudioApi } from '@/services/liveAudioApi';
+import { LiveSanctuaryApi } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -70,7 +70,7 @@ const LiveSanctuaryCreator: React.FC = () => {
     try {
       console.log('🎙️ Creating live sanctuary session:', data);
       
-      const response = await LiveAudioApi.createSession({
+      const response = await LiveSanctuaryApi.createSession({
         topic: data.topic,
         description: data.description,
         emoji: data.emoji,

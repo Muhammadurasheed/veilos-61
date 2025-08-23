@@ -577,6 +577,10 @@ export const LiveSanctuaryApi = {
     return apiRequest('POST', `/api/live-sanctuary/${sessionId}/end`, { hostToken });
   },
 
+  async leaveSession(sessionId: string) {
+    return apiRequest('POST', `/api/live-sanctuary/${sessionId}/leave`);
+  },
+
   async removeParticipant(sessionId: string, participantId: string, hostToken?: string) {
     return apiRequest('POST', `/api/live-sanctuary/${sessionId}/remove-participant`, { 
       participantId, 

@@ -350,7 +350,81 @@ router.put('/profile',
   }
 );
 
-// Remove duplicate admin login route - using the one above
+// Admin login route
+router.post('/admin/login',
+  // Remove rate limiting for admin - they should be able to login immediately
+  validate([
+    body('email').isEmail().normalizeEmail(),
+    body('password').notEmpty(),
+  ]),
+  async (req, res) => {
+    try {
+      console.log('🔐 Admin login attempt:', { email: req.body.email, hasPassword: !!req.body.password });
+      
+      const { email, password } = req.body;
+
+      // Find user by email
+      const user = await User.findOne({ email });
+      if (!user || !user.passwordHash) {
+        console.log('❌ Admin login failed: User not found or no password hash');
+        return res.error('Invalid admin credentials or insufficient permissions', 401);
+      }
+
+      // Check if user has admin role
+      if (user.role !== 'admin') {
+        console.log('❌ Admin login failed: User is not admin', { userRole: user.role });
+        return res.error('Invalid admin credentials or insufficient permissions', 403);
+      }
+
+      // Verify password
+      const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+      if (!isValidPassword) {
+        console.log('❌ Admin login failed: Invalid password');
+        return res.error('Invalid admin credentials or insufficient permissions', 401);
+      }
+
+      // Generate admin token with extended expiry
+      const adminToken = jwt.sign(
+        { 
+          user: {
+            id: user.id,
+            role: user.role,
+            isAdmin: true
+          }
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' } // Extended admin session
+      );
+
+      // Update last login
+      user.lastLoginAt = new Date();
+      await user.save();
+
+      console.log('✅ Admin login successful:', { 
+        userId: user.id,
+        email: user.email,
+        role: user.role 
+      });
+
+      return res.success({
+        token: adminToken,
+        admin: {
+          id: user.id,
+          email: user.email,
+          alias: user.alias,
+          role: user.role,
+          avatarIndex: user.avatarIndex,
+          avatarUrl: user.avatarUrl,
+          isAnonymous: false
+        }
+      }, 'Admin login successful');
+
+    } catch (error) {
+      console.error('❌ Admin login error:', error);
+      return res.error('Admin login failed: ' + error.message, 500);
+    }
+  }
+);
 
 // Update avatar
 router.post('/avatar',
