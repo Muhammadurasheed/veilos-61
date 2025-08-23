@@ -20,16 +20,27 @@ export interface User {
   email?: string;
 }
 
-// Enhanced user creation state
-export interface UserCreationState {
+// Export enum for external use
+export enum UserCreationState {
+  IDLE = "idle",
+  CREATING = "creating", 
+  SUCCESS = "success",
+  ERROR = "error"
+}
+
+// Export typed version as well
+export type UserCreationStateType = UserCreationState;
+
+// Enhanced user creation state interface
+export interface UserCreationStateInterface {
   step: 'idle' | 'initializing' | 'creating' | 'authenticating' | 'finalizing' | 'complete' | 'error';
   progress: number;
   message: string;
   retryCount: number;
 }
 
-// Define the context type
-interface UserContextType {
+// Export UserContextType interface
+export interface UserContextType {
   user: User | null;
   setUser: (user: User | null) => void;
   logout: () => void;
@@ -37,12 +48,12 @@ interface UserContextType {
   createAnonymousAccount: (alias?: string, avatarIndex?: number) => Promise<boolean>;
   isLoading: boolean;
   updateAvatar: (avatarUrl: string) => Promise<void>;
-  creationState: UserCreationState;
+  creationState: UserCreationStateInterface;
   retryAccountCreation: () => Promise<boolean>;
 }
 
 // Initial creation state
-const initialCreationState: UserCreationState = {
+const initialCreationState: UserCreationStateInterface = {
   step: 'idle',
   progress: 0,
   message: '',
@@ -69,11 +80,11 @@ export const useUserContext = () => useContext(UserContext);
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [creationState, setCreationState] = useState<UserCreationState>(initialCreationState);
+  const [creationState, setCreationState] = useState<UserCreationStateInterface>(initialCreationState);
   // Remove useLocalStorage dependency - now handled by tokenManager
 
   // Helper to update creation state
-  const updateCreationState = useCallback((updates: Partial<UserCreationState>) => {
+  const updateCreationState = useCallback((updates: Partial<UserCreationStateInterface>) => {
     setCreationState(prev => ({ ...prev, ...updates }));
   }, []);
 

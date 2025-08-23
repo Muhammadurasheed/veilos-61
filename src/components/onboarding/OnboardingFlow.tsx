@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Sparkles, Shield, Heart, Users, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
-import { useUserContext, UserCreationState } from '@/contexts/UserContext';
+import { useUserContext, UserCreationStateInterface } from '@/contexts/UserContext';
 import { useAppState } from '@/contexts/AppStateContext';
 import { toast } from '@/hooks/use-toast';
 
@@ -114,7 +114,7 @@ export function OnboardingFlow({ isOpen, onComplete }: OnboardingFlowProps) {
     }
   };
 
-  const getCreationProgress = (state: UserCreationState) => {
+  const getCreationProgress = (state: UserCreationStateInterface) => {
     const stepMap: Record<string, number> = {
       'idle': 0,
       'initializing': 20,
@@ -127,7 +127,7 @@ export function OnboardingFlow({ isOpen, onComplete }: OnboardingFlowProps) {
     return stepMap[state.step] || state.progress;
   };
 
-  const getCurrentStepMessage = (state: UserCreationState) => {
+  const getCurrentStepMessage = (state: UserCreationStateInterface) => {
     const messages: Record<string, string> = {
       'idle': 'Ready to begin...',
       'initializing': 'Preparing your sanctuary...',

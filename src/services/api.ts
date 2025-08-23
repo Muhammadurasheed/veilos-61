@@ -567,6 +567,8 @@ export const EnhancedAdminApi = {
   }
 };
 
+// Fixed re-export to avoid conflicts
+
 // Export temporary API fixes
 export * from './temporaryApiExports';
 
