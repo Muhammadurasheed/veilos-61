@@ -56,7 +56,17 @@ mongoose.connect(dbUrl, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-.then(() => console.log('✅ MongoDB connected'))
+.then(async () => {
+  console.log('✅ MongoDB connected');
+  
+  // Auto-setup platform data on first run
+  try {
+    const setupPlatformData = require('./scripts/setupPlatformData');
+    await setupPlatformData();
+  } catch (error) {
+    console.log('ℹ️ Platform data setup skipped:', error.message);
+  }
+})
 .catch(err => console.error('❌ MongoDB connection error:', err));
 
 // Serve static files from the 'uploads' directory

@@ -4,7 +4,7 @@ const { nanoid } = require('nanoid');
 const dotenv = require('dotenv');
 
 // Load environment variables
-dotenv.config({ path: '../.env' });
+dotenv.config();
 
 // Import models
 const User = require('../models/User');
@@ -12,18 +12,19 @@ const Expert = require('../models/Expert');
 
 async function setupPlatformData() {
   try {
-    // Connect to MongoDB
-    const dbUrl = process.env.MONGODB_URI;
-    if (!dbUrl) {
-      console.error('❌ MONGODB_URI not found in environment variables');
-      return;
-    }
+    // Check if we're already connected to MongoDB
+    if (mongoose.connection.readyState !== 1) {
+      const dbUrl = process.env.MONGODB_URI;
+      if (!dbUrl) {
+        throw new Error('MONGODB_URI not found in environment variables');
+      }
 
-    await mongoose.connect(dbUrl, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    console.log('✅ MongoDB connected');
+      await mongoose.connect(dbUrl, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+      });
+      console.log('✅ MongoDB connected for setup');
+    }
 
     // 1. CREATE ADMIN USER WITH PROPER PASSWORD HASH
     console.log('\n🔐 Setting up Admin User...');
@@ -230,11 +231,17 @@ async function setupPlatformData() {
     
   } catch (error) {
     console.error('❌ Setup failed:', error);
-  } finally {
-    await mongoose.connection.close();
-    console.log('🔌 Database connection closed');
+    throw error;
   }
 }
 
-// Run the setup
-setupPlatformData();
+// Export the function for use in server.js
+module.exports = setupPlatformData;
+
+// Only run directly if this file is executed directly
+if (require.main === module) {
+  setupPlatformData().finally(() => {
+    mongoose.connection.close();
+    console.log('🔌 Database connection closed');
+  });
+}
