@@ -421,6 +421,29 @@ router.get('/dashboard/stats', authMiddleware, adminMiddleware, async (req, res)
   }
 });
 
+// Admin verify route for authentication check
+router.get('/verify', authMiddleware, async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'admin') {
+      return res.error('Access denied: Admin privileges required', 403);
+    }
+
+    res.success('Admin token verified', {
+      user: {
+        id: req.user.id,
+        alias: req.user.alias,
+        email: req.user.email,
+        role: req.user.role,
+        avatarIndex: req.user.avatarIndex,
+        avatarUrl: req.user.avatarUrl
+      }
+    });
+  } catch (error) {
+    console.error('Admin verification error:', error);
+    res.error('Token verification failed', 500);
+  }
+});
+
 // Helper functions
 function calculateProfileCompletion(expert) {
   let score = 0;

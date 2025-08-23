@@ -35,7 +35,7 @@ import {
   Headphones,
   Shield
 } from 'lucide-react';
-import { EnhancedAdminApi } from '@/services/adminApi';
+import { AdminApi } from '@/services/api';
 import { format } from 'date-fns';
 
 interface ExpertApplicationDetailsProps {
@@ -192,7 +192,7 @@ export function ExpertApplicationDetails({
 
     setIsSubmitting(true);
     try {
-      const response = await EnhancedAdminApi.bulkExpertAction({
+      const response = await AdminApi.bulkExpertAction({
         expertIds: [expert.id],
         action: reviewAction,
         notes: reviewNotes || undefined,

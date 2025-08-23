@@ -96,7 +96,7 @@ const EnhancedExpertManagement = () => {
   const { data: expertsData, isLoading, isError, refetch } = useQuery({
     queryKey: ['enhancedExperts', currentPage, filters],
     queryFn: async () => {
-      const { EnhancedAdminApi } = await import('@/services/adminApi');
+      const { AdminApi } = await import('@/services/api');
       
       const params = {
         page: currentPage,
@@ -120,7 +120,7 @@ const EnhancedExpertManagement = () => {
   const bulkActionMutation = useMutation({
     mutationFn: async (params: { expertIds: string[]; action: 'approve' | 'reject' | 'suspend' | 'reactivate'; notes?: string }) => {
       const { EnhancedAdminApi } = await import('@/services/adminApi');
-      const response = await EnhancedAdminApi.bulkExpertAction(params);
+      const response = await AdminApi.bulkExpertAction(params);
       
       if (!response.success) throw new Error(response.error || 'Bulk action failed');
       return response;

@@ -68,6 +68,9 @@ const BookSession = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   
+  console.log('🎯 BookSession component mounted with expertId:', expertId);
+  console.log('🎯 Current location:', window.location.pathname);
+  
   const [expert, setExpert] = useState<Expert | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -84,14 +87,16 @@ const BookSession = () => {
 
   // Fetch expert details
   useEffect(() => {
+    console.log('🔄 BookSession useEffect triggered with expertId:', expertId);
+    
     const fetchExpert = async () => {
       if (!expertId) {
-        console.log('❌ No expertId provided');
+        console.log('❌ No expertId provided in BookSession');
         setLoading(false);
         return;
       }
       
-      console.log(`🔍 Fetching expert details for ID: ${expertId}`);
+      console.log(`🔍 BookSession: Fetching expert details for ID: ${expertId}`);
       
       try {
         const response = await apiRequest('GET', `/api/experts/${expertId}`);
@@ -103,14 +108,15 @@ const BookSession = () => {
         
         if (response.success && response.data) {
           setExpert(response.data);
-          console.log('✅ Expert loaded successfully:', response.data.name);
+          console.log('✅ BookSession: Expert loaded successfully:', response.data.name);
         } else {
-          console.log('❌ Expert not found or invalid response');
+          console.log('❌ BookSession: Expert not found or invalid response');
           toast({
             title: "Expert not found",
             description: `The expert with ID ${expertId} could not be found. Please try again or contact support.`,
             variant: "destructive",
           });
+          console.log('🔄 BookSession: Navigating to /beacons due to expert not found');
           navigate('/beacons');
         }
       } catch (error) {

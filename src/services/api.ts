@@ -300,7 +300,7 @@ export const ExpertApi = {
 // Admin API methods
 export const AdminApi = {
   async login(credentials: { email: string; password: string }) {
-    return apiRequest('POST', '/api/admin/login', credentials);
+    return apiRequest('POST', '/api/auth/admin/login', credentials);
   },
 
   async getUsers(params?: any) {

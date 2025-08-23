@@ -4,7 +4,7 @@ import { Expert } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useUserContext } from '@/contexts/UserContext';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
-import { EnhancedAdminApi } from '@/services/adminApi';
+import { AdminApi } from '@/services/api';
 import {
   Card,
   CardContent,
@@ -127,7 +127,7 @@ const FlagshipExpertManagement = () => {
         ...(filters.search && { search: filters.search }),
       };
 
-      const response = await EnhancedAdminApi.getExpertsAdvanced(params);
+      const response = await AdminApi.getExpertsAdvanced(params);
       if (!response.success) throw new Error(response.error || 'Failed to fetch experts');
       return response.data;
     },
@@ -150,7 +150,7 @@ const FlagshipExpertManagement = () => {
   const { data: platformData } = useQuery({
     queryKey: ['platformOverview'],
     queryFn: async () => {
-      const response = await EnhancedAdminApi.getPlatformOverview({ timeframe: '7d' });
+      const response = await AdminApi.getPlatformOverview({ timeframe: '7d' });
       if (!response.success) throw new Error(response.error);
       return response.data;
     },
@@ -160,7 +160,7 @@ const FlagshipExpertManagement = () => {
   // Bulk action mutation
   const bulkActionMutation = useMutation({
     mutationFn: async (params: { expertIds: string[]; action: 'approve' | 'reject' | 'suspend' | 'reactivate'; notes?: string }) => {
-      const response = await EnhancedAdminApi.bulkExpertAction(params);
+      const response = await AdminApi.bulkExpertAction(params);
       if (!response.success) throw new Error(response.error || 'Bulk action failed');
       return response;
     },
