@@ -129,6 +129,22 @@ export interface ApiResponse<T = any> {
   message?: string;
 }
 
+// Token management utilities
+export const setAdminToken = (token: string) => {
+  localStorage.setItem('admin_token', token);
+  localStorage.setItem('token', token); 
+  localStorage.setItem('veilo-auth-token', token);
+  
+  // Set axios default header for all subsequent requests
+  api.defaults.headers.common['x-auth-token'] = token;
+  api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  
+  console.log('🔐 Admin token set:', { 
+    token: token.substring(0, 20) + '...', 
+    hasHeader: !!api.defaults.headers.common['x-auth-token'] 
+  });
+};
+
 // Generic API request function
 export const apiRequest = async <T = any>(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',

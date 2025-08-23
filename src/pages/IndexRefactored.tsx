@@ -22,6 +22,7 @@ import EnhancedSanctuary from '@/pages/EnhancedSanctuary';
 import SmartSanctuaryRouter from '@/components/sanctuary/SmartSanctuaryRouter';
 import Phase4Test from '@/pages/Phase4Test';
 import MySanctuariesPage from '@/pages/MySanctuaries';
+import BookSession from '@/pages/BookSession';
 
 const IndexRefactored = () => {
   return (
@@ -35,6 +36,7 @@ const IndexRefactored = () => {
           <Route path="/expert/:expertId" element={<ExpertProfileEnhanced />} />
           <Route path="/chat/:sessionId?" element={<Chat />} />
           <Route path="/sessions" element={<SessionHub />} />
+          <Route path="/sessions/book/:expertId" element={<BookSession />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/register-expert" element={<ExpertRegistration />} />

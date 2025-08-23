@@ -444,6 +444,91 @@ router.get('/verify', authMiddleware, async (req, res) => {
   }
 });
 
+// Platform analytics overview
+router.get('/analytics/platform-overview', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { timeframe = '7d' } = req.query;
+    const days = timeframe === '30d' ? 30 : timeframe === '24h' ? 1 : 7;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const [
+      expertStats,
+      userStats,
+      sessionStats,
+      recentActivity
+    ] = await Promise.all([
+      Expert.aggregate([
+        {
+          $facet: {
+            total: [{ $count: "count" }],
+            byStatus: [
+              { $group: { _id: "$accountStatus", count: { $sum: 1 } } }
+            ],
+            byVerification: [
+              { $group: { _id: "$verificationLevel", count: { $sum: 1 } } }
+            ],
+            recent: [
+              { $match: { createdAt: { $gte: startDate } } },
+              { $count: "count" }
+            ]
+          }
+        }
+      ]),
+      User.aggregate([
+        {
+          $facet: {
+            total: [{ $count: "count" }],
+            active: [
+              { $match: { lastActive: { $gte: startDate } } },
+              { $count: "count" }
+            ],
+            recent: [
+              { $match: { createdAt: { $gte: startDate } } },
+              { $count: "count" }
+            ]
+          }
+        }
+      ]),
+      // Session stats would go here when Session model is available
+      Promise.resolve({ bookings: 0, completed: 0 }),
+      Expert.find({ createdAt: { $gte: startDate } })
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .select('name specialization accountStatus createdAt')
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        overview: {
+          experts: {
+            total: expertStats[0]?.total[0]?.count || 0,
+            recent: expertStats[0]?.recent[0]?.count || 0,
+            byStatus: expertStats[0]?.byStatus || [],
+            byVerification: expertStats[0]?.byVerification || []
+          },
+          users: {
+            total: userStats[0]?.total[0]?.count || 0,
+            active: userStats[0]?.active[0]?.count || 0,
+            recent: userStats[0]?.recent[0]?.count || 0
+          },
+          sessions: sessionStats,
+          timeframe: timeframe
+        },
+        recentActivity
+      }
+    });
+
+  } catch (error) {
+    console.error('Platform overview error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch platform overview'
+    });
+  }
+});
+
 // Helper functions
 function calculateProfileCompletion(expert) {
   let score = 0;

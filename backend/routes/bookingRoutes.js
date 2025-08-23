@@ -36,11 +36,27 @@ router.post('/create', authMiddleware, async (req, res) => {
       });
     }
 
-    // Check if expert is available (basic check)
+    // Check if expert is available (comprehensive check)
     if (expert.accountStatus !== 'approved') {
       return res.status(400).json({
         success: false,
         error: 'Expert is not available for bookings'
+      });
+    }
+
+    if (!expert.verified) {
+      return res.status(400).json({
+        success: false,
+        error: 'Expert is not yet verified'
+      });
+    }
+
+    // Validate session time is in the future
+    const scheduledTime = new Date(scheduledDateTime);
+    if (scheduledTime <= new Date()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Session must be scheduled for a future time'
       });
     }
 
