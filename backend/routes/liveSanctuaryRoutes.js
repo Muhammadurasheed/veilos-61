@@ -1,348 +1,428 @@
 const express = require('express');
 const router = express.Router();
-const LiveSanctuarySession = require('../models/LiveSanctuarySession');
-const { optionalAuthMiddleware } = require('../middleware/auth');
 const { nanoid } = require('nanoid');
-
-// Get client IP helper
-const getClientIp = (req, res, next) => {
-  req.clientIp = req.headers['x-forwarded-for'] || 
-    req.connection.remoteAddress || 
-    req.socket.remoteAddress;
-  next();
-};
+const LiveSanctuarySession = require('../models/LiveSanctuarySession');
+const { authMiddleware, optionalAuthMiddleware } = require('../middleware/auth');
+const { generateAgoraToken } = require('../utils/agoraTokenGenerator');
 
 // Create live sanctuary session
-router.post('/', getClientIp, optionalAuthMiddleware, async (req, res) => {
+router.post('/', authMiddleware, async (req, res) => {
   try {
-    const { 
-      topic, 
-      description, 
+    const {
+      topic,
+      description,
       emoji,
       maxParticipants = 50,
       audioOnly = true,
       allowAnonymous = true,
       moderationEnabled = true,
       emergencyContactEnabled = true,
-      expireHours = 2,
-      scheduledAt
+      expireHours = 24
     } = req.body;
 
-    if (!topic) {
-      return res.status(400).json({
-        success: false,
-        error: 'Topic is required'
-      });
+    console.log('🎙️ Creating live sanctuary session:', { 
+      topic, 
+      hostId: req.user.id,
+      maxParticipants,
+      audioOnly 
+    });
+
+    if (!topic || topic.trim().length === 0) {
+      return res.error('Topic is required', 400);
     }
 
-    // Generate unique Agora channel name
-    const agoraChannelName = `live_sanctuary_${nanoid(12)}`;
+    // Generate unique channel name and tokens
+    const sessionId = `live-sanctuary-${nanoid(8)}`;
+    const channelName = `sanctuary_${sessionId}`;
+    const hostAlias = req.user.alias || `Host_${nanoid(4)}`;
     
-    // In production, this would generate a real Agora token
-    // For now, using a mock token
-    const agoraToken = `agora_token_${nanoid(32)}`;
-
-    // Calculate expiration
-    const hours = Math.min(Math.max(1, expireHours), 24);
-    const expiresAt = scheduledAt ? 
-      new Date(new Date(scheduledAt).getTime() + (hours * 60 * 60 * 1000)) :
-      new Date(Date.now() + (hours * 60 * 60 * 1000));
-
-    // Host identification
-    let hostId = null;
-    let hostToken = null;
-
-    if (req.user && req.user.id) {
-      hostId = req.user.id;
-    } else {
-      // Anonymous host - generate token
-      hostToken = nanoid(32);
+    // Calculate expiration time
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + expireHours);
+    
+    // Generate Agora tokens
+    let agoraToken, hostToken;
+    try {
+      agoraToken = generateAgoraToken(channelName, null, 'subscriber', 3600 * expireHours);
+      hostToken = generateAgoraToken(channelName, req.user.id, 'publisher', 3600 * expireHours);
+    } catch (agoraError) {
+      console.warn('⚠️ Agora token generation failed, using placeholder:', agoraError.message);
+      agoraToken = `temp_token_${nanoid(16)}`;
+      hostToken = `temp_host_token_${nanoid(16)}`;
     }
 
-    // Create live sanctuary session
+    // Create session
     const session = new LiveSanctuarySession({
-      topic,
-      description: description || '',
+      id: sessionId,
+      topic: topic.trim(),
+      description: description?.trim(),
       emoji: emoji || '🎙️',
-      hostId,
+      hostId: req.user.id,
+      hostAlias,
       hostToken,
-      hostIp: req.clientIp,
-      agoraChannelName,
+      agoraChannelName: channelName,
       agoraToken,
-      maxParticipants: Math.min(Math.max(2, maxParticipants), 200),
-      audioOnly,
+      expiresAt,
+      isActive: true,
+      participants: [{
+        id: req.user.id,
+        alias: hostAlias,
+        isHost: true,
+        isModerator: true,
+        isMuted: false,
+        isBlocked: false,
+        handRaised: false,
+        joinedAt: new Date(),
+        avatarIndex: req.user.avatarIndex || 1,
+        connectionStatus: 'connected',
+        audioLevel: 0,
+        speakingTime: 0
+      }],
+      maxParticipants,
+      currentParticipants: 1,
       allowAnonymous,
+      audioOnly,
       moderationEnabled,
       emergencyContactEnabled,
-      expiresAt,
-      scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
-      participants: []
+      startTime: new Date(),
+      isRecorded: false,
+      recordingConsent: [req.user.id],
+      breakoutRooms: [],
+      moderationLevel: moderationEnabled ? 'medium' : 'low',
+      emergencyProtocols: emergencyContactEnabled,
+      aiMonitoring: moderationEnabled,
+      estimatedDuration: expireHours * 60,
+      tags: [],
+      language: 'en',
+      status: 'active'
     });
 
     await session.save();
 
-    res.json({
-      success: true,
-      data: {
+    console.log('✅ Live sanctuary session created:', {
+      sessionId,
+      channelName,
+      hostId: req.user.id,
+      expiresAt
+    });
+
+    res.success('Live sanctuary session created successfully', {
+      session: {
         id: session.id,
         topic: session.topic,
         description: session.description,
         emoji: session.emoji,
+        hostId: session.hostId,
+        hostAlias: session.hostAlias,
         agoraChannelName: session.agoraChannelName,
         agoraToken: session.agoraToken,
+        hostToken: session.hostToken,
+        expiresAt: session.expiresAt,
         maxParticipants: session.maxParticipants,
         currentParticipants: session.currentParticipants,
-        expiresAt: session.expiresAt,
-        scheduledAt: session.scheduledAt,
-        hostToken: hostToken // Only for anonymous hosts
+        allowAnonymous: session.allowAnonymous,
+        audioOnly: session.audioOnly,
+        moderationEnabled: session.moderationEnabled,
+        emergencyContactEnabled: session.emergencyContactEnabled,
+        status: session.status,
+        isActive: session.isActive
       }
     });
 
   } catch (error) {
-    console.error('Create live sanctuary error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Server error creating live sanctuary session'
+    console.error('❌ Live sanctuary creation error:', error);
+    res.error('Failed to create live sanctuary session: ' + error.message, 500);
+  }
+});
+
+// Get live sanctuary session
+router.get('/:sessionId', optionalAuthMiddleware, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    
+    console.log('🔍 Fetching live sanctuary session:', sessionId);
+    
+    const session = await LiveSanctuarySession.findOne({ id: sessionId });
+    
+    if (!session) {
+      return res.error('Live sanctuary session not found', 404);
+    }
+
+    // Check if session has expired
+    if (new Date() > session.expiresAt) {
+      session.status = 'ended';
+      session.isActive = false;
+      await session.save();
+      return res.error('Live sanctuary session has expired', 410);
+    }
+
+    console.log('✅ Live sanctuary session found:', {
+      sessionId,
+      status: session.status,
+      participants: session.currentParticipants
     });
+
+    res.success('Live sanctuary session retrieved', {
+      session: {
+        id: session.id,
+        topic: session.topic,
+        description: session.description,
+        emoji: session.emoji,
+        hostId: session.hostId,
+        hostAlias: session.hostAlias,
+        agoraChannelName: session.agoraChannelName,
+        agoraToken: session.agoraToken,
+        expiresAt: session.expiresAt,
+        maxParticipants: session.maxParticipants,
+        currentParticipants: session.currentParticipants,
+        allowAnonymous: session.allowAnonymous,
+        audioOnly: session.audioOnly,
+        moderationEnabled: session.moderationEnabled,
+        emergencyContactEnabled: session.emergencyContactEnabled,
+        status: session.status,
+        isActive: session.isActive,
+        participants: session.participants,
+        breakoutRooms: session.breakoutRooms
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Live sanctuary fetch error:', error);
+    res.error('Failed to fetch live sanctuary session: ' + error.message, 500);
   }
 });
 
 // Join live sanctuary session
-router.post('/:id/join', getClientIp, async (req, res) => {
+router.post('/:sessionId/join', authMiddleware, async (req, res) => {
   try {
-    const { alias, isAnonymous = true } = req.body;
-
-    const session = await LiveSanctuarySession.findOne({
-      id: req.params.id,
-      isActive: true,
-      expiresAt: { $gt: new Date() }
+    const { sessionId } = req.params;
+    const { alias, isAnonymous = false, voiceModulation } = req.body;
+    
+    console.log('🚪 User joining live sanctuary:', {
+      sessionId,
+      userId: req.user.id,
+      alias: alias || req.user.alias
     });
 
+    const session = await LiveSanctuarySession.findOne({ id: sessionId });
+    
     if (!session) {
-      return res.status(404).json({
-        success: false,
-        error: 'Live sanctuary session not found or expired'
-      });
+      return res.error('Live sanctuary session not found', 404);
     }
 
-    // Check capacity
+    if (!session.isActive || session.status !== 'active') {
+      return res.error('Live sanctuary session is not active', 400);
+    }
+
+    if (new Date() > session.expiresAt) {
+      return res.error('Live sanctuary session has expired', 410);
+    }
+
     if (session.currentParticipants >= session.maxParticipants) {
-      return res.status(400).json({
-        success: false,
-        error: 'Session is at maximum capacity'
-      });
+      return res.error('Live sanctuary session is full', 400);
     }
 
-    // Generate participant details
-    const participantId = nanoid(10);
-    const participantAlias = alias || `Speaker ${nanoid(4)}`;
+    // Check if user is already in session
+    const existingParticipant = session.participants.find(p => p.id === req.user.id);
+    if (existingParticipant) {
+      return res.error('User already in session', 400);
+    }
 
     // Add participant
-    session.participants.push({
-      id: participantId,
+    const participantAlias = alias || req.user.alias || `Participant_${nanoid(4)}`;
+    const participant = {
+      id: req.user.id,
       alias: participantAlias,
-      joinedAt: new Date()
-    });
+      isHost: false,
+      isModerator: false,
+      isMuted: !session.allowAnonymous, // Auto-mute non-anonymous joins
+      isBlocked: false,
+      handRaised: false,
+      joinedAt: new Date(),
+      avatarIndex: req.user.avatarIndex || Math.floor(Math.random() * 12) + 1,
+      connectionStatus: 'connected',
+      audioLevel: 0,
+      speakingTime: 0
+    };
 
+    session.participants.push(participant);
     session.currentParticipants = session.participants.length;
     await session.save();
 
-    res.json({
-      success: true,
-      data: {
-        sessionId: session.id,
-        participantId,
-        participantAlias,
+    console.log('✅ User joined live sanctuary:', {
+      sessionId,
+      userId: req.user.id,
+      participantCount: session.currentParticipants
+    });
+
+    res.success('Successfully joined live sanctuary session', {
+      session: {
+        id: session.id,
         agoraChannelName: session.agoraChannelName,
         agoraToken: session.agoraToken,
-        topic: session.topic,
-        description: session.description,
-        emoji: session.emoji,
-        isHost: false,
-        expiresAt: session.expiresAt
+        participant
       }
     });
 
   } catch (error) {
-    console.error('Join live sanctuary error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Server error joining live sanctuary session'
-    });
+    console.error('❌ Live sanctuary join error:', error);
+    res.error('Failed to join live sanctuary session: ' + error.message, 500);
   }
 });
 
-// Get live sanctuary session details
-router.get('/:id', async (req, res) => {
+// Leave live sanctuary session
+router.post('/:sessionId/leave', authMiddleware, async (req, res) => {
   try {
-    const session = await LiveSanctuarySession.findOne({
-      id: req.params.id,
+    const { sessionId } = req.params;
+    
+    console.log('🚪 User leaving live sanctuary:', {
+      sessionId,
+      userId: req.user.id
+    });
+
+    const session = await LiveSanctuarySession.findOne({ id: sessionId });
+    
+    if (!session) {
+      return res.error('Live sanctuary session not found', 404);
+    }
+
+    // Remove participant
+    const participantIndex = session.participants.findIndex(p => p.id === req.user.id);
+    if (participantIndex === -1) {
+      return res.error('User not in session', 400);
+    }
+
+    const isHost = session.participants[participantIndex].isHost;
+    session.participants.splice(participantIndex, 1);
+    session.currentParticipants = session.participants.length;
+
+    // If host leaves, end session or transfer to another moderator
+    if (isHost) {
+      const newHost = session.participants.find(p => p.isModerator);
+      if (newHost) {
+        newHost.isHost = true;
+        session.hostId = newHost.id;
+        session.hostAlias = newHost.alias;
+      } else {
+        // No moderators left, end session
+        session.status = 'ended';
+        session.isActive = false;
+      }
+    }
+
+    await session.save();
+
+    console.log('✅ User left live sanctuary:', {
+      sessionId,
+      userId: req.user.id,
+      wasHost: isHost,
+      participantCount: session.currentParticipants
+    });
+
+    res.success('Successfully left live sanctuary session', {
+      sessionEnded: !session.isActive
+    });
+
+  } catch (error) {
+    console.error('❌ Live sanctuary leave error:', error);
+    res.error('Failed to leave live sanctuary session: ' + error.message, 500);
+  }
+});
+
+// Get active live sanctuary sessions
+router.get('/', optionalAuthMiddleware, async (req, res) => {
+  try {
+    const { limit = 20, page = 1 } = req.query;
+    
+    console.log('📋 Fetching active live sanctuary sessions');
+    
+    const sessions = await LiveSanctuarySession.find({
       isActive: true,
+      status: 'active',
+      expiresAt: { $gt: new Date() }
+    })
+    .sort({ createdAt: -1 })
+    .limit(parseInt(limit))
+    .skip((parseInt(page) - 1) * parseInt(limit));
+
+    const total = await LiveSanctuarySession.countDocuments({
+      isActive: true,
+      status: 'active',
       expiresAt: { $gt: new Date() }
     });
 
-    if (!session) {
-      return res.status(404).json({
-        success: false,
-        error: 'Live sanctuary session not found or expired'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: {
+    res.success('Active live sanctuary sessions retrieved', {
+      sessions: sessions.map(session => ({
         id: session.id,
         topic: session.topic,
         description: session.description,
         emoji: session.emoji,
-        maxParticipants: session.maxParticipants,
+        hostAlias: session.hostAlias,
         currentParticipants: session.currentParticipants,
-        audioOnly: session.audioOnly,
+        maxParticipants: session.maxParticipants,
         allowAnonymous: session.allowAnonymous,
+        audioOnly: session.audioOnly,
         moderationEnabled: session.moderationEnabled,
         emergencyContactEnabled: session.emergencyContactEnabled,
-        expiresAt: session.expiresAt,
-        scheduledAt: session.scheduledAt,
-        createdAt: session.createdAt
+        status: session.status,
+        createdAt: session.createdAt,
+        estimatedDuration: session.estimatedDuration,
+        tags: session.tags,
+        language: session.language
+      })),
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
       }
     });
 
   } catch (error) {
-    console.error('Get live sanctuary error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Server error retrieving live sanctuary session'
-    });
+    console.error('❌ Live sanctuary sessions fetch error:', error);
+    res.error('Failed to fetch live sanctuary sessions: ' + error.message, 500);
   }
 });
 
-// End live sanctuary session
-router.post('/:id/end', getClientIp, async (req, res) => {
+// End live sanctuary session (host only)
+router.post('/:sessionId/end', authMiddleware, async (req, res) => {
   try {
-    const { hostToken } = req.body;
-    let session;
+    const { sessionId } = req.params;
+    
+    console.log('🛑 Ending live sanctuary session:', {
+      sessionId,
+      userId: req.user.id
+    });
 
-    // Authentication logic - try hostToken first
-    if (hostToken) {
-      session = await LiveSanctuarySession.findOne({
-        id: req.params.id,
-        hostToken
-      });
-    }
-
-    // Try authenticated user
-    if (!session && req.headers['x-auth-token']) {
-      try {
-        const decoded = require('jsonwebtoken').verify(
-          req.headers['x-auth-token'],
-          process.env.JWT_SECRET
-        );
-
-        session = await LiveSanctuarySession.findOne({
-          id: req.params.id,
-          hostId: decoded.user.id
-        });
-      } catch (err) {
-        // Invalid token
-      }
-    }
-
-    // Fall back to IP verification (less secure)
+    const session = await LiveSanctuarySession.findOne({ id: sessionId });
+    
     if (!session) {
-      session = await LiveSanctuarySession.findOne({
-        id: req.params.id,
-        hostIp: req.clientIp
-      });
+      return res.error('Live sanctuary session not found', 404);
     }
 
-    if (!session) {
-      return res.status(403).json({
-        success: false,
-        error: 'Not authorized to end this session'
-      });
+    // Check if user is host or admin
+    const isHost = session.hostId === req.user.id;
+    const isAdmin = req.user.role === 'admin';
+    
+    if (!isHost && !isAdmin) {
+      return res.error('Only the host or admin can end the session', 403);
     }
 
-    // End session
+    session.status = 'ended';
     session.isActive = false;
+    session.endedAt = new Date();
     await session.save();
 
-    res.json({
-      success: true,
-      message: 'Live sanctuary session ended successfully'
+    console.log('✅ Live sanctuary session ended:', {
+      sessionId,
+      endedBy: req.user.id
     });
+
+    res.success('Live sanctuary session ended successfully');
 
   } catch (error) {
-    console.error('End live sanctuary error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Server error ending live sanctuary session'
-    });
-  }
-});
-
-// Remove participant from live sanctuary
-router.post('/:id/remove-participant', getClientIp, async (req, res) => {
-  try {
-    const { hostToken, participantId } = req.body;
-    let session;
-
-    // Host authentication (same logic as end session)
-    if (hostToken) {
-      session = await LiveSanctuarySession.findOne({
-        id: req.params.id,
-        hostToken
-      });
-    }
-
-    if (!session && req.headers['x-auth-token']) {
-      try {
-        const decoded = require('jsonwebtoken').verify(
-          req.headers['x-auth-token'],
-          process.env.JWT_SECRET
-        );
-
-        session = await LiveSanctuarySession.findOne({
-          id: req.params.id,
-          hostId: decoded.user.id
-        });
-      } catch (err) {
-        // Invalid token
-      }
-    }
-
-    if (!session) {
-      session = await LiveSanctuarySession.findOne({
-        id: req.params.id,
-        hostIp: req.clientIp
-      });
-    }
-
-    if (!session) {
-      return res.status(403).json({
-        success: false,
-        error: 'Not authorized to moderate this session'
-      });
-    }
-
-    // Remove participant
-    session.participants = session.participants.filter(
-      participant => participant.id !== participantId
-    );
-
-    session.currentParticipants = session.participants.length;
-    await session.save();
-
-    res.json({
-      success: true,
-      message: 'Participant removed from live sanctuary session'
-    });
-
-  } catch (error) {
-    console.error('Remove participant error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Server error removing participant'
-    });
+    console.error('❌ Live sanctuary end error:', error);
+    res.error('Failed to end live sanctuary session: ' + error.message, 500);
   }
 });
 

@@ -24,27 +24,36 @@ export const useAdminAuth = () => {
         return;
       }
 
+      console.log('🔍 Checking admin auth status with token:', token.substring(0, 20) + '...');
+
       // Verify token with backend
       const response = await fetch('/api/admin/verify', {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'x-auth-token': token
+          'x-auth-token': token,
+          'Content-Type': 'application/json'
         }
       });
 
+      console.log('📡 Admin auth response status:', response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Admin auth response:', { success: data.success, hasUser: !!data.data?.user, userRole: data.data?.user?.role });
+        
         if (data.success && data.data?.user?.role === 'admin') {
           setIsAuthenticated(true);
           setUser(data.data.user);
         } else {
+          console.log('❌ Admin auth failed: invalid role or missing data');
           logout();
         }
       } else {
+        console.log('❌ Admin auth failed: response not ok');
         logout();
       }
     } catch (error) {
-      console.error('Auth check failed:', error);
+      console.error('❌ Auth check failed:', error);
       logout();
     } finally {
       setIsLoading(false);
