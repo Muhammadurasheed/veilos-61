@@ -87,11 +87,11 @@ const EnhancedLiveSanctuary: React.FC = () => {
 
   const sanctuarySocket = socketConfig ? useSanctuarySocket(socketConfig) : null;
 
-  // Fetch session data
   useEffect(() => {
     const fetchSession = async () => {
-      if (!sessionId) {
-        setError('Session ID is required');
+      if (!sessionId || sessionId === 'undefined') {
+        console.error('❌ Invalid session ID:', sessionId);
+        setError('Invalid session ID provided');
         setLoading(false);
         return;
       }
@@ -100,6 +100,8 @@ const EnhancedLiveSanctuary: React.FC = () => {
         console.log('🔍 Fetching live sanctuary session:', sessionId);
         
         const response = await LiveSanctuaryApi.getSession(sessionId);
+        
+        console.log('📡 Live sanctuary response:', response);
         
         if (response.success && response.data?.session) {
           setSession(response.data.session);

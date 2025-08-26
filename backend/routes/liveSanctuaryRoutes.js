@@ -5,7 +5,7 @@ const LiveSanctuarySession = require('../models/LiveSanctuarySession');
 const { authMiddleware, optionalAuthMiddleware } = require('../middleware/auth');
 const { generateAgoraToken } = require('../utils/agoraTokenGenerator');
 
-// Create live sanctuary session
+// Enhanced Live Sanctuary session creation with better error handling and structure
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const {
@@ -31,7 +31,7 @@ router.post('/', authMiddleware, async (req, res) => {
       return res.error('Topic is required', 400);
     }
 
-    // Generate unique channel name and tokens
+    // Generate unique session ID and channel name
     const sessionId = `live-sanctuary-${nanoid(8)}`;
     const channelName = `sanctuary_${sessionId}`;
     const hostAlias = req.user.alias || `Host_${nanoid(4)}`;
@@ -40,18 +40,19 @@ router.post('/', authMiddleware, async (req, res) => {
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + expireHours);
     
-    // Generate Agora tokens
+    // Generate Agora tokens with proper error handling
     let agoraToken, hostToken;
     try {
       agoraToken = generateAgoraToken(channelName, null, 'subscriber', 3600 * expireHours);
       hostToken = generateAgoraToken(channelName, req.user.id, 'publisher', 3600 * expireHours);
+      console.log('✅ Agora tokens generated successfully');
     } catch (agoraError) {
       console.warn('⚠️ Agora token generation failed, using placeholder:', agoraError.message);
       agoraToken = `temp_token_${nanoid(16)}`;
       hostToken = `temp_host_token_${nanoid(16)}`;
     }
 
-    // Create session
+    // Create session document
     const session = new LiveSanctuarySession({
       id: sessionId,
       topic: topic.trim(),
@@ -99,13 +100,14 @@ router.post('/', authMiddleware, async (req, res) => {
 
     await session.save();
 
-    console.log('✅ Live sanctuary session created:', {
+    console.log('✅ Live sanctuary session created successfully:', {
       sessionId,
       channelName,
       hostId: req.user.id,
       expiresAt
     });
 
+    // Return response with consistent structure for frontend
     res.success('Live sanctuary session created successfully', {
       session: {
         id: session.id,
@@ -125,7 +127,8 @@ router.post('/', authMiddleware, async (req, res) => {
         moderationEnabled: session.moderationEnabled,
         emergencyContactEnabled: session.emergencyContactEnabled,
         status: session.status,
-        isActive: session.isActive
+        isActive: session.isActive,
+        participants: session.participants
       }
     });
 

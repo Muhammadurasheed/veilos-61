@@ -84,16 +84,24 @@ const LiveSanctuaryCreator: React.FC = () => {
 
       console.log('📡 Live sanctuary creation response:', response);
 
-      if (response.success && response.data?.session) {
+      if (response.success && response.data?.session?.id) {
+        const sessionId = response.data.session.id;
+        
+        console.log('✅ Session created with ID:', sessionId);
+        
         toast({
           title: 'Live Sanctuary Created',
           description: `Your live audio session "${data.topic}" is now active.`,
         });
 
-        // Navigate to the live sanctuary space as host
-        navigate(`/sanctuary/live/${response.data.session.id}?role=host`);
+        // Navigate to the live sanctuary space as host with proper session ID
+        const navigationUrl = `/sanctuary/live/${sessionId}?role=host`;
+        console.log('🧭 Navigating to:', navigationUrl);
+        
+        navigate(navigationUrl);
       } else {
-        throw new Error(response.error || 'Failed to create live sanctuary session');
+        console.error('❌ Invalid response structure:', response);
+        throw new Error(response.error || 'Failed to create live sanctuary session - invalid response');
       }
     } catch (error) {
       console.error('❌ Live sanctuary creation error:', error);
