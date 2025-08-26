@@ -68,6 +68,10 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
         const adminUser = response.data.admin || response.data.user;
         
         if (adminUser?.role !== 'admin') {
+          console.error('❌ Access denied - not admin role:', { 
+            userRole: adminUser?.role, 
+            expectedRole: 'admin' 
+          });
           throw new Error('Access denied. Admin privileges required.');
         }
         

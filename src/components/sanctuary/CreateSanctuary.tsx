@@ -186,7 +186,7 @@ const CreateSanctuary: React.FC = () => {
           }
           
           setCreatedSession({
-            ...response.data,
+            ...response.data.session,
             type: 'live-audio'
           });
           setShowShareOptions(true);

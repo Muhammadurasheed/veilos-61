@@ -316,7 +316,21 @@ export const ExpertApi = {
 // Admin API methods
 export const AdminApi = {
   async login(credentials: { email: string; password: string }) {
-    return apiRequest('POST', '/api/auth/admin/login', credentials);
+    console.log('🔐 AdminApi.login called with:', { email: credentials.email, hasPassword: !!credentials.password });
+    
+    const response = await apiRequest('POST', '/api/auth/admin/login', {
+      email: credentials.email,
+      password: credentials.password
+    });
+    
+    console.log('📡 AdminApi.login response:', {
+      success: response.success,
+      hasData: !!response.data,
+      hasToken: !!response.data?.token,
+      userRole: response.data?.user?.role
+    });
+    
+    return response;
   },
 
   async getUsers(params?: any) {
