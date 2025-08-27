@@ -576,7 +576,19 @@ export const SanctuaryApi = {
 // Live Sanctuary API methods
 export const LiveSanctuaryApi = {
   async createSession(sessionData: any) {
-    return apiRequest('POST', '/api/live-sanctuary', sessionData);
+    console.log('🚀 LiveSanctuaryApi.createSession called with:', sessionData);
+    const response = await apiRequest('POST', '/api/live-sanctuary', sessionData);
+    console.log('📡 LiveSanctuaryApi.createSession response:', {
+      success: response.success,
+      hasData: !!response.data,
+      hasSession: !!response.data?.session,
+      sessionId: response.data?.session?.id,
+      sessionAltId: response.data?.session?._id,
+      responseKeys: response.data ? Object.keys(response.data) : 'no data',
+      sessionKeys: response.data?.session ? Object.keys(response.data.session) : 'no session',
+      fullResponse: response
+    });
+    return response;
   },
 
   async getSession(id: string) {

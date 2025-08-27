@@ -64,41 +64,72 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
       });
 
       if (response.success && response.data?.token) {
-        // Enhanced admin validation - check multiple response structures
-        const adminFromAdmin = response.data.admin;
-        const adminFromUser = response.data.user;
+        // Complete admin validation with exhaustive debugging
+        const adminFromAdmin = response.data?.admin;
+        const adminFromUser = response.data?.user;
         
-        console.log('🔍 Admin login response analysis:', {
-          hasToken: !!response.data.token,
-          hasAdmin: !!response.data.admin,
-          hasUser: !!response.data.user,
-          adminRole: response.data.admin?.role,
-          userRole: response.data.user?.role,
-          fullResponseData: response.data
+        console.log('🔍 Complete admin login response analysis:', {
+          hasToken: !!response.data?.token,
+          hasAdmin: !!adminFromAdmin,
+          hasUser: !!adminFromUser,
+          adminRole: adminFromAdmin?.role,
+          userRole: adminFromUser?.role,
+          adminId: adminFromAdmin?.id,
+          userId: adminFromUser?.id,
+          responseDataKeys: response.data ? Object.keys(response.data) : 'no data',
+          fullResponseData: response.data,
+          responseSuccess: response.success,
+          responseError: response.error
         });
         
-        // Check admin role from either admin or user object
+        // Enhanced admin role validation
         let isValidAdmin = false;
         let adminUser = null;
         
-        if (adminFromAdmin && adminFromAdmin.role === 'admin') {
+        // Primary check - admin object with admin role
+        if (adminFromAdmin?.role === 'admin' && adminFromAdmin?.id) {
           isValidAdmin = true;
           adminUser = adminFromAdmin;
-          console.log('✅ Admin validated from admin object');
-        } else if (adminFromUser && adminFromUser.role === 'admin') {
+          console.log('✅ Admin validated from admin object:', {
+            id: adminUser.id,
+            role: adminUser.role,
+            email: adminUser.email
+          });
+        }
+        // Secondary check - user object with admin role
+        else if (adminFromUser?.role === 'admin' && adminFromUser?.id) {
           isValidAdmin = true;
           adminUser = adminFromUser;
-          console.log('✅ Admin validated from user object');
-        }
-        
-        if (!isValidAdmin || !adminUser) {
-          console.error('❌ Access denied - invalid admin credentials:', { 
-            adminFromAdmin: adminFromAdmin?.role,
-            adminFromUser: adminFromUser?.role,
-            expectedRole: 'admin',
-            fullResponse: response.data
+          console.log('✅ Admin validated from user object:', {
+            id: adminUser.id,
+            role: adminUser.role,
+            email: adminUser.email
           });
-          throw new Error('Access denied. Admin privileges required.');
+        }
+        // Final validation failure
+        else {
+          console.error('❌ Complete admin validation failure:', { 
+            adminObjectExists: !!adminFromAdmin,
+            adminRole: adminFromAdmin?.role,
+            adminId: adminFromAdmin?.id,
+            userObjectExists: !!adminFromUser,
+            userRole: adminFromUser?.role,
+            userId: adminFromUser?.id,
+            expectedRole: 'admin',
+            responseKeys: response.data ? Object.keys(response.data) : 'no data',
+            fullResponseDebug: {
+              success: response.success,
+              error: response.error,
+              data: response.data
+            }
+          });
+          
+          // Try one more approach - check if response has success but missing proper structure
+          if (response.success && response.data?.token) {
+            throw new Error('Admin login succeeded but response structure is invalid. Please check backend response format.');
+          } else {
+            throw new Error('Access denied. Admin privileges required or invalid credentials.');
+          }
         }
         
         // Store admin token using centralized function
