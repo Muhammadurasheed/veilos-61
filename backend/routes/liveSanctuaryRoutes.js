@@ -111,6 +111,7 @@ router.post('/', authMiddleware, async (req, res) => {
     res.success('Live sanctuary session created successfully', {
       session: {
         id: session.id,
+        _id: session.id, // Also include _id as fallback
         topic: session.topic,
         description: session.description,
         emoji: session.emoji,

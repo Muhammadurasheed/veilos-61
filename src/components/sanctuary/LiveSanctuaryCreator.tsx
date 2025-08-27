@@ -84,8 +84,13 @@ const LiveSanctuaryCreator: React.FC = () => {
 
       console.log('📡 Live sanctuary creation response:', response);
 
-      if (response.success && response.data?.session?.id) {
-        const sessionId = response.data.session.id;
+      if (response.success && response.data?.session) {
+        const sessionId = response.data.session.id || response.data.session._id;
+        
+        if (!sessionId) {
+          console.error('❌ No session ID in response:', response.data);
+          throw new Error('Invalid response: missing session ID');
+        }
         
         console.log('✅ Session created with ID:', sessionId);
         

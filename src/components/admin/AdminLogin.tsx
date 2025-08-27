@@ -64,13 +64,23 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
       });
 
       if (response.success && response.data?.token) {
-        // Check if user has admin role from either user or admin object
+        // Check admin role from response - backend returns both user and admin objects
         const adminUser = response.data.admin || response.data.user;
         
-        if (adminUser?.role !== 'admin') {
-          console.error('❌ Access denied - not admin role:', { 
-            userRole: adminUser?.role, 
-            expectedRole: 'admin' 
+        console.log('🔍 Admin login response analysis:', {
+          hasToken: !!response.data.token,
+          hasAdmin: !!response.data.admin,
+          hasUser: !!response.data.user,
+          adminRole: response.data.admin?.role,
+          userRole: response.data.user?.role,
+          adminUser: adminUser
+        });
+        
+        if (!adminUser || adminUser.role !== 'admin') {
+          console.error('❌ Access denied - invalid admin role:', { 
+            adminUserRole: adminUser?.role,
+            expectedRole: 'admin',
+            fullResponse: response.data
           });
           throw new Error('Access denied. Admin privileges required.');
         }

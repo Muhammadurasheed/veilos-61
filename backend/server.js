@@ -97,6 +97,17 @@ app.use('/api/admin/monitoring', adminDashboardRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/sanctuary', sanctuaryRoutes);
+
+// Live Sanctuary routes with debugging
+app.use('/api/live-sanctuary', (req, res, next) => {
+  console.log('🔍 Live Sanctuary API Debug:', {
+    method: req.method,
+    path: req.path,
+    url: req.url,
+    body: req.method === 'POST' ? req.body : 'N/A'
+  });
+  next();
+});
 app.use('/api/live-sanctuary', liveSanctuaryRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/chat', chatRoutes);
