@@ -29,6 +29,7 @@ import { SanctuaryHostDashboard } from '@/components/sanctuary/SanctuaryHostDash
 import MySanctuariesPage from '@/pages/MySanctuaries';
 import SanctuarySubmit from '@/pages/SanctuarySubmit';
 import EnhancedSanctuary from '@/pages/EnhancedSanctuary';
+import EnhancedLiveSanctuary from '@/pages/EnhancedLiveSanctuary';
 import Phase4Test from '@/pages/Phase4Test';
 import FollowedExperts from '@/pages/FollowedExperts';
 import { SessionProvider } from '@/contexts/SessionContext';
