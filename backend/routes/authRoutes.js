@@ -79,6 +79,15 @@ router.post('/admin/login',
       avatarIndex: user.avatarIndex,
       avatarUrl: user.avatarUrl,
       isAnonymous: false
+    },
+    admin: {
+      id: user.id,
+      alias: user.alias,
+      email: user.email,
+      role: user.role,
+      avatarIndex: user.avatarIndex,
+      avatarUrl: user.avatarUrl,
+      isAnonymous: false
     }
   });
       

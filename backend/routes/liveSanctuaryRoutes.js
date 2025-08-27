@@ -3,7 +3,7 @@ const router = express.Router();
 const { nanoid } = require('nanoid');
 const LiveSanctuarySession = require('../models/LiveSanctuarySession');
 const { authMiddleware, optionalAuthMiddleware } = require('../middleware/auth');
-const { generateAgoraToken } = require('../utils/agoraTokenGenerator');
+const { generateRtcToken } = require('../utils/agoraTokenGenerator');
 
 // Enhanced Live Sanctuary session creation with better error handling and structure
 router.post('/', authMiddleware, async (req, res) => {
@@ -43,8 +43,8 @@ router.post('/', authMiddleware, async (req, res) => {
     // Generate Agora tokens with proper error handling
     let agoraToken, hostToken;
     try {
-      agoraToken = generateAgoraToken(channelName, null, 'subscriber', 3600 * expireHours);
-      hostToken = generateAgoraToken(channelName, req.user.id, 'publisher', 3600 * expireHours);
+      agoraToken = generateRtcToken(channelName, 0, 'subscriber', 3600 * expireHours);
+      hostToken = generateRtcToken(channelName, req.user.id, 'publisher', 3600 * expireHours);
       console.log('✅ Agora tokens generated successfully');
     } catch (agoraError) {
       console.warn('⚠️ Agora token generation failed, using placeholder:', agoraError.message);

@@ -55,3 +55,6 @@ exports.generateChannelName = (sessionId) => {
 exports.validateAgoraConfig = () => {
   return !!(process.env.AGORA_APP_ID && process.env.AGORA_APP_CERTIFICATE);
 };
+
+// Add alias export for backward compatibility
+exports.generateAgoraToken = exports.generateRtcToken;
