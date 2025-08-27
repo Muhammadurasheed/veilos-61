@@ -108,29 +108,41 @@ router.post('/', authMiddleware, async (req, res) => {
     });
 
     // Return response with consistent structure for frontend
+    // Enhanced response with consistent structure for frontend
+    const sessionResponse = {
+      id: session.id,
+      _id: session.id, // Also include _id as fallback
+      topic: session.topic,
+      description: session.description,
+      emoji: session.emoji,
+      hostId: session.hostId,
+      hostAlias: session.hostAlias,
+      agoraChannelName: session.agoraChannelName,
+      agoraToken: session.agoraToken,
+      hostToken: session.hostToken,
+      expiresAt: session.expiresAt,
+      maxParticipants: session.maxParticipants,
+      currentParticipants: session.currentParticipants,
+      allowAnonymous: session.allowAnonymous,
+      audioOnly: session.audioOnly,
+      moderationEnabled: session.moderationEnabled,
+      emergencyContactEnabled: session.emergencyContactEnabled,
+      status: session.status,
+      isActive: session.isActive,
+      participants: session.participants
+    };
+
+    console.log('📦 Sending live sanctuary response:', {
+      sessionId: sessionResponse.id,
+      hasId: !!sessionResponse.id,
+      responseKeys: Object.keys(sessionResponse)
+    });
+
     res.success('Live sanctuary session created successfully', {
-      session: {
-        id: session.id,
-        _id: session.id, // Also include _id as fallback
-        topic: session.topic,
-        description: session.description,
-        emoji: session.emoji,
-        hostId: session.hostId,
-        hostAlias: session.hostAlias,
-        agoraChannelName: session.agoraChannelName,
-        agoraToken: session.agoraToken,
-        hostToken: session.hostToken,
-        expiresAt: session.expiresAt,
-        maxParticipants: session.maxParticipants,
-        currentParticipants: session.currentParticipants,
-        allowAnonymous: session.allowAnonymous,
-        audioOnly: session.audioOnly,
-        moderationEnabled: session.moderationEnabled,
-        emergencyContactEnabled: session.emergencyContactEnabled,
-        status: session.status,
-        isActive: session.isActive,
-        participants: session.participants
-      }
+      session: sessionResponse,
+      // Also provide direct access for compatibility
+      id: sessionResponse.id,
+      hostToken: sessionResponse.hostToken
     });
 
   } catch (error) {

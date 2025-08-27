@@ -85,10 +85,27 @@ const LiveSanctuaryCreator: React.FC = () => {
       console.log('📡 Live sanctuary creation response:', response);
 
       if (response.success && response.data?.session) {
-        const sessionId = response.data.session.id || response.data.session._id;
+        // Extract session ID from response with enhanced debugging
+        const session = response.data.session;
+        const sessionId = session.id || session._id;
+        
+        console.log('🔍 Session ID extraction detailed:', {
+          sessionFromResponse: session,
+          sessionId: sessionId,
+          hasId: !!session.id,
+          hasAltId: !!session._id,
+          sessionKeys: Object.keys(session || {}),
+          responseDataKeys: Object.keys(response.data || {}),
+          fullResponseData: response.data
+        });
         
         if (!sessionId) {
-          console.error('❌ No session ID in response:', response.data);
+          console.error('❌ No session ID found in response:', {
+            session,
+            responseData: response.data,
+            sessionKeys: session ? Object.keys(session) : 'no session',
+            fullResponse: response
+          });
           throw new Error('Invalid response: missing session ID');
         }
         
@@ -105,7 +122,14 @@ const LiveSanctuaryCreator: React.FC = () => {
         
         navigate(navigationUrl);
       } else {
-        console.error('❌ Invalid response structure:', response);
+        console.error('❌ Invalid response structure:', {
+          success: response.success,
+          hasData: !!response.data,
+          hasSession: !!response.data?.session,
+          dataKeys: response.data ? Object.keys(response.data) : 'no data',
+          error: response.error,
+          fullResponse: response
+        });
         throw new Error(response.error || 'Failed to create live sanctuary session - invalid response');
       }
     } catch (error) {

@@ -64,8 +64,9 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
       });
 
       if (response.success && response.data?.token) {
-        // Check admin role from response - backend returns both user and admin objects
-        const adminUser = response.data.admin || response.data.user;
+        // Enhanced admin validation - check multiple response structures
+        const adminFromAdmin = response.data.admin;
+        const adminFromUser = response.data.user;
         
         console.log('🔍 Admin login response analysis:', {
           hasToken: !!response.data.token,
@@ -73,12 +74,27 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
           hasUser: !!response.data.user,
           adminRole: response.data.admin?.role,
           userRole: response.data.user?.role,
-          adminUser: adminUser
+          fullResponseData: response.data
         });
         
-        if (!adminUser || adminUser.role !== 'admin') {
-          console.error('❌ Access denied - invalid admin role:', { 
-            adminUserRole: adminUser?.role,
+        // Check admin role from either admin or user object
+        let isValidAdmin = false;
+        let adminUser = null;
+        
+        if (adminFromAdmin && adminFromAdmin.role === 'admin') {
+          isValidAdmin = true;
+          adminUser = adminFromAdmin;
+          console.log('✅ Admin validated from admin object');
+        } else if (adminFromUser && adminFromUser.role === 'admin') {
+          isValidAdmin = true;
+          adminUser = adminFromUser;
+          console.log('✅ Admin validated from user object');
+        }
+        
+        if (!isValidAdmin || !adminUser) {
+          console.error('❌ Access denied - invalid admin credentials:', { 
+            adminFromAdmin: adminFromAdmin?.role,
+            adminFromUser: adminFromUser?.role,
             expectedRole: 'admin',
             fullResponse: response.data
           });
