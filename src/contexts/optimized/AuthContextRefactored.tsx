@@ -20,7 +20,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (credentials: { email: string; password: string }) => Promise<boolean>;
-  register: (userData: { email?: string; password?: string; alias?: string }) => Promise<boolean>;
+  register: (userData: { email?: string; password?: string; alias?: string; realName?: string; preferredAlias?: string }) => Promise<boolean>;
   logout: () => void;
   refreshToken: () => Promise<boolean>;
   updateProfile: (updates: Partial<AuthUser>) => Promise<boolean>;
@@ -116,7 +116,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const register = async (userData: { email?: string; password?: string; alias?: string }): Promise<boolean> => {
+  const register = async (userData: { email?: string; password?: string; alias?: string; realName?: string; preferredAlias?: string }): Promise<boolean> => {
     setIsLoading(true);
     try {
       logger.accountCreation('Registration attempt', userData);

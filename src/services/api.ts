@@ -170,12 +170,14 @@ const apiRequest = async <T = any>(
 
 // User API methods
 export const UserApi = {
-  // Register new user (anonymous or with credentials)
+  // Register new user with secure identity system
   async register(userData: { 
     alias?: string; 
     avatarIndex?: number; 
     email?: string; 
-    password?: string; 
+    password?: string;
+    realName?: string;
+    preferredAlias?: string;
   } = {}) {
     logger.accountCreation('Starting registration', userData);
     const response = await api.post('/api/auth/register', userData);
