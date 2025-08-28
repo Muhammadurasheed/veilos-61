@@ -74,18 +74,16 @@ const EnhancedLiveSanctuary: React.FC = () => {
   const [handRaised, setHandRaised] = useState(false);
   const [userRole, setUserRole] = useState<'host' | 'participant'>('participant');
 
-  // Initialize sanctuary socket
-  const socketConfig = session ? {
-    sessionId: session.id,
+  // Initialize sanctuary socket (always call hooks unconditionally)
+  const sanctuarySocket = useSanctuarySocket({
+    sessionId: session?.id || '',
     participant: {
       id: 'current-user-id', // This should come from user context
       alias: 'Current User', // This should come from user context
       isHost: userRole === 'host',
       isModerator: userRole === 'host'
     }
-  } : null;
-
-  const sanctuarySocket = socketConfig ? useSanctuarySocket(socketConfig) : null;
+  });
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -104,8 +102,9 @@ const EnhancedLiveSanctuary: React.FC = () => {
         console.log('📡 Live sanctuary response:', response);
         
         if (response.success && response.data) {
-          // The response.data contains the session data directly
-          setSession(response.data);
+          // Access nested session data correctly
+          const sessionData = response.data.session || response.data;
+          setSession(sessionData);
           
           // Determine user role from URL params
           const role = searchParams.get('role') as 'host' | 'participant' || 'participant';
@@ -113,14 +112,14 @@ const EnhancedLiveSanctuary: React.FC = () => {
           
           console.log('✅ Live sanctuary session loaded:', {
             sessionId,
-            topic: response.data.topic,
+            topic: sessionData.topic,
             role,
-            participants: response.data.currentParticipants
+            participants: sessionData.currentParticipants
           });
           
           toast({
             title: 'Sanctuary Loaded',
-            description: `Connected to "${response.data.topic}"`,
+            description: `Connected to "${sessionData.topic}"`,
           });
         } else {
           throw new Error(response.error || 'Session not found');
