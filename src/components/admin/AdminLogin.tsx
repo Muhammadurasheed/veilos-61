@@ -64,72 +64,33 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
       });
 
       console.log('🔍 RAW ADMIN RESPONSE DEBUG:', JSON.stringify(response, null, 2));
-      console.log('🔍 RESPONSE DATA KEYS:', response.data ? Object.keys(response.data) : 'no data');
-      console.log('🔍 CRITICAL TOKEN EXTRACTION:', {
-        hasData: !!response.data,
-        dataKeys: response.data ? Object.keys(response.data) : [],
-        hasToken: !!response.data?.token,
-        hasAccessToken: !!response.data?.access_token,
-        hasAuthToken: !!response.data?.authToken,
-        adminObject: response.data?.admin,
-        userObject: response.data?.user,
-        fullResponse: response
-      });
       
       if (response.success) {
-        // Extract token from the admin login response - check all possible locations
-        const token = response.data?.token || 
-                     response.data?.access_token || 
-                     response.data?.authToken ||
-                     response.data?.admin?.token ||
-                     response.data?.user?.token;
-        
-        console.log('🔑 TOKEN EXTRACTION RESULT:', {
-          foundToken: !!token,
-          tokenSource: token ? 'found' : 'missing',
-          tokenLength: token ? token.length : 'N/A'
-        });
+        // Based on backend logs, the response structure includes a direct token field
+        const token = response.data?.token;
         
         if (!token) {
           console.error('❌ CRITICAL: No token found in admin login response');
-          console.error('Checked locations:', [
-            'response.data.token',
-            'response.data.access_token', 
-            'response.data.authToken',
-            'response.data.admin.token',
-            'response.data.user.token'
-          ]);
           console.error('Available keys:', response.data ? Object.keys(response.data) : []);
           throw new Error('Login succeeded but no authentication token found in response');
         }
         
         console.log('✅ Token found in response, proceeding with admin validation...');
         
-        // Try multiple paths to find admin user data
-        let adminUser = null;
-        
-        // Path 1: Check admin object
-        if (response.data?.admin?.role === 'admin') {
-          adminUser = response.data.admin;
-          console.log('✅ Admin found in admin object:', { id: adminUser.id, role: adminUser.role });
-        }
-        // Path 2: Check user object  
-        else if (response.data?.user?.role === 'admin') {
-          adminUser = response.data.user;
-          console.log('✅ Admin found in user object:', { id: adminUser.id, role: adminUser.role });
-        }
+        // Based on backend logs, admin user data is in both admin and user objects
+        const adminUser = response.data?.admin || response.data?.user;
         
         if (!adminUser || adminUser.role !== 'admin') {
           console.error('❌ Admin validation failed:', {
             hasAdmin: !!response.data?.admin,
             hasUser: !!response.data?.user,
             adminRole: response.data?.admin?.role,
-            userRole: response.data?.user?.role,
-            responseKeys: response.data ? Object.keys(response.data) : [],
-            fullResponse: response
+            userRole: response.data?.user?.role
           });
           throw new Error('Access denied: Admin privileges required');
         }
+        
+        console.log('✅ Admin validated:', { id: adminUser.id, role: adminUser.role });
         
         // Store admin token using centralized function
         const { setAdminToken } = await import('@/services/api');

@@ -89,8 +89,8 @@ const LiveSanctuaryCreator: React.FC = () => {
         console.log('🎯 RAW DATA OBJECT:', response.data);
         console.log('🎯 ALL DATA KEYS:', Object.keys(response.data || {}));
         
-        // Backend consistently shows sessionId directly in response.data
-        const sessionId = response.data?.sessionId;
+        // Based on backend logs, the sessionId is in response.data.id
+        const sessionId = response.data?.id;
         
         console.log('🔍 CRITICAL Session ID extraction:', {
           extractedSessionId: sessionId,
