@@ -83,6 +83,8 @@ const postRoutes = require('./routes/postRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const sanctuaryRoutes = require('./routes/sanctuaryRoutes');
 const liveSanctuaryRoutes = require('./routes/liveSanctuaryRoutes');
+const sanctuaryInvitationRoutes = require('./routes/sanctuaryInvitationRoutes');
+const sanctuaryChatRoutes = require('./routes/sanctuaryChatRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const sessionRatingRoutes = require('./routes/sessionRatingRoutes');
 const hostRecoveryRoutes = require('./routes/hostRecoveryRoutes');
@@ -109,6 +111,8 @@ app.use('/api/live-sanctuary', (req, res, next) => {
   next();
 });
 app.use('/api/live-sanctuary', liveSanctuaryRoutes);
+app.use('/api/sanctuary-invitations', sanctuaryInvitationRoutes);
+app.use('/api/sanctuary-chat', sanctuaryChatRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/sessions', sessionRatingRoutes);
@@ -126,6 +130,9 @@ const server = createServer(app);
 
 // Socket.IO Initialization
 const io = initializeSocket(server);
+
+// Make io available to routes for real-time features
+app.set('io', io);
 
 // Socket.IO Admin Panel Instrumentation
 instrument(io, {

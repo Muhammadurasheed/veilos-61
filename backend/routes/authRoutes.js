@@ -98,40 +98,38 @@ router.post('/admin/login',
   }
 );
 
-// Register new user
+// Register new user (now mandatory with real identity + shadow identity)
 router.post('/register', 
   authLimiter,
   validate([
-    body('email').optional().isEmail().normalizeEmail(),
-    body('password').optional().isLength({ min: 6 }),
-    body('alias').optional().isLength({ min: 2, max: 30 }),
+    body('email').isEmail().normalizeEmail(),
+    body('password').isLength({ min: 8 }).matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/),
+    body('realName').isLength({ min: 2, max: 50 }).trim(),
+    body('preferredAlias').optional().isLength({ min: 2, max: 30 }).trim(),
   ]),
   async (req, res) => {
     try {
-      const { email, password, alias } = req.body;
+      const { email, password, realName, preferredAlias } = req.body;
       
-      // Check if email already exists (for non-anonymous users)
-      if (email) {
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-          return res.error('Email already registered', 400);
-        }
+      // Check if email already exists
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return res.error('Email already registered. Try logging in instead.', 400);
       }
 
-      // Create user data
+      // Generate shadow identity
+      const shadowAlias = preferredAlias || generateAlias();
+      const avatarIndex = Math.floor(Math.random() * 12) + 1;
+      
+      // Create user with both real and shadow identities
       const userData = {
-        alias: alias || generateAlias(),
-        avatarIndex: Math.floor(Math.random() * 12) + 1,
-        role: 'shadow',
-        isAnonymous: !email,
+        email,
+        passwordHash: await bcrypt.hash(password, 12),
+        realName,
+        alias: shadowAlias,
+        avatarIndex,
+        role: 'shadow'
       };
-
-      // Add email and password for non-anonymous users
-      if (email && password) {
-        userData.email = email;
-        userData.passwordHash = await bcrypt.hash(password, 12);
-        userData.isAnonymous = false;
-      }
 
       const user = new User(userData);
       await user.save();
@@ -140,7 +138,9 @@ router.post('/register',
       const accessToken = jwt.sign(
         { 
           user: {
-            id: user.id
+            id: user.id,
+            shadowId: user.shadowId,
+            role: user.role
           }
         },
         process.env.JWT_SECRET,
@@ -159,8 +159,9 @@ router.post('/register',
 
       console.log('User registration successful:', {
         id: user.id,
+        shadowId: user.shadowId,
         alias: user.alias,
-        isAnonymous: user.isAnonymous,
+        email: user.email,
         role: user.role
       });
 
@@ -169,20 +170,23 @@ router.post('/register',
         refreshToken,
         user: {
           id: user.id,
+          shadowId: user.shadowId,
           alias: user.alias,
           avatarIndex: user.avatarIndex,
           role: user.role,
           isExpert: user.isExpert,
           avatarUrl: user.avatarUrl,
           email: user.email,
-          isAnonymous: user.isAnonymous
+          realName: user.realName,
+          activities: user.activities,
+          preferences: user.preferences
         }
-      }, `Welcome to Veilo, ${user.alias}!`);
+      }, `Welcome to Veilo, ${user.alias}! Your secure shadow identity has been created.`);
 
     } catch (error) {
       console.error('Registration error:', error.message, {
         stack: error.stack,
-        userId: req.body?.email || 'anonymous'
+        userId: req.body?.email || 'unknown'
       });
       return res.error('Registration failed: ' + error.message, 500);
     }
@@ -239,13 +243,16 @@ router.post('/login',
         refreshToken,
         user: {
           id: user.id,
+          shadowId: user.shadowId,
           alias: user.alias,
           avatarIndex: user.avatarIndex,
           role: user.role,
           isExpert: user.isExpert,
           avatarUrl: user.avatarUrl,
           email: user.email,
-          isAnonymous: user.isAnonymous
+          realName: user.realName,
+          activities: user.activities,
+          preferences: user.preferences
         }
       }, 'Login successful');
 
