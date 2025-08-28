@@ -1,56 +1,47 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { LiveSanctuaryApi } from '@/services/api';
-import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Slider } from '@/components/ui/slider';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Mic, 
   Users, 
   Shield, 
-  Clock, 
-  AlertTriangle, 
-  Volume2,
-  Loader2 
+  Clock,
+  AlertTriangle
 } from 'lucide-react';
+import { LiveSanctuaryApi } from '@/services/api';
 
-const liveSanctuarySchema = z.object({
-  topic: z.string().min(3, 'Topic must be at least 3 characters').max(100, 'Topic must not exceed 100 characters'),
-  description: z.string().optional(),
-  emoji: z.string().optional(),
-  maxParticipants: z.number().min(2).max(100).default(50),
-  audioOnly: z.boolean().default(true),
-  allowAnonymous: z.boolean().default(true),
-  moderationEnabled: z.boolean().default(true),
-  emergencyContactEnabled: z.boolean().default(true),
-  expireHours: z.number().min(1).max(168).default(24), // 1 hour to 1 week
-});
+interface LiveSanctuaryFormData {
+  topic: string;
+  description?: string;
+  emoji: string;
+  maxParticipants: number;
+  audioOnly: boolean;
+  allowAnonymous: boolean;
+  moderationEnabled: boolean;
+  emergencyContactEnabled: boolean;
+  expireHours: number;
+}
 
-type LiveSanctuaryFormData = z.infer<typeof liveSanctuarySchema>;
+interface CreationState {
+  status: 'idle' | 'creating' | 'success' | 'error';
+  sessionId?: string;
+  error?: string;
+}
 
 const LiveSanctuaryCreator: React.FC = () => {
-  const [isCreating, setIsCreating] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [isCreating, setIsCreating] = useState(false);
+  const [creationState, setCreationState] = useState<CreationState>({ status: 'idle' });
 
-  const form = useForm<LiveSanctuaryFormData>({
-    resolver: zodResolver(liveSanctuarySchema),
+  const { register, handleSubmit, formState: { errors }, watch } = useForm<LiveSanctuaryFormData>({
     defaultValues: {
       topic: '',
       description: '',
@@ -60,10 +51,11 @@ const LiveSanctuaryCreator: React.FC = () => {
       allowAnonymous: true,
       moderationEnabled: true,
       emergencyContactEnabled: true,
-      expireHours: 24,
+      expireHours: 1,
     },
   });
 
+  // EXACT PATTERN FROM WORKING ANONYMOUS SANCTUARY
   const onSubmit = async (data: LiveSanctuaryFormData) => {
     setIsCreating(true);
     
@@ -84,45 +76,15 @@ const LiveSanctuaryCreator: React.FC = () => {
 
       console.log('📡 Live sanctuary creation response:', response);
 
-      if (response.success) {
-        // From console logs: the session data is actually in response.message, NOT response.data
-        const sessionData = response.message || response.data;
-        
-        console.log('🎯 FIXED SESSION EXTRACTION:', {
-          hasMessage: !!response.message,
-          hasData: !!response.data,
-          messageKeys: response.message ? Object.keys(response.message) : 'none',
-          dataKeys: response.data ? Object.keys(response.data) : 'none',
-          sessionData
-        });
-        
-        // Extract session ID from the actual location (message, not data)
-        const sessionId = sessionData?.id || sessionData?.sessionId || sessionData?._id;
-        
-        console.log('🔍 Session ID extraction debug:', {
-          extractedSessionId: sessionId,
-          sessionIdExists: !!sessionId,
-          responseDataId: response.data.id,
-          responseDataSessionId: response.data.sessionId,
-          responseData_id: response.data._id,
-          allKeys: Object.keys(response.data || {})
-        });
-        
-        if (!sessionId) {
-          console.error('❌ CRITICAL: No session ID found in response');
-          console.error('Full response data:', response.data);
-          throw new Error('Session creation failed: No session ID in server response');
-        }
-        
-        console.log('✅ Live Sanctuary created successfully with ID:', sessionId);
-        
-        // Store host token if provided (for anonymous hosts)
-        if (sessionData.hostToken) {
+      // EXACT PATTERN FROM WORKING ANONYMOUS SANCTUARY
+      if (response.success && response.data) {
+        // Store host token in localStorage with expiry if this is an anonymous host
+        if (response.data.hostToken) {
           const expiryDate = new Date();
           expiryDate.setHours(expiryDate.getHours() + 48); // 48 hours
           
-          localStorage.setItem(`live-sanctuary-host-${sessionId}`, sessionData.hostToken);
-          localStorage.setItem(`live-sanctuary-host-${sessionId}-expires`, expiryDate.toISOString());
+          localStorage.setItem(`live-sanctuary-host-${response.data.id}`, response.data.hostToken);
+          localStorage.setItem(`live-sanctuary-host-${response.data.id}-expires`, expiryDate.toISOString());
         }
         
         toast({
@@ -130,272 +92,238 @@ const LiveSanctuaryCreator: React.FC = () => {
           description: `Your live audio session "${data.topic}" is now active.`,
         });
 
-        // Navigate to the live sanctuary space as host
-        const navigationUrl = `/sanctuary/live/${sessionId}?role=host`;
-        console.log('🧭 Navigating to live sanctuary:', navigationUrl);
+        // Navigate using the EXACT SAME PATTERN as anonymous sanctuary
+        const sessionId = response.data.id; // SAME AS WORKING ANONYMOUS SANCTUARY
+        console.log('✅ Session created successfully, navigating to:', sessionId);
         
-        navigate(navigationUrl);
+        navigate(`/sanctuary/live/${sessionId}?role=host`);
       } else {
         console.error('❌ Invalid response structure:', {
           success: response.success,
           hasData: !!response.data,
-          hasSession: !!response.data?.session,
-          dataKeys: response.data ? Object.keys(response.data) : 'no data',
           error: response.error,
           fullResponse: response
         });
-        throw new Error(response.error || 'Failed to create live sanctuary session - invalid response');
+        
+        throw new Error(response.error || 'Failed to create live sanctuary session');
       }
-    } catch (error) {
-      console.error('❌ Live sanctuary creation error:', error);
+    } catch (error: any) {
+      console.error('❌ Live sanctuary creation failed:', error);
+      
       toast({
-        title: 'Creation Failed',
-        description: error instanceof Error ? error.message : 'An unexpected error occurred',
+        title: 'Failed to create live sanctuary',
+        description: error.message || 'Please try again later.',
         variant: 'destructive',
+      });
+      
+      setCreationState({ 
+        status: 'error', 
+        error: error.message || 'Unknown error occurred' 
       });
     } finally {
       setIsCreating(false);
     }
   };
 
+  const watchedValues = watch();
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <Card className="glass">
+    <div className="max-w-2xl mx-auto p-6">
+      <Card className="border-purple-200 shadow-lg">
         <CardHeader className="text-center">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mb-4">
-            <Mic className="h-8 w-8 text-white" />
-          </div>
-          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-            Create Live Audio Sanctuary
-          </CardTitle>
-          <p className="text-muted-foreground">
-            Host a real-time anonymous audio support session
+          <div className="text-6xl mb-4">🎙️</div>
+          <CardTitle className="text-2xl text-purple-700">Create Live Audio Sanctuary</CardTitle>
+          <p className="text-gray-600">
+            Start a real-time audio session for meaningful conversations and support
           </p>
         </CardHeader>
-        
-        <CardContent className="space-y-6">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Topic */}
-              <FormField
-                control={form.control}
-                name="topic"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <Volume2 className="h-4 w-4" />
-                      Session Topic
-                    </FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="e.g., Anxiety Support Circle, Late Night Chat..." 
-                        {...field} 
-                        className="text-lg"
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Choose a clear, welcoming topic that describes your session
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
-              {/* Description */}
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Provide more details about what participants can expect..."
-                        {...field}
-                        rows={3}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Help participants understand the session's purpose and guidelines
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
+        <CardContent>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Topic */}
+            <div>
+              <Label htmlFor="topic" className="text-sm font-medium">
+                Sanctuary Topic *
+              </Label>
+              <Input
+                id="topic"
+                {...register('topic', { 
+                  required: 'Topic is required',
+                  minLength: { value: 3, message: 'Topic must be at least 3 characters' }
+                })}
+                placeholder="What will you discuss? (e.g., Anxiety Support)"
+                className="mt-1"
               />
+              {errors.topic && (
+                <p className="text-red-500 text-sm mt-1">{errors.topic.message}</p>
+              )}
+            </div>
 
-              {/* Emoji */}
-              <FormField
-                control={form.control}
-                name="emoji"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Session Emoji</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="🎙️" 
-                        {...field}
-                        className="w-20 text-center text-xl"
-                        maxLength={2}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Choose an emoji to represent your session
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            {/* Description */}
+            <div>
+              <Label htmlFor="description" className="text-sm font-medium">
+                Description (Optional)
+              </Label>
+              <Textarea
+                id="description"
+                {...register('description')}
+                placeholder="Provide more context about your sanctuary..."
+                className="mt-1"
+                rows={3}
               />
+            </div>
 
+            {/* Emoji */}
+            <div>
+              <Label htmlFor="emoji" className="text-sm font-medium">
+                Sanctuary Emoji
+              </Label>
+              <Input
+                id="emoji"
+                {...register('emoji')}
+                placeholder="🎙️"
+                className="mt-1 text-center text-2xl"
+                maxLength={2}
+              />
+            </div>
+
+            {/* Settings Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Max Participants */}
-              <FormField
-                control={form.control}
-                name="maxParticipants"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      Maximum Participants: {field.value}
-                    </FormLabel>
-                    <FormControl>
-                      <Slider
-                        min={2}
-                        max={100}
-                        step={1}
-                        value={[field.value]}
-                        onValueChange={(value) => field.onChange(value[0])}
-                        className="w-full"
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Smaller groups (5-15) often work better for intimate discussions
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
+              <div>
+                <Label htmlFor="maxParticipants" className="text-sm font-medium flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Max Participants
+                </Label>
+                <Input
+                  id="maxParticipants"
+                  type="number"
+                  {...register('maxParticipants', { 
+                    required: true, 
+                    min: { value: 2, message: 'Minimum 2 participants' },
+                    max: { value: 100, message: 'Maximum 100 participants' }
+                  })}
+                  min={2}
+                  max={100}
+                  className="mt-1"
+                />
+                {errors.maxParticipants && (
+                  <p className="text-red-500 text-sm mt-1">{errors.maxParticipants.message}</p>
                 )}
-              />
+              </div>
 
               {/* Duration */}
-              <FormField
-                control={form.control}
-                name="expireHours"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
-                      Session Duration: {field.value} hours
-                    </FormLabel>
-                    <FormControl>
-                      <Slider
-                        min={1}
-                        max={168}
-                        step={1}
-                        value={[field.value]}
-                        onValueChange={(value) => field.onChange(value[0])}
-                        className="w-full"
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      How long should this session remain available? (1 hour - 1 week)
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
+              <div>
+                <Label htmlFor="expireHours" className="text-sm font-medium flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Duration (Hours)
+                </Label>
+                <Input
+                  id="expireHours"
+                  type="number"
+                  {...register('expireHours', { 
+                    required: true,
+                    min: { value: 0.5, message: 'Minimum 30 minutes' },
+                    max: { value: 24, message: 'Maximum 24 hours' }
+                  })}
+                  min={0.5}
+                  max={24}
+                  step={0.5}
+                  className="mt-1"
+                />
+                {errors.expireHours && (
+                  <p className="text-red-500 text-sm mt-1">{errors.expireHours.message}</p>
                 )}
-              />
+              </div>
+            </div>
 
-              {/* Settings */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Session Settings</h3>
-                
-                <FormField
-                  control={form.control}
-                  name="allowAnonymous"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">Allow Anonymous Participants</FormLabel>
-                        <FormDescription>
-                          Let people join without creating an account
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="moderationEnabled"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5 flex items-center gap-2">
-                        <Shield className="h-4 w-4" />
-                        <div>
-                          <FormLabel className="text-base">AI Moderation</FormLabel>
-                          <FormDescription>
-                            Automatically detect and prevent harmful content
-                          </FormDescription>
-                        </div>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="emergencyContactEnabled"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5 flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4" />
-                        <div>
-                          <FormLabel className="text-base">Emergency Protocols</FormLabel>
-                          <FormDescription>
-                            Enable crisis detection and emergency response
-                          </FormDescription>
-                        </div>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
+            {/* Settings Switches */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Mic className="h-4 w-4 text-purple-600" />
+                  <Label htmlFor="audioOnly" className="text-sm font-medium">
+                    Audio Only Mode
+                  </Label>
+                </div>
+                <Switch
+                  id="audioOnly"
+                  {...register('audioOnly')}
+                  checked={watchedValues.audioOnly}
                 />
               </div>
 
-              {/* Submit Button */}
-              <Button 
-                type="submit" 
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 text-lg"
-                disabled={isCreating}
-              >
-                {isCreating ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Creating Session...
-                  </>
-                ) : (
-                  <>
-                    <Mic className="mr-2 h-5 w-5" />
-                    Start Live Audio Session
-                  </>
-                )}
-              </Button>
-            </form>
-          </Form>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-green-600" />
+                  <Label htmlFor="allowAnonymous" className="text-sm font-medium">
+                    Allow Anonymous Participants
+                  </Label>
+                </div>
+                <Switch
+                  id="allowAnonymous"
+                  {...register('allowAnonymous')}
+                  checked={watchedValues.allowAnonymous}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-blue-600" />
+                  <Label htmlFor="moderationEnabled" className="text-sm font-medium">
+                    AI Moderation
+                  </Label>
+                </div>
+                <Switch
+                  id="moderationEnabled"
+                  {...register('moderationEnabled')}
+                  checked={watchedValues.moderationEnabled}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-red-600" />
+                  <Label htmlFor="emergencyContactEnabled" className="text-sm font-medium">
+                    Emergency Contact System
+                  </Label>
+                </div>
+                <Switch
+                  id="emergencyContactEnabled"
+                  {...register('emergencyContactEnabled')}
+                  checked={watchedValues.emergencyContactEnabled}
+                />
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              disabled={isCreating}
+              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-3"
+            >
+              {isCreating ? (
+                <>
+                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                  Creating Live Sanctuary...
+                </>
+              ) : (
+                <>
+                  <Mic className="h-4 w-4 mr-2" />
+                  Create Live Audio Sanctuary
+                </>
+              )}
+            </Button>
+          </form>
+
+          {/* Error State */}
+          {creationState.status === 'error' && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-700 text-sm">
+                {creationState.error}
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
