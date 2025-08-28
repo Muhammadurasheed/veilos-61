@@ -672,7 +672,7 @@ export function ExpertProfileEnhanced({ expertId: propExpertId }: ExpertProfileE
                     ))}
                     <div className="text-sm text-gray-600 mt-4">
                       <Clock className="h-4 w-4 inline mr-1" />
-                      Timezone: {expert.timezone}
+                      Timezone: {expert.location?.timezone || 'UTC'}
                     </div>
                   </div>
                 ) : (

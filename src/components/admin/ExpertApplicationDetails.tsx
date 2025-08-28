@@ -330,7 +330,7 @@ export function ExpertApplicationDetails({
                             </div>
                             <div>
                               <label className="text-sm font-medium text-gray-500">Timezone</label>
-                              <p className="text-sm">{expert.timezone || 'UTC'}</p>
+                              <p className="text-sm">{expert.location?.timezone || 'UTC'}</p>
                             </div>
                           </div>
                         ) : (

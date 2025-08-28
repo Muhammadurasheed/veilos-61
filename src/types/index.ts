@@ -63,8 +63,8 @@ export interface Expert {
     city?: string;
     state?: string;
     country?: string;
+    timezone?: string;
   };
-  timezone?: string;
   languages?: string[];
   verificationLevel: 'blue' | 'gold' | 'platinum' | 'none';
   verified: boolean;
@@ -238,7 +238,7 @@ export interface Testimonial {
 
 export interface VerificationDocument {
   id: string;
-  type: "id" | "credential" | "certificate" | "other" | "resume" | "cv" | "photo";
+  type: "id" | "credential" | "certificate" | "other" | "photo" | "resume" | "cv";
   fileUrl: string;
   fileName: string;
   uploadedAt: string;

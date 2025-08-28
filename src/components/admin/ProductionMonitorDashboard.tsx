@@ -32,7 +32,7 @@ const ProductionMonitorDashboard = () => {
 
       setHealthData(healthResponse.data);
       setMetrics(metricsResponse.data);
-      setAlerts(alertsResponse.data);
+      setAlerts(Array.isArray(alertsResponse.data) ? alertsResponse.data : []);
       setLoading(false);
     } catch (error) {
       console.error('Failed to fetch monitoring data:', error);

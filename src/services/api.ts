@@ -432,8 +432,11 @@ export const AdminApi = {
   // Real-time expert application monitoring
   async getExpertApplications() {
     return apiRequest('GET', '/api/admin/monitoring/expert-applications');
-  }
-};
+  },
+
+  // Additional admin methods for complete coverage
+  getAllExperts: async () => apiRequest('GET', '/api/admin/experts/all')
+} as const;
 
 // Post API methods
 export const PostApi = {
