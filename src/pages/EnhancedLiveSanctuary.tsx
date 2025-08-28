@@ -103,8 +103,9 @@ const EnhancedLiveSanctuary: React.FC = () => {
         
         console.log('📡 Live sanctuary response:', response);
         
-        if (response.success && response.data?.session) {
-          setSession(response.data.session);
+        if (response.success && response.data) {
+          // The response.data contains the session data directly
+          setSession(response.data);
           
           // Determine user role from URL params
           const role = searchParams.get('role') as 'host' | 'participant' || 'participant';
@@ -112,14 +113,14 @@ const EnhancedLiveSanctuary: React.FC = () => {
           
           console.log('✅ Live sanctuary session loaded:', {
             sessionId,
-            topic: response.data.session.topic,
+            topic: response.data.topic,
             role,
-            participants: response.data.session.currentParticipants
+            participants: response.data.currentParticipants
           });
           
           toast({
             title: 'Sanctuary Loaded',
-            description: `Connected to "${response.data.session.topic}"`,
+            description: `Connected to "${response.data.topic}"`,
           });
         } else {
           throw new Error(response.error || 'Session not found');

@@ -474,7 +474,7 @@ export const PostApi = {
   }
 };
 
-// Analytics API methods
+// Analytics API methods (consolidated)
 export const AnalyticsApi = {
   async getOverview(params?: any) {
     return apiRequest('GET', '/api/analytics/overview', null, { params });
@@ -510,6 +510,14 @@ export const AnalyticsApi = {
 
   async getPlatformAnalytics(params?: any) {
     return apiRequest('GET', '/api/analytics/platform', null, { params });
+  },
+
+  async getUserAnalytics(params?: any) {
+    return apiRequest('GET', '/api/analytics/users', null, { params });
+  },
+
+  async getSessionAnalytics(params?: any) {
+    return apiRequest('GET', '/api/analytics/sessions', null, { params });
   }
 };
 
@@ -680,9 +688,25 @@ export const EnhancedAdminApi = {
   }
 };
 
-// Fixed re-export to avoid conflicts
+// AppealApi for content appeals
+export const AppealApi = {
+  async submitAppeal(appealData: any) {
+    return apiRequest('POST', '/api/appeals', appealData);
+  },
 
-// Export temporary API fixes
+  async getAppeals(params?: any) {
+    return apiRequest('GET', '/api/appeals', null, { params });
+  },
+
+  async reviewAppeal(appealId: string, decision: any) {
+    return apiRequest('PUT', `/api/appeals/${appealId}`, decision);
+  }
+};
+
+// Export for other modules
+export { apiRequest };
+
+// Fixed re-export to avoid conflicts
 export * from './temporaryApiExports';
 
 export default api;

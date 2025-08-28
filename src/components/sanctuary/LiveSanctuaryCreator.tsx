@@ -84,49 +84,49 @@ const LiveSanctuaryCreator: React.FC = () => {
 
       console.log('📡 Live sanctuary creation response:', response);
 
-      if (response.success) {
+      if (response.success && response.data) {
         console.log('🎯 RAW API RESPONSE:', JSON.stringify(response, null, 2));
         console.log('🎯 RAW DATA OBJECT:', response.data);
         console.log('🎯 ALL DATA KEYS:', Object.keys(response.data || {}));
-        console.log('🎯 BACKEND LOG SESSIONID:', response.data?.sessionId);
-        console.log('🎯 MONGODB ID FIELD:', response.data?.id);
-        console.log('🎯 CHECKING ALL POSSIBLE ID SOURCES:', {
-          id: response.data?.id,
-          _id: response.data?._id,
-          sessionId: response.data?.sessionId,
-          session_id: response.data?.session_id
-        });
         
-        // Based on backend logs showing sessionId: 'live-sanctuary-dHpG2Fug', try all possible sources
-        const sessionId = response.data?.sessionId || response.data?.id || response.data?._id;
+        // Based on successful anonymous sanctuary pattern, extract session ID
+        // The backend logs show sessionId is being sent in the response
+        const sessionId = response.data.id || response.data.sessionId || response.data._id;
         
-        console.log('🔍 CRITICAL Session ID extraction:', {
+        console.log('🔍 Session ID extraction debug:', {
           extractedSessionId: sessionId,
           sessionIdExists: !!sessionId,
-          sessionIdType: typeof sessionId,
-          sessionIdLength: sessionId ? sessionId.length : 'N/A',
-          allDataKeys: Object.keys(response.data || {}),
-          rawSessionIdValue: response.data?.sessionId
+          responseDataId: response.data.id,
+          responseDataSessionId: response.data.sessionId,
+          responseData_id: response.data._id,
+          allKeys: Object.keys(response.data || {})
         });
         
         if (!sessionId) {
-          console.error('❌ CRITICAL: sessionId not found in response.data');
-          console.error('Expected: response.data.sessionId');
-          console.error('Received keys:', Object.keys(response.data || {}));
-          console.error('Full response:', response);
-          throw new Error('Session creation failed: sessionId missing from server response');
+          console.error('❌ CRITICAL: No session ID found in response');
+          console.error('Full response data:', response.data);
+          throw new Error('Session creation failed: No session ID in server response');
         }
         
-        console.log('✅ Session created with ID:', sessionId);
+        console.log('✅ Live Sanctuary created successfully with ID:', sessionId);
+        
+        // Store host token if provided (for anonymous hosts)
+        if (response.data.hostToken) {
+          const expiryDate = new Date();
+          expiryDate.setHours(expiryDate.getHours() + 48); // 48 hours
+          
+          localStorage.setItem(`live-sanctuary-host-${sessionId}`, response.data.hostToken);
+          localStorage.setItem(`live-sanctuary-host-${sessionId}-expires`, expiryDate.toISOString());
+        }
         
         toast({
           title: 'Live Sanctuary Created',
           description: `Your live audio session "${data.topic}" is now active.`,
         });
 
-        // Navigate to the live sanctuary space as host with proper session ID
+        // Navigate to the live sanctuary space as host
         const navigationUrl = `/sanctuary/live/${sessionId}?role=host`;
-        console.log('🧭 Navigating to:', navigationUrl);
+        console.log('🧭 Navigating to live sanctuary:', navigationUrl);
         
         navigate(navigationUrl);
       } else {
