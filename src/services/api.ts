@@ -703,9 +703,6 @@ export const AppealApi = {
   }
 };
 
-// Export for other modules
-export { apiRequest };
-
 // Fixed re-export to avoid conflicts
 export * from './temporaryApiExports';
 

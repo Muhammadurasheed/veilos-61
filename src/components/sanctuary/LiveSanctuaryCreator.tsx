@@ -84,14 +84,20 @@ const LiveSanctuaryCreator: React.FC = () => {
 
       console.log('📡 Live sanctuary creation response:', response);
 
-      if (response.success && response.data) {
-        console.log('🎯 RAW API RESPONSE:', JSON.stringify(response, null, 2));
-        console.log('🎯 RAW DATA OBJECT:', response.data);
-        console.log('🎯 ALL DATA KEYS:', Object.keys(response.data || {}));
+      if (response.success) {
+        // From console logs: the session data is actually in response.message, NOT response.data
+        const sessionData = response.message || response.data;
         
-        // Based on successful anonymous sanctuary pattern, extract session ID
-        // The backend logs show sessionId is being sent in the response
-        const sessionId = response.data.id || response.data.sessionId || response.data._id;
+        console.log('🎯 FIXED SESSION EXTRACTION:', {
+          hasMessage: !!response.message,
+          hasData: !!response.data,
+          messageKeys: response.message ? Object.keys(response.message) : 'none',
+          dataKeys: response.data ? Object.keys(response.data) : 'none',
+          sessionData
+        });
+        
+        // Extract session ID from the actual location (message, not data)
+        const sessionId = sessionData?.id || sessionData?.sessionId || sessionData?._id;
         
         console.log('🔍 Session ID extraction debug:', {
           extractedSessionId: sessionId,
@@ -111,11 +117,11 @@ const LiveSanctuaryCreator: React.FC = () => {
         console.log('✅ Live Sanctuary created successfully with ID:', sessionId);
         
         // Store host token if provided (for anonymous hosts)
-        if (response.data.hostToken) {
+        if (sessionData.hostToken) {
           const expiryDate = new Date();
           expiryDate.setHours(expiryDate.getHours() + 48); // 48 hours
           
-          localStorage.setItem(`live-sanctuary-host-${sessionId}`, response.data.hostToken);
+          localStorage.setItem(`live-sanctuary-host-${sessionId}`, sessionData.hostToken);
           localStorage.setItem(`live-sanctuary-host-${sessionId}-expires`, expiryDate.toISOString());
         }
         
