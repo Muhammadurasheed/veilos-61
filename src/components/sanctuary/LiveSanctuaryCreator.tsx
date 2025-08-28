@@ -85,57 +85,25 @@ const LiveSanctuaryCreator: React.FC = () => {
       console.log('📡 Live sanctuary creation response:', response);
 
       if (response.success) {
-        console.log('🔍 RAW API RESPONSE DEBUG:', JSON.stringify(response, null, 2));
+        console.log('🎯 RAW API RESPONSE:', JSON.stringify(response, null, 2));
+        console.log('🎯 RAW DATA OBJECT:', response.data);
+        console.log('🎯 ALL DATA KEYS:', Object.keys(response.data || {}));
         
-        // Try extracting session ID from multiple possible locations
-        let sessionId = null;
-        let sessionData = null;
+        // Backend logs show sessionId field directly - extract it properly  
+        const sessionId = response.data?.sessionId || 
+                         response.data?.id || 
+                         response.data?._id;
         
-        // Path 1: Direct from response.data.session.id
-        if (response.data?.session?.id) {
-          sessionId = response.data.session.id;
-          sessionData = response.data.session;
-          console.log('✅ Found sessionId in response.data.session.id:', sessionId);
-        }
-        // Path 2: Direct from response.data.id 
-        else if (response.data?.id) {
-          sessionId = response.data.id;
-          sessionData = response.data.session || response.data;
-          console.log('✅ Found sessionId in response.data.id:', sessionId);
-        }
-        // Path 3: From response.data.session._id (MongoDB ObjectId)
-        else if (response.data?.session?._id) {
-          sessionId = response.data.session._id;
-          sessionData = response.data.session;
-          console.log('✅ Found sessionId in response.data.session._id:', sessionId);
-        }
-        // Path 4: From response.data._id
-        else if (response.data?._id) {
-          sessionId = response.data._id;
-          sessionData = response.data;
-          console.log('✅ Found sessionId in response.data._id:', sessionId);
-        }
-        
-        console.log('🔍 SESSION EXTRACTION DEBUG:', {
-          foundSessionId: sessionId,
-          sessionIdType: typeof sessionId,
-          sessionIdValid: sessionId && sessionId !== 'undefined' && sessionId.length > 0,
-          hasSessionData: !!sessionData,
-          responseDataKeys: response.data ? Object.keys(response.data) : [],
-          sessionDataKeys: sessionData ? Object.keys(sessionData) : [],
-          rawResponseData: response.data
+        console.log('🔍 Session ID extraction:', {
+          sessionId: response.data?.sessionId,
+          id: response.data?.id, 
+          _id: response.data?._id,
+          finalSessionId: sessionId
         });
         
-        // Validate extracted session ID
         if (!sessionId || sessionId === 'undefined' || sessionId === null || sessionId.trim() === '') {
           console.error('❌ CRITICAL: No valid session ID extracted from response');
-          console.error('Response structure analysis:', {
-            hasData: !!response.data,
-            dataKeys: response.data ? Object.keys(response.data) : [],
-            hasSession: !!response.data?.session,
-            sessionKeys: response.data?.session ? Object.keys(response.data.session) : [],
-            fullResponse: response
-          });
+          console.error('Full response debug:', response);
           throw new Error('Session creation failed: No valid session ID in server response');
         }
         

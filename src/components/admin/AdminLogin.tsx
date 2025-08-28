@@ -64,11 +64,25 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
       });
 
       console.log('🔍 RAW ADMIN RESPONSE DEBUG:', JSON.stringify(response, null, 2));
+      console.log('🔍 RESPONSE DATA KEYS:', response.data ? Object.keys(response.data) : 'no data');
+      console.log('🔍 TOKEN CHECK:', {
+        hasData: !!response.data,
+        hasToken: !!response.data?.token,
+        hasAccessToken: !!response.data?.access_token,
+        hasAuthToken: !!response.data?.authToken
+      });
       
       if (response.success) {
-        // Enhanced token validation
-        if (!response.data?.token) {
-          console.error('❌ Missing token in successful response:', response);
+        // Try multiple token field names
+        const token = response.data?.token || 
+                     response.data?.access_token || 
+                     response.data?.authToken;
+        
+        if (!token) {
+          console.error('❌ Missing token in successful response:', {
+            responseKeys: response.data ? Object.keys(response.data) : [],
+            fullResponse: response
+          });
           throw new Error('Login succeeded but no authentication token received');
         }
         
@@ -102,14 +116,14 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
         
         // Store admin token using centralized function
         const { setAdminToken } = await import('@/services/api');
-        setAdminToken(response.data.token);
+        setAdminToken(token);
         localStorage.setItem('admin_user', JSON.stringify(adminUser));
         
         // Update user context with admin user
         window.dispatchEvent(new CustomEvent('adminLoginSuccess', { 
           detail: { 
             user: adminUser,
-            token: response.data.token 
+            token: token 
           } 
         }));
         
