@@ -138,12 +138,12 @@ router.post('/', authMiddleware, async (req, res) => {
       responseKeys: Object.keys(sessionResponse)
     });
 
-    res.success('Live sanctuary session created successfully', {
+    res.success({
       session: sessionResponse,
       // Also provide direct access for compatibility
       id: sessionResponse.id,
       hostToken: sessionResponse.hostToken
-    });
+    }, 'Live sanctuary session created successfully');
 
   } catch (error) {
     console.error('❌ Live sanctuary creation error:', error);
@@ -178,7 +178,7 @@ router.get('/:sessionId', optionalAuthMiddleware, async (req, res) => {
       participants: session.currentParticipants
     });
 
-    res.success('Live sanctuary session retrieved', {
+    res.success({
       session: {
         id: session.id,
         topic: session.topic,
@@ -200,7 +200,7 @@ router.get('/:sessionId', optionalAuthMiddleware, async (req, res) => {
         participants: session.participants,
         breakoutRooms: session.breakoutRooms
       }
-    });
+    }, 'Live sanctuary session retrieved');
 
   } catch (error) {
     console.error('❌ Live sanctuary fetch error:', error);
@@ -271,14 +271,14 @@ router.post('/:sessionId/join', authMiddleware, async (req, res) => {
       participantCount: session.currentParticipants
     });
 
-    res.success('Successfully joined live sanctuary session', {
+    res.success({
       session: {
         id: session.id,
         agoraChannelName: session.agoraChannelName,
         agoraToken: session.agoraToken,
         participant
       }
-    });
+    }, 'Successfully joined live sanctuary session');
 
   } catch (error) {
     console.error('❌ Live sanctuary join error:', error);
@@ -335,9 +335,9 @@ router.post('/:sessionId/leave', authMiddleware, async (req, res) => {
       participantCount: session.currentParticipants
     });
 
-    res.success('Successfully left live sanctuary session', {
+    res.success({
       sessionEnded: !session.isActive
-    });
+    }, 'Successfully left live sanctuary session');
 
   } catch (error) {
     console.error('❌ Live sanctuary leave error:', error);
@@ -367,7 +367,7 @@ router.get('/', optionalAuthMiddleware, async (req, res) => {
       expiresAt: { $gt: new Date() }
     });
 
-    res.success('Active live sanctuary sessions retrieved', {
+    res.success({
       sessions: sessions.map(session => ({
         id: session.id,
         topic: session.topic,
@@ -392,7 +392,7 @@ router.get('/', optionalAuthMiddleware, async (req, res) => {
         total,
         pages: Math.ceil(total / parseInt(limit))
       }
-    });
+    }, 'Active live sanctuary sessions retrieved');
 
   } catch (error) {
     console.error('❌ Live sanctuary sessions fetch error:', error);
@@ -434,7 +434,7 @@ router.post('/:sessionId/end', authMiddleware, async (req, res) => {
       endedBy: req.user.id
     });
 
-    res.success('Live sanctuary session ended successfully');
+    res.success({}, 'Live sanctuary session ended successfully');
 
   } catch (error) {
     console.error('❌ Live sanctuary end error:', error);
