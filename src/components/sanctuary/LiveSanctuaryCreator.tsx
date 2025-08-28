@@ -89,22 +89,24 @@ const LiveSanctuaryCreator: React.FC = () => {
         console.log('🎯 RAW DATA OBJECT:', response.data);
         console.log('🎯 ALL DATA KEYS:', Object.keys(response.data || {}));
         
-        // Backend logs show sessionId field directly - extract it properly  
-        const sessionId = response.data?.sessionId || 
-                         response.data?.id || 
-                         response.data?._id;
+        // Backend consistently shows sessionId directly in response.data
+        const sessionId = response.data?.sessionId;
         
-        console.log('🔍 Session ID extraction:', {
-          sessionId: response.data?.sessionId,
-          id: response.data?.id, 
-          _id: response.data?._id,
-          finalSessionId: sessionId
+        console.log('🔍 CRITICAL Session ID extraction:', {
+          extractedSessionId: sessionId,
+          sessionIdExists: !!sessionId,
+          sessionIdType: typeof sessionId,
+          sessionIdLength: sessionId ? sessionId.length : 'N/A',
+          allDataKeys: Object.keys(response.data || {}),
+          rawSessionIdValue: response.data?.sessionId
         });
         
-        if (!sessionId || sessionId === 'undefined' || sessionId === null || sessionId.trim() === '') {
-          console.error('❌ CRITICAL: No valid session ID extracted from response');
-          console.error('Full response debug:', response);
-          throw new Error('Session creation failed: No valid session ID in server response');
+        if (!sessionId) {
+          console.error('❌ CRITICAL: sessionId not found in response.data');
+          console.error('Expected: response.data.sessionId');
+          console.error('Received keys:', Object.keys(response.data || {}));
+          console.error('Full response:', response);
+          throw new Error('Session creation failed: sessionId missing from server response');
         }
         
         console.log('✅ Session created with ID:', sessionId);

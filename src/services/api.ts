@@ -323,11 +323,16 @@ export const AdminApi = {
       password: credentials.password
     });
     
-    console.log('📡 AdminApi.login response:', {
+    console.log('📡 AdminApi.login RAW response:', {
       success: response.success,
       hasData: !!response.data,
+      dataKeys: response.data ? Object.keys(response.data) : 'no data',
       hasToken: !!response.data?.token,
-      userRole: response.data?.user?.role
+      hasAccessToken: !!response.data?.access_token,
+      hasAuthToken: !!response.data?.authToken,
+      adminObject: response.data?.admin,
+      userObject: response.data?.user,
+      fullResponse: response
     });
     
     return response;
@@ -578,14 +583,12 @@ export const LiveSanctuaryApi = {
   async createSession(sessionData: any) {
     console.log('🚀 LiveSanctuaryApi.createSession called with:', sessionData);
     const response = await apiRequest('POST', '/api/live-sanctuary', sessionData);
-    console.log('📡 LiveSanctuaryApi.createSession response:', {
+    console.log('📡 LiveSanctuaryApi.createSession RAW response:', {
       success: response.success,
       hasData: !!response.data,
-      hasSession: !!response.data?.session,
-      sessionId: response.data?.session?.id,
-      sessionAltId: response.data?.session?._id,
-      responseKeys: response.data ? Object.keys(response.data) : 'no data',
-      sessionKeys: response.data?.session ? Object.keys(response.data.session) : 'no session',
+      directSessionId: response.data?.sessionId,
+      sessionKeys: response.data ? Object.keys(response.data) : 'no data',
+      fullDataObject: response.data,
       fullResponse: response
     });
     return response;

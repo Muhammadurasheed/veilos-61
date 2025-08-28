@@ -65,25 +65,42 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
 
       console.log('🔍 RAW ADMIN RESPONSE DEBUG:', JSON.stringify(response, null, 2));
       console.log('🔍 RESPONSE DATA KEYS:', response.data ? Object.keys(response.data) : 'no data');
-      console.log('🔍 TOKEN CHECK:', {
+      console.log('🔍 CRITICAL TOKEN EXTRACTION:', {
         hasData: !!response.data,
+        dataKeys: response.data ? Object.keys(response.data) : [],
         hasToken: !!response.data?.token,
         hasAccessToken: !!response.data?.access_token,
-        hasAuthToken: !!response.data?.authToken
+        hasAuthToken: !!response.data?.authToken,
+        adminObject: response.data?.admin,
+        userObject: response.data?.user,
+        fullResponse: response
       });
       
       if (response.success) {
-        // Try multiple token field names
+        // Extract token from the admin login response - check all possible locations
         const token = response.data?.token || 
                      response.data?.access_token || 
-                     response.data?.authToken;
+                     response.data?.authToken ||
+                     response.data?.admin?.token ||
+                     response.data?.user?.token;
+        
+        console.log('🔑 TOKEN EXTRACTION RESULT:', {
+          foundToken: !!token,
+          tokenSource: token ? 'found' : 'missing',
+          tokenLength: token ? token.length : 'N/A'
+        });
         
         if (!token) {
-          console.error('❌ Missing token in successful response:', {
-            responseKeys: response.data ? Object.keys(response.data) : [],
-            fullResponse: response
-          });
-          throw new Error('Login succeeded but no authentication token received');
+          console.error('❌ CRITICAL: No token found in admin login response');
+          console.error('Checked locations:', [
+            'response.data.token',
+            'response.data.access_token', 
+            'response.data.authToken',
+            'response.data.admin.token',
+            'response.data.user.token'
+          ]);
+          console.error('Available keys:', response.data ? Object.keys(response.data) : []);
+          throw new Error('Login succeeded but no authentication token found in response');
         }
         
         console.log('✅ Token found in response, proceeding with admin validation...');
