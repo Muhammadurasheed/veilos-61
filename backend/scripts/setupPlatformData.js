@@ -41,8 +41,8 @@ async function setupPlatformData() {
     if (adminUser) {
       // Update existing admin with proper password hash
       adminUser.passwordHash = passwordHash;
+      adminUser.realName = adminUser.realName || 'System Administrator';
       adminUser.role = 'admin';
-      adminUser.isAnonymous = false;
       await adminUser.save();
       console.log('✅ Updated existing admin user with proper password hash');
     } else {
@@ -50,11 +50,11 @@ async function setupPlatformData() {
       adminUser = new User({
         id: `user-${nanoid(8)}`,
         alias: 'Admin',
+        realName: 'System Administrator',
         email: adminEmail,
         passwordHash: passwordHash,
         role: 'admin',
         avatarIndex: 1,
-        isAnonymous: false,
         registeredAt: new Date()
       });
       await adminUser.save();
