@@ -63,73 +63,41 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
         adminRole: response.data?.admin?.role
       });
 
-      if (response.success && response.data?.token) {
-        // Complete admin validation with exhaustive debugging
-        const adminFromAdmin = response.data?.admin;
-        const adminFromUser = response.data?.user;
+      console.log('🔍 RAW ADMIN RESPONSE DEBUG:', JSON.stringify(response, null, 2));
+      
+      if (response.success) {
+        // Enhanced token validation
+        if (!response.data?.token) {
+          console.error('❌ Missing token in successful response:', response);
+          throw new Error('Login succeeded but no authentication token received');
+        }
         
-        console.log('🔍 Complete admin login response analysis:', {
-          hasToken: !!response.data?.token,
-          hasAdmin: !!adminFromAdmin,
-          hasUser: !!adminFromUser,
-          adminRole: adminFromAdmin?.role,
-          userRole: adminFromUser?.role,
-          adminId: adminFromAdmin?.id,
-          userId: adminFromUser?.id,
-          responseDataKeys: response.data ? Object.keys(response.data) : 'no data',
-          fullResponseData: response.data,
-          responseSuccess: response.success,
-          responseError: response.error
-        });
+        console.log('✅ Token found in response, proceeding with admin validation...');
         
-        // Enhanced admin role validation
-        let isValidAdmin = false;
+        // Try multiple paths to find admin user data
         let adminUser = null;
         
-        // Primary check - admin object with admin role
-        if (adminFromAdmin?.role === 'admin' && adminFromAdmin?.id) {
-          isValidAdmin = true;
-          adminUser = adminFromAdmin;
-          console.log('✅ Admin validated from admin object:', {
-            id: adminUser.id,
-            role: adminUser.role,
-            email: adminUser.email
-          });
+        // Path 1: Check admin object
+        if (response.data?.admin?.role === 'admin') {
+          adminUser = response.data.admin;
+          console.log('✅ Admin found in admin object:', { id: adminUser.id, role: adminUser.role });
         }
-        // Secondary check - user object with admin role
-        else if (adminFromUser?.role === 'admin' && adminFromUser?.id) {
-          isValidAdmin = true;
-          adminUser = adminFromUser;
-          console.log('✅ Admin validated from user object:', {
-            id: adminUser.id,
-            role: adminUser.role,
-            email: adminUser.email
-          });
+        // Path 2: Check user object  
+        else if (response.data?.user?.role === 'admin') {
+          adminUser = response.data.user;
+          console.log('✅ Admin found in user object:', { id: adminUser.id, role: adminUser.role });
         }
-        // Final validation failure
-        else {
-          console.error('❌ Complete admin validation failure:', { 
-            adminObjectExists: !!adminFromAdmin,
-            adminRole: adminFromAdmin?.role,
-            adminId: adminFromAdmin?.id,
-            userObjectExists: !!adminFromUser,
-            userRole: adminFromUser?.role,
-            userId: adminFromUser?.id,
-            expectedRole: 'admin',
-            responseKeys: response.data ? Object.keys(response.data) : 'no data',
-            fullResponseDebug: {
-              success: response.success,
-              error: response.error,
-              data: response.data
-            }
+        
+        if (!adminUser || adminUser.role !== 'admin') {
+          console.error('❌ Admin validation failed:', {
+            hasAdmin: !!response.data?.admin,
+            hasUser: !!response.data?.user,
+            adminRole: response.data?.admin?.role,
+            userRole: response.data?.user?.role,
+            responseKeys: response.data ? Object.keys(response.data) : [],
+            fullResponse: response
           });
-          
-          // Try one more approach - check if response has success but missing proper structure
-          if (response.success && response.data?.token) {
-            throw new Error('Admin login succeeded but response structure is invalid. Please check backend response format.');
-          } else {
-            throw new Error('Access denied. Admin privileges required or invalid credentials.');
-          }
+          throw new Error('Access denied: Admin privileges required');
         }
         
         // Store admin token using centralized function

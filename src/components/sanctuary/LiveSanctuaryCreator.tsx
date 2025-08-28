@@ -84,60 +84,59 @@ const LiveSanctuaryCreator: React.FC = () => {
 
       console.log('📡 Live sanctuary creation response:', response);
 
-      if (response.success && response.data?.session) {
-        // Enhanced session ID extraction with comprehensive debugging
-        const session = response.data.session;
+      if (response.success) {
+        console.log('🔍 RAW API RESPONSE DEBUG:', JSON.stringify(response, null, 2));
         
-        // Try multiple extraction paths for sessionId
+        // Try extracting session ID from multiple possible locations
         let sessionId = null;
+        let sessionData = null;
         
-        if (session?.id) {
-          sessionId = session.id;
-          console.log('✅ Session ID found in session.id:', sessionId);
-        } else if (session?._id) {
-          sessionId = session._id;
-          console.log('✅ Session ID found in session._id:', sessionId);
-        } else if (response.data?.id) {
+        // Path 1: Direct from response.data.session.id
+        if (response.data?.session?.id) {
+          sessionId = response.data.session.id;
+          sessionData = response.data.session;
+          console.log('✅ Found sessionId in response.data.session.id:', sessionId);
+        }
+        // Path 2: Direct from response.data.id 
+        else if (response.data?.id) {
           sessionId = response.data.id;
-          console.log('✅ Session ID found in data.id:', sessionId);
-        } else if (response.data?._id) {
+          sessionData = response.data.session || response.data;
+          console.log('✅ Found sessionId in response.data.id:', sessionId);
+        }
+        // Path 3: From response.data.session._id (MongoDB ObjectId)
+        else if (response.data?.session?._id) {
+          sessionId = response.data.session._id;
+          sessionData = response.data.session;
+          console.log('✅ Found sessionId in response.data.session._id:', sessionId);
+        }
+        // Path 4: From response.data._id
+        else if (response.data?._id) {
           sessionId = response.data._id;
-          console.log('✅ Session ID found in data._id:', sessionId);
+          sessionData = response.data;
+          console.log('✅ Found sessionId in response.data._id:', sessionId);
         }
         
-        console.log('🔍 Complete session ID extraction debug:', {
-          hasResponseData: !!response.data,
-          hasSession: !!session,
-          extractedSessionId: sessionId,
-          sessionKeys: session ? Object.keys(session) : 'no session',
-          dataKeys: response.data ? Object.keys(response.data) : 'no data',
-          sessionIdValue: session?.id,
-          sessionMongoId: session?._id,
-          dataIdValue: response.data?.id,
-          dataMongoId: response.data?._id,
-          rawSessionDebug: {
-            id: session?.id,
-            _id: session?._id,
-            topic: session?.topic,
-            hostId: session?.hostId
-          },
-          fullResponseStructure: {
-            success: response.success,
-            dataKeys: response.data ? Object.keys(response.data) : 'no data',
-            hasSessionInData: !!response.data?.session
-          }
+        console.log('🔍 SESSION EXTRACTION DEBUG:', {
+          foundSessionId: sessionId,
+          sessionIdType: typeof sessionId,
+          sessionIdValid: sessionId && sessionId !== 'undefined' && sessionId.length > 0,
+          hasSessionData: !!sessionData,
+          responseDataKeys: response.data ? Object.keys(response.data) : [],
+          sessionDataKeys: sessionData ? Object.keys(sessionData) : [],
+          rawResponseData: response.data
         });
         
-        if (!sessionId || sessionId === 'undefined' || sessionId === null) {
-          console.error('❌ No valid session ID found in response:', {
-            sessionId,
-            sessionIdType: typeof sessionId,
-            session,
-            responseData: response.data,
-            sessionKeys: session ? Object.keys(session) : 'no session',
+        // Validate extracted session ID
+        if (!sessionId || sessionId === 'undefined' || sessionId === null || sessionId.trim() === '') {
+          console.error('❌ CRITICAL: No valid session ID extracted from response');
+          console.error('Response structure analysis:', {
+            hasData: !!response.data,
+            dataKeys: response.data ? Object.keys(response.data) : [],
+            hasSession: !!response.data?.session,
+            sessionKeys: response.data?.session ? Object.keys(response.data.session) : [],
             fullResponse: response
           });
-          throw new Error(`Invalid response: missing or invalid session ID. Found value: ${sessionId} (type: ${typeof sessionId})`);
+          throw new Error('Session creation failed: No valid session ID in server response');
         }
         
         console.log('✅ Session created with ID:', sessionId);
