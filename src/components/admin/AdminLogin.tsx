@@ -66,8 +66,8 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
       console.log('🔍 RAW ADMIN RESPONSE DEBUG:', JSON.stringify(response, null, 2));
       
       if (response.success) {
-        // Based on backend logs, the response structure includes a direct token field
-        const token = response.data?.token;
+        // Based on backend logs, the token is in response.message.token
+        const token = response.message?.token;
         
         if (!token) {
           console.error('❌ CRITICAL: No token found in admin login response');
@@ -77,24 +77,25 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
         
         console.log('✅ Token found in response, proceeding with admin validation...');
         
-        // Based on backend logs, admin user data is in both admin and user objects
-        const adminUser = response.data?.admin || response.data?.user;
+        // Based on backend logs, admin user data is in response.message.admin or response.message.user
+        const adminUser = response.message?.admin || response.message?.user;
         
         if (!adminUser || adminUser.role !== 'admin') {
           console.error('❌ Admin validation failed:', {
-            hasAdmin: !!response.data?.admin,
-            hasUser: !!response.data?.user,
-            adminRole: response.data?.admin?.role,
-            userRole: response.data?.user?.role
+            hasAdmin: !!response.message?.admin,
+            hasUser: !!response.message?.user,
+            adminRole: response.message?.admin?.role,
+            userRole: response.message?.user?.role
           });
           throw new Error('Access denied: Admin privileges required');
         }
         
         console.log('✅ Admin validated:', { id: adminUser.id, role: adminUser.role });
         
-        // Store admin token using centralized function
-        const { setAdminToken } = await import('@/services/api');
-        setAdminToken(token);
+        // Store admin token directly
+        localStorage.setItem('admin_token', token);
+        localStorage.setItem('token', token); 
+        localStorage.setItem('veilo-auth-token', token);
         localStorage.setItem('admin_user', JSON.stringify(adminUser));
         
         // Update user context with admin user

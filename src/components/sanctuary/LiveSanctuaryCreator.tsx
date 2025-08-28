@@ -88,9 +88,17 @@ const LiveSanctuaryCreator: React.FC = () => {
         console.log('🎯 RAW API RESPONSE:', JSON.stringify(response, null, 2));
         console.log('🎯 RAW DATA OBJECT:', response.data);
         console.log('🎯 ALL DATA KEYS:', Object.keys(response.data || {}));
+        console.log('🎯 BACKEND LOG SESSIONID:', response.data?.sessionId);
+        console.log('🎯 MONGODB ID FIELD:', response.data?.id);
+        console.log('🎯 CHECKING ALL POSSIBLE ID SOURCES:', {
+          id: response.data?.id,
+          _id: response.data?._id,
+          sessionId: response.data?.sessionId,
+          session_id: response.data?.session_id
+        });
         
-        // Based on backend logs, the sessionId is in response.data.id
-        const sessionId = response.data?.id;
+        // Based on backend logs showing sessionId: 'live-sanctuary-dHpG2Fug', try all possible sources
+        const sessionId = response.data?.sessionId || response.data?.id || response.data?._id;
         
         console.log('🔍 CRITICAL Session ID extraction:', {
           extractedSessionId: sessionId,
