@@ -67,7 +67,7 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
       
       if (response.success) {
         // Based on backend logs, the token is in response.message.token
-        const token = response.message?.token;
+        const token = response.message && typeof response.message === 'object' ? (response.message as any).token : null;
         
         if (!token) {
           console.error('❌ CRITICAL: No token found in admin login response');
@@ -78,14 +78,16 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
         console.log('✅ Token found in response, proceeding with admin validation...');
         
         // Based on backend logs, admin user data is in response.message.admin or response.message.user
-        const adminUser = response.message?.admin || response.message?.user;
+        const adminUser = (response.message && typeof response.message === 'object') 
+          ? ((response.message as any).admin || (response.message as any).user) 
+          : null;
         
         if (!adminUser || adminUser.role !== 'admin') {
           console.error('❌ Admin validation failed:', {
-            hasAdmin: !!response.message?.admin,
-            hasUser: !!response.message?.user,
-            adminRole: response.message?.admin?.role,
-            userRole: response.message?.user?.role
+            hasAdmin: !!(response.message && typeof response.message === 'object' && (response.message as any).admin),
+            hasUser: !!(response.message && typeof response.message === 'object' && (response.message as any).user),
+            adminRole: (response.message && typeof response.message === 'object' && (response.message as any).admin) ? (response.message as any).admin.role : undefined,
+            userRole: (response.message && typeof response.message === 'object' && (response.message as any).user) ? (response.message as any).user.role : undefined
           });
           throw new Error('Access denied: Admin privileges required');
         }
