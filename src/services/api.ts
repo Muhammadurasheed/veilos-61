@@ -146,7 +146,7 @@ export const setAdminToken = (token: string) => {
 };
 
 // Generic API request function
-export const apiRequest = async <T = any>(
+const apiRequest = async <T = any>(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
   url: string,
   data?: any,
@@ -251,8 +251,8 @@ export const UserApi = {
 
   // Register expert account
   async registerExpertAccount(expertData: any) {
-    const response = await api.post('/api/experts/register', expertData);
-    return response.data;
+    const response = await apiRequest('POST', '/api/experts/register', expertData);
+    return response;
   }
 };
 
@@ -669,25 +669,6 @@ export const GeminiApi = {
   }
 };
 
-// Enhanced Admin API for flagship admin panel
-export const EnhancedAdminApi = {
-  async getExpertsAdvanced(params?: any) {
-    return apiRequest('GET', '/api/admin/experts/advanced', null, { params });
-  },
-
-  async bulkAction(data: { expertIds: string[]; action: string; notes?: string }) {
-    return apiRequest('POST', '/api/admin/experts/bulk-action', data);
-  },
-
-  async getPlatformOverview(params?: any) {
-    return apiRequest('GET', '/api/admin/analytics/platform-overview', null, { params });
-  },
-
-  async getApplicationMonitoring() {
-    return apiRequest('GET', '/api/admin/monitoring/expert-applications');
-  }
-};
-
 // AppealApi for content appeals
 export const AppealApi = {
   async submitAppeal(appealData: any) {
@@ -702,6 +683,9 @@ export const AppealApi = {
     return apiRequest('PUT', `/api/appeals/${appealId}`, decision);
   }
 };
+
+// Export apiRequest for components that need it
+export { apiRequest };
 
 // Fixed re-export to avoid conflicts
 export * from './temporaryApiExports';
