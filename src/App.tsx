@@ -27,6 +27,7 @@ import BookSession from '@/pages/BookSession';
 import Sanctuary from '@/pages/Sanctuary';
 import SanctuaryRecover from '@/pages/SanctuaryRecover';
 import SanctuaryInbox from '@/components/sanctuary/SanctuaryInbox';
+import SanctuaryInboxPage from '@/pages/SanctuaryInbox';
 import { SanctuaryHostDashboard } from '@/components/sanctuary/SanctuaryHostDashboard';
 import MySanctuariesPage from '@/pages/MySanctuaries';
 import SanctuarySubmit from '@/pages/SanctuarySubmit';
@@ -142,7 +143,7 @@ const App: React.FC = () => {
                         <Route path="/sanctuary-inbox/:id" element={<SanctuaryInbox />} />
                         <Route path="/sanctuary-host/:id" element={<SanctuaryHostDashboard />} />
         <Route path="/sanctuary/submit/:sessionId" element={<SanctuarySubmit />} />
-        <Route path="/sanctuary/inbox/:sessionId" element={<SanctuaryInbox />} />
+        <Route path="/sanctuary/inbox/:sessionId" element={<SanctuaryInboxPage />} />
         <Route path="/sanctuary/recover/:sessionId" element={<SanctuaryRecover />} />
         <Route path="/sanctuary/live/:sessionId" element={<EnhancedLiveSanctuary />} />
         <Route path="/my-sanctuaries" element={

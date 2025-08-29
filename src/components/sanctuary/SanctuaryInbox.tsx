@@ -34,10 +34,36 @@ interface SanctuaryMessage {
 }
 
 const SanctuaryInbox = () => {
-  const { id: sanctuaryId } = useParams<{ id: string }>();
+  // Handle both parameter formats: /sanctuary-inbox/:id and /sanctuary/inbox/:sessionId
+  const params = useParams<{ id?: string; sessionId?: string }>();
+  const sanctuaryId = params.id || params.sessionId;
   const [searchParams] = useSearchParams();
-  const hostToken = searchParams.get('hostToken');
+  const urlHostToken = searchParams.get('hostToken');
   const { toast } = useToast();
+  
+  // Get host token from URL params or localStorage
+  const getHostToken = () => {
+    if (urlHostToken) return urlHostToken;
+    if (sanctuaryId) {
+      const storedToken = localStorage.getItem(`sanctuary-host-${sanctuaryId}`);
+      const expiryTime = localStorage.getItem(`sanctuary-host-${sanctuaryId}-expires`);
+      
+      if (storedToken && expiryTime) {
+        const expiryDate = new Date(expiryTime);
+        const now = new Date();
+        
+        if (now > expiryDate) {
+          localStorage.removeItem(`sanctuary-host-${sanctuaryId}`);
+          localStorage.removeItem(`sanctuary-host-${sanctuaryId}-expires`);
+          return null;
+        }
+        return storedToken;
+      }
+    }
+    return null;
+  };
+
+  const hostToken = getHostToken();
   
   const [messages, setMessages] = useState<SanctuaryMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,19 +71,19 @@ const SanctuaryInbox = () => {
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const [sanctuary, setSanctuary] = useState<any>(null);
 
-  // Real-time connection
-  const { 
-    isConnected, 
-    connectionQuality, 
-    totalSubmissions,
-    markMessageAsRead,
-    requestNotificationPermission 
-  } = useSanctuaryRealtime({
-    sanctuaryId: sanctuaryId || '',
-    hostToken: hostToken || undefined,
-    onNewSubmission: handleNewMessage,
-    enableNotifications: true
-  });
+  // Store host token if from URL
+  useEffect(() => {
+    if (urlHostToken && sanctuaryId) {
+      const expiryDate = new Date();
+      expiryDate.setHours(expiryDate.getHours() + 48);
+      
+      localStorage.setItem(`sanctuary-host-${sanctuaryId}`, urlHostToken);
+      localStorage.setItem(`sanctuary-host-${sanctuaryId}-expires`, expiryDate.toISOString());
+      
+      // Clean URL
+      window.history.replaceState({}, '', `/sanctuary/inbox/${sanctuaryId}`);
+    }
+  }, [sanctuaryId, urlHostToken]);
 
   function handleNewMessage(submission: any) {
     const newMessage: SanctuaryMessage = {
@@ -76,6 +102,20 @@ const SanctuaryInbox = () => {
       duration: 5000,
     });
   }
+
+  // Real-time connection
+  const { 
+    isConnected, 
+    connectionQuality, 
+    totalSubmissions,
+    markMessageAsRead,
+    requestNotificationPermission 
+  } = useSanctuaryRealtime({
+    sanctuaryId: sanctuaryId || '',
+    hostToken: hostToken || undefined,
+    onNewSubmission: handleNewMessage,
+    enableNotifications: true
+  });
 
   // Load sanctuary details and messages
   useEffect(() => {
