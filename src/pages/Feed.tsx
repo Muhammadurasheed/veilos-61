@@ -7,14 +7,14 @@ import PostCard from '@/components/post/PostCard';
 import Layout from '@/components/layout/Layout';
 import { SmartRecommendations } from '@/components/recommendations/SmartRecommendations';
 import { useVeiloData } from '@/contexts/VeiloDataContext';
-import { useUserContext } from '@/contexts/UserContext';
+import { useAuth } from '@/contexts/optimized/AuthContextRefactored';
 import { Post } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Globe, Loader2 } from 'lucide-react';
 
 const Feed = () => {
   const { posts, loading, refreshPosts } = useVeiloData();
-  const { user } = useUserContext();
+  const { user, isAuthenticated } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('latest');
   const [filterBy, setFilterBy] = useState('all');
@@ -60,9 +60,9 @@ const Feed = () => {
           <CreatePostForm />
           
           {/* Smart Recommendations Section */}
-          {user?.loggedIn && (
+          {isAuthenticated && (
             <div className="mb-8">
-              <SmartRecommendations userId={user.id} />
+              <SmartRecommendations userId={user?.id || ''} />
             </div>
           )}
           
@@ -129,10 +129,10 @@ const Feed = () => {
                   ? 'Try adjusting your search or filters' 
                   : 'Be the first to share something'}
               </p>
-              {!user?.loggedIn && (
+              {!isAuthenticated && (
                 <Button 
                   className="mt-4"
-                  onClick={() => {}}
+                  onClick={() => window.location.href = '/auth'}
                 >
                   Sign in to Post
                 </Button>

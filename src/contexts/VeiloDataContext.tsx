@@ -1,7 +1,7 @@
 
 import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { PostApi, ExpertApi } from '@/services/api';
-import { useUserContext } from './UserContext';
+import { useAuth } from '@/contexts/optimized/AuthContextRefactored';
 import { Post, Expert } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -50,16 +50,16 @@ export const VeiloDataProvider = ({ children }: { children: ReactNode }) => {
     posts: true,
     experts: true,
   });
-  const { user } = useUserContext();
+  const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
 
   // Fetch initial data
   useEffect(() => {
-    if (user?.loggedIn) {
+    if (isAuthenticated) {
       refreshPosts();
       refreshExperts();
     }
-  }, [user?.loggedIn]);
+  }, [isAuthenticated]);
 
   const refreshPosts = async () => {
     setLoading(prev => ({ ...prev, posts: true }));
@@ -99,7 +99,7 @@ export const VeiloDataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const likePost = async (postId: string) => {
-    if (!user) return;
+    if (!isAuthenticated || !user) return;
     
     try {
       const response = await PostApi.likePost(postId);
@@ -125,7 +125,7 @@ export const VeiloDataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const unlikePost = async (postId: string) => {
-    if (!user) return;
+    if (!isAuthenticated || !user) return;
     
     try {
       const response = await PostApi.unlikePost(postId);
@@ -156,7 +156,14 @@ export const VeiloDataProvider = ({ children }: { children: ReactNode }) => {
     topic?: string,
     wantsExpertHelp: boolean = false
   ): Promise<Post | null> => {
-    if (!user) return null;
+    if (!isAuthenticated || !user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to create posts.",
+        variant: "destructive",
+      });
+      return null;
+    }
     
     try {
       const response = await PostApi.createPost({
@@ -194,7 +201,7 @@ export const VeiloDataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addComment = async (postId: string, content: string): Promise<Post | null> => {
-    if (!user) return null;
+    if (!isAuthenticated || !user) return null;
     
     try {
       const response = await PostApi.addComment(postId, content);
@@ -230,7 +237,7 @@ export const VeiloDataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const flagPost = async (postId: string, reason: string): Promise<boolean> => {
-    if (!user) return false;
+    if (!isAuthenticated || !user) return false;
     
     try {
       const response = await PostApi.flagPost(postId, reason);

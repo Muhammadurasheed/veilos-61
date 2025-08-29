@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useVeiloData } from '@/contexts/VeiloDataContext';
-import { useUserContext } from '@/contexts/UserContext';
+import { useAuth } from '@/contexts/optimized/AuthContextRefactored';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -18,7 +18,7 @@ interface PostCardProps {
 }
 
 const PostCard = ({ post }: PostCardProps) => {
-  const { user } = useUserContext();
+  const { user, isAuthenticated } = useAuth();
   const { likePost, unlikePost, addComment, flagPost } = useVeiloData();
   const [comment, setComment] = useState('');
   const [showCommentInput, setShowCommentInput] = useState(false);
@@ -27,10 +27,11 @@ const PostCard = ({ post }: PostCardProps) => {
   const [flagDialogOpen, setFlagDialogOpen] = useState(false);
   const [showAppeal, setShowAppeal] = useState(false);
 
-  const isLiked = user ? post.likes.includes(user.id) : false;
+  const isLiked = post.likes.includes(user?.id || '');
+  const canInteract = isAuthenticated && user;
 
   const handleLikeToggle = async () => {
-    if (!user) return;
+    if (!canInteract) return;
     
     if (isLiked) {
       await unlikePost(post.id);
@@ -41,7 +42,7 @@ const PostCard = ({ post }: PostCardProps) => {
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!comment.trim() || !user) return;
+    if (!comment.trim() || !canInteract) return;
     
     setLoading(true);
     await addComment(post.id, comment);
@@ -51,7 +52,7 @@ const PostCard = ({ post }: PostCardProps) => {
   };
 
   const handleFlagPost = async () => {
-    if (!flagReason.trim() || !user) return;
+    if (!flagReason.trim() || !canInteract) return;
     
     const success = await flagPost(post.id, flagReason);
     if (success) {
@@ -129,15 +130,17 @@ const PostCard = ({ post }: PostCardProps) => {
           <div className="flex items-center">
             <button 
               onClick={handleLikeToggle}
-              className={`flex items-center mr-4 ${isLiked ? 'text-red-500' : 'text-gray-500'}`}
+              disabled={!canInteract}
+              className={`flex items-center mr-4 ${isLiked ? 'text-red-500' : 'text-gray-500'} ${!canInteract ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
             >
               <Heart className={`h-4 w-4 mr-1 ${isLiked ? 'fill-red-500' : ''}`} />
               {post.likes.length > 0 && <span>{post.likes.length}</span>}
             </button>
             
             <button 
-              onClick={() => setShowCommentInput(!showCommentInput)}
-              className="flex items-center text-gray-500"
+              onClick={() => canInteract && setShowCommentInput(!showCommentInput)}
+              disabled={!canInteract}
+              className={`flex items-center text-gray-500 ${!canInteract ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
             >
               <MessageSquare className="h-4 w-4 mr-1" />
               {post.comments.length > 0 && <span>{post.comments.length}</span>}

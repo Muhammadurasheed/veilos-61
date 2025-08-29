@@ -118,8 +118,8 @@ const MySanctuariesEnhanced = () => {
         'Content-Type': 'application/json',
       };
 
-      // Include auth token if available
-      const authToken = localStorage.getItem('token');
+      // Include auth token if available  
+      const authToken = localStorage.getItem('veilo-auth-token');
       if (authToken) {
         headers['x-auth-token'] = authToken;
       }

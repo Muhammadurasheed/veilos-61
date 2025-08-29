@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useVeiloData } from '@/contexts/VeiloDataContext';
-import { useUserContext } from '@/contexts/UserContext';
+import { useAuth } from '@/contexts/optimized/AuthContextRefactored';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -41,7 +41,7 @@ const feelings = [
 
 const CreatePostForm = () => {
   const { createPost } = useVeiloData();
-  const { user } = useUserContext();
+  const { user, isAuthenticated } = useAuth();
   const [content, setContent] = useState('');
   const [feeling, setFeeling] = useState<string | undefined>(undefined);
   const [topic, setTopic] = useState<string | undefined>(undefined);
@@ -84,7 +84,7 @@ const CreatePostForm = () => {
     setShowRefinement(false);
   };
 
-  if (!user) {
+  if (!isAuthenticated || !user) {
     return null;
   }
 
@@ -94,7 +94,7 @@ const CreatePostForm = () => {
         <form onSubmit={handleSubmit}>
           <div className="flex items-start space-x-3 mb-4">
             <Avatar className="h-9 w-9">
-              <AvatarImage src={`/avatars/avatar-${user.avatarIndex}.svg`} alt={user.alias} />
+              <AvatarImage src={user.avatarUrl || `/avatars/avatar-${user.avatarIndex}.svg`} alt={user.alias} />
               <AvatarFallback>
                 {user.alias.substring(0, 2).toUpperCase()}
               </AvatarFallback>

@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useUserContext } from '@/contexts/UserContext';
+import { useAuth } from '@/contexts/optimized/AuthContextRefactored';
 import { Link } from 'react-router-dom';
 import { useTheme } from '@/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -22,7 +22,7 @@ interface TopbarProps {
 }
 
 const Topbar = ({ onToggleSidebar, sidebarOpen }: TopbarProps) => {
-  const { user, logout } = useUserContext();
+  const { user, logout, isAuthenticated } = useAuth();
   const { theme, toggleTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
