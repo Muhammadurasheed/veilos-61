@@ -165,7 +165,7 @@ router.post('/register',
         role: user.role
       });
 
-      return res.success({
+      return res.success(`Welcome to Veilo, ${user.alias}! Your secure shadow identity has been created.`, {
         token: accessToken,
         refreshToken,
         user: {
@@ -181,7 +181,7 @@ router.post('/register',
           activities: user.activities,
           preferences: user.preferences
         }
-      }, `Welcome to Veilo, ${user.alias}! Your secure shadow identity has been created.`);
+      });
 
     } catch (error) {
       console.error('Registration error:', error.message, {
@@ -238,7 +238,7 @@ router.post('/login',
       user.lastLoginAt = new Date();
       await user.save();
 
-      return res.success({
+      return res.success('Login successful', {
         token: accessToken,
         refreshToken,
         user: {
@@ -254,7 +254,7 @@ router.post('/login',
           activities: user.activities,
           preferences: user.preferences
         }
-      }, 'Login successful');
+      });
 
     } catch (error) {
       console.error('Login error:', error);
@@ -300,7 +300,7 @@ router.get('/admin/verify', authMiddleware, async (req, res) => {
 
     console.log('✅ Admin verification successful:', { userId: user.id, role: user.role });
 
-    return res.success({
+    return res.success('Admin token valid', {
       user: {
         id: user.id,
         alias: user.alias,
@@ -311,7 +311,7 @@ router.get('/admin/verify', authMiddleware, async (req, res) => {
         email: user.email,
         isAnonymous: user.isAnonymous
       }
-    }, 'Admin token valid');
+    });
 
   } catch (error) {
     console.error('❌ Admin token verification error:', error);
@@ -327,7 +327,7 @@ router.get('/verify', authMiddleware, async (req, res) => {
       return res.error('User not found', 404);
     }
 
-    return res.success({
+    return res.success('Token valid', {
       user: {
         id: user.id,
         alias: user.alias,
@@ -338,7 +338,7 @@ router.get('/verify', authMiddleware, async (req, res) => {
         email: user.email,
         isAnonymous: user.isAnonymous
       }
-    }, 'Token valid');
+    });
 
   } catch (error) {
     console.error('Token verification error:', error);
@@ -376,7 +376,7 @@ router.put('/profile',
 
       await user.save();
 
-      return res.success({
+      return res.success('Profile updated successfully', {
         user: {
           id: user.id,
           alias: user.alias,
@@ -387,7 +387,7 @@ router.put('/profile',
           email: user.email,
           isAnonymous: user.isAnonymous
         }
-      }, 'Profile updated successfully');
+      });
 
     } catch (error) {
       console.error('Profile update error:', error);
@@ -415,7 +415,7 @@ router.post('/avatar',
       user.avatarUrl = req.file.path;
       await user.save();
 
-      return res.success({
+      return res.success('Avatar updated successfully', {
         user: {
           id: user.id,
           alias: user.alias,
@@ -426,7 +426,7 @@ router.post('/avatar',
           email: user.email,
           isAnonymous: user.isAnonymous
         }
-      }, 'Avatar updated successfully');
+      });
 
     } catch (error) {
       console.error('Avatar update error:', error);

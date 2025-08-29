@@ -9,6 +9,7 @@ import { ErrorBoundary } from '@/components/ui/error-boundary';
 
 import FlagshipLanding from '@/pages/FlagshipLanding';
 import Dashboard from '@/pages/Dashboard';
+import Auth from '@/pages/Auth';
 import SanctuaryJoinViaInvite from '@/components/sanctuary/SanctuaryJoinViaInvite';
 import Feed from '@/pages/Feed';
 import BeaconsList from '@/pages/BeaconsList';
@@ -60,6 +61,8 @@ const App: React.FC = () => {
             <SmartRouter>
               <Routes>
                 <Route path="/" element={<FlagshipLanding />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/sanctuary/join/:inviteCode" element={<SanctuaryJoinViaInvite />} />
                         <Route path="/feed" element={<Feed />} />
                         <Route path="/beacons" element={<BeaconsList />} />

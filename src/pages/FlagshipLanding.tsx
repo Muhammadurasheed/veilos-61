@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { EnhancedAuthFlow } from '@/components/auth/EnhancedAuthFlow';
+
 import { 
   Heart, Shield, Users, MessageCircle, Video, BookOpen, ArrowRight, 
   Sparkles, Star, CheckCircle, Globe, Zap, Award, TrendingUp,
@@ -14,8 +14,6 @@ import { Link } from 'react-router-dom';
 
 const FlagshipLanding = () => {
   const { user, isAuthenticated } = useAuth();
-  const [showAuth, setShowAuth] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('register');
 
   // Redirect authenticated users to dashboard
   useEffect(() => {
@@ -96,30 +94,6 @@ const FlagshipLanding = () => {
 
   return (
     <>
-      {showAuth && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-background rounded-2xl shadow-2xl w-full max-w-md">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">
-                  {authMode === 'login' ? 'Welcome Back' : 'Join Veilo'}
-                </h2>
-                <Button variant="ghost" size="sm" onClick={() => setShowAuth(false)}>
-                  ×
-                </Button>
-              </div>
-              <EnhancedAuthFlow 
-                mode={authMode}
-                onModeChange={setAuthMode}
-                onSuccess={() => {
-                  setShowAuth(false);
-                  // Will redirect via useEffect
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
         {/* Navigation Header */}
@@ -136,18 +110,11 @@ const FlagshipLanding = () => {
                 <Badge className="bg-primary/10 text-primary border-primary/20">Enterprise Ready</Badge>
               </div>
               <div className="flex items-center space-x-3">
-                <Button 
-                  variant="ghost" 
-                  onClick={() => { setAuthMode('login'); setShowAuth(true); }}
-                  className="font-medium"
-                >
-                  Sign In
+                <Button asChild variant="ghost" className="font-medium">
+                  <Link to="/auth?mode=login">Sign In</Link>
                 </Button>
-                <Button 
-                  onClick={() => { setAuthMode('register'); setShowAuth(true); }}
-                  className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 shadow-lg font-medium px-6"
-                >
-                  Get Started Free
+                <Button asChild className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 shadow-lg font-medium px-6">
+                  <Link to="/auth?mode=register">Get Started Free</Link>
                 </Button>
               </div>
             </div>
@@ -194,22 +161,17 @@ const FlagshipLanding = () => {
               transition={{ delay: 0.4 }}
               className="flex flex-col sm:flex-row gap-4 justify-center items-center"
             >
-              <Button 
-                size="lg" 
-                onClick={() => { setAuthMode('register'); setShowAuth(true); }}
-                className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 shadow-xl px-12 py-6 text-lg font-semibold"
-              >
-                <Play className="mr-3 h-6 w-6" />
-                Start Your Journey
+              <Button asChild size="lg" className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 shadow-xl px-12 py-6 text-lg font-semibold">
+                <Link to="/auth?mode=register">
+                  <Play className="mr-3 h-6 w-6" />
+                  Start Your Journey
+                </Link>
               </Button>
-              <Button 
-                variant="outline" 
-                size="lg" 
-                onClick={() => { setAuthMode('login'); setShowAuth(true); }}
-                className="px-12 py-6 text-lg border-primary/30 hover:bg-primary/5 font-semibold"
-              >
-                <Video className="mr-3 h-6 w-6" />
-                Watch Demo
+              <Button asChild variant="outline" size="lg" className="px-12 py-6 text-lg border-primary/30 hover:bg-primary/5 font-semibold">
+                <Link to="/auth?mode=login">
+                  <Video className="mr-3 h-6 w-6" />
+                  Watch Demo
+                </Link>
               </Button>
             </motion.div>
 
@@ -397,22 +359,17 @@ const FlagshipLanding = () => {
                     Your journey to wellness starts with complete privacy and professional care.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                    <Button 
-                      size="lg" 
-                      onClick={() => { setAuthMode('register'); setShowAuth(true); }}
-                      className="bg-gradient-to-r from-primary to-accent hover:shadow-2xl px-12 py-6 text-lg font-semibold"
-                    >
-                      <Sparkles className="mr-3 h-6 w-6" />
-                      Start Free Today
+                    <Button asChild size="lg" className="bg-gradient-to-r from-primary to-accent hover:shadow-2xl px-12 py-6 text-lg font-semibold">
+                      <Link to="/auth?mode=register">
+                        <Sparkles className="mr-3 h-6 w-6" />
+                        Start Free Today
+                      </Link>
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="lg"
-                      onClick={() => { setAuthMode('login'); setShowAuth(true); }}
-                      className="px-12 py-6 text-lg border-primary/30 hover:bg-primary/5 font-semibold"
-                    >
-                      <MessageCircle className="mr-3 h-6 w-6" />
-                      Talk to Expert
+                    <Button asChild variant="outline" size="lg" className="px-12 py-6 text-lg border-primary/30 hover:bg-primary/5 font-semibold">
+                      <Link to="/auth?mode=login">
+                        <MessageCircle className="mr-3 h-6 w-6" />
+                        Talk to Expert
+                      </Link>
                     </Button>
                   </div>
                 </div>
