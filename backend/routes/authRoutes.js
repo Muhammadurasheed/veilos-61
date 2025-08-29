@@ -69,7 +69,7 @@ router.post('/admin/login',
   console.log('✅ Admin login complete - returning structured response');
   
   // Return structure that matches frontend expectations exactly
-  res.success('Admin login successful', {
+  res.success({
     token: adminToken,
     user: {
       id: user.id,
@@ -89,7 +89,7 @@ router.post('/admin/login',
       avatarUrl: user.avatarUrl,
       isAnonymous: false
     }
-  });
+  }, 'Admin login successful');
       
     } catch (error) {
       console.error('❌ Admin login error:', error);
@@ -253,7 +253,7 @@ router.post('/login',
       user.lastLoginAt = new Date();
       await user.save();
 
-      return res.success('Login successful', {
+      return res.success({
         token: accessToken,
         refreshToken,
         user: {
@@ -269,7 +269,7 @@ router.post('/login',
           activities: user.activities,
           preferences: user.preferences
         }
-      });
+      }, 'Login successful');
 
     } catch (error) {
       console.error('Login error:', error);
@@ -315,7 +315,7 @@ router.get('/admin/verify', authMiddleware, async (req, res) => {
 
     console.log('✅ Admin verification successful:', { userId: user.id, role: user.role });
 
-    return res.success('Admin token valid', {
+    return res.success({
       user: {
         id: user.id,
         alias: user.alias,
@@ -326,7 +326,7 @@ router.get('/admin/verify', authMiddleware, async (req, res) => {
         email: user.email,
         isAnonymous: user.isAnonymous
       }
-    });
+    }, 'Admin token valid');
 
   } catch (error) {
     console.error('❌ Admin token verification error:', error);
@@ -342,7 +342,7 @@ router.get('/verify', authMiddleware, async (req, res) => {
       return res.error('User not found', 404);
     }
 
-    return res.success('Token valid', {
+    return res.success({
       user: {
         id: user.id,
         alias: user.alias,
@@ -353,7 +353,7 @@ router.get('/verify', authMiddleware, async (req, res) => {
         email: user.email,
         isAnonymous: user.isAnonymous
       }
-    });
+    }, 'Token valid');
 
   } catch (error) {
     console.error('Token verification error:', error);
@@ -391,7 +391,7 @@ router.put('/profile',
 
       await user.save();
 
-      return res.success('Profile updated successfully', {
+      return res.success({
         user: {
           id: user.id,
           alias: user.alias,
@@ -402,7 +402,7 @@ router.put('/profile',
           email: user.email,
           isAnonymous: user.isAnonymous
         }
-      });
+      }, 'Profile updated successfully');
 
     } catch (error) {
       console.error('Profile update error:', error);
@@ -430,7 +430,7 @@ router.post('/avatar',
       user.avatarUrl = req.file.path;
       await user.save();
 
-      return res.success('Avatar updated successfully', {
+      return res.success({
         user: {
           id: user.id,
           alias: user.alias,
@@ -441,7 +441,7 @@ router.post('/avatar',
           email: user.email,
           isAnonymous: user.isAnonymous
         }
-      });
+      }, 'Avatar updated successfully');
 
     } catch (error) {
       console.error('Avatar update error:', error);
