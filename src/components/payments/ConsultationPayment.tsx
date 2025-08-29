@@ -19,16 +19,7 @@ import {
   DollarSign
 } from 'lucide-react';
 
-interface Expert {
-  id: string;
-  name: string;
-  specialization: string;
-  avatar?: string;
-  rating: number;
-  pricing: {
-    rate: number; // cents per minute
-  };
-}
+import { Expert } from '@/types';
 
 interface ConsultationPaymentProps {
   expert: Expert;
@@ -80,9 +71,10 @@ const ConsultationPayment: React.FC<ConsultationPaymentProps> = ({
     }
   };
 
-  const baseRate = expert.pricing?.rate || 50; // cents per minute
+  const baseRate = expert.hourlyRate || 50; // dollars per hour - convert to cents per minute
+  const rateCentsPerMinute = Math.floor((baseRate * 100) / 60);
   const multiplier = getTypeMultiplier(consultationType);
-  const finalRate = Math.floor(baseRate * multiplier);
+  const finalRate = Math.floor(rateCentsPerMinute * multiplier);
   const totalAmount = finalRate * duration;
 
   const formatCurrency = (cents: number) => {
@@ -173,7 +165,7 @@ const ConsultationPayment: React.FC<ConsultationPaymentProps> = ({
           {/* Expert Info */}
           <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
             <Avatar className="h-12 w-12">
-              <AvatarImage src={expert.avatar || `/experts/expert-${expert.id.slice(-1)}.jpg`} />
+              <AvatarImage src={expert.avatarUrl || `/experts/expert-${expert.id.slice(-1)}.jpg`} />
               <AvatarFallback>{expert.name[0]}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
@@ -216,7 +208,7 @@ const ConsultationPayment: React.FC<ConsultationPaymentProps> = ({
           <div className="space-y-3 p-3 border rounded-lg bg-gradient-to-br from-background to-muted">
             <div className="flex items-center justify-between">
               <span className="text-sm">Base rate (per minute)</span>
-              <span className="text-sm">{formatCurrency(baseRate)}</span>
+              <span className="text-sm">{formatCurrency(rateCentsPerMinute)}</span>
             </div>
             
             {multiplier > 1 && (
@@ -224,7 +216,7 @@ const ConsultationPayment: React.FC<ConsultationPaymentProps> = ({
                 <span className="text-sm">
                   {consultationType === 'emergency' ? 'Emergency' : 'Premium'} multiplier ({multiplier}x)
                 </span>
-                <span className="text-sm">+{formatCurrency((finalRate - baseRate) * duration)}</span>
+                <span className="text-sm">+{formatCurrency((finalRate - rateCentsPerMinute) * duration)}</span>
               </div>
             )}
             

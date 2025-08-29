@@ -58,7 +58,7 @@ const App: React.FC = () => {
     <ErrorBoundary>
       <ThemeProvider>
         <AuthProvider>
-          <ErrorBoundary fallback={<AuthErrorFallback error={new Error("Auth error")} />}>
+          <ErrorBoundary fallback={AuthErrorFallback}>
             <SmartRouter>
               <Routes>
                 <Route path="/" element={

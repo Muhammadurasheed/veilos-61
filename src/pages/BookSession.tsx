@@ -43,24 +43,9 @@ const bookingSchema = z.object({
   urgency: z.string().optional(),
 });
 
-type BookingFormValues = z.infer<typeof bookingSchema>;
+import { Expert } from '@/types';
 
-interface Expert {
-  id: string;
-  name: string;
-  email: string;
-  specialization: string;
-  bio: string;
-  avatarUrl?: string;
-  averageRating?: number;
-  totalRatings?: number;
-  responseTime?: string;
-  pricingModel: 'free' | 'paid' | 'donation';
-  pricingDetails?: {
-    sessionRate?: number;
-    currency?: string;
-  };
-}
+type BookingFormValues = z.infer<typeof bookingSchema>;
 
 const BookSession = () => {
   const { expertId } = useParams();
@@ -251,10 +236,10 @@ const BookSession = () => {
                     <h2 className="text-2xl font-bold">{expert.name}</h2>
                     <p className="text-muted-foreground">{expert.specialization}</p>
                     <div className="flex items-center mt-2 space-x-4">
-                      {expert.averageRating && (
+                      {expert.rating && (
                         <div className="flex items-center">
                           <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 mr-1" />
-                          <span className="text-sm font-medium">{expert.averageRating}</span>
+                          <span className="text-sm font-medium">{expert.rating}</span>
                           <span className="text-sm text-muted-foreground ml-1">
                             ({expert.totalRatings} reviews)
                           </span>
@@ -281,7 +266,7 @@ const BookSession = () => {
                     <Badge variant="outline">
                       {expert.pricingModel === 'free' ? 'Free Consultation' :
                        expert.pricingModel === 'donation' ? 'Pay What You Can' :
-                       `$${expert.pricingDetails?.sessionRate || 0}/${expert.pricingDetails?.currency || 'USD'} per session`}
+                       `$${expert.hourlyRate || 0} per session`}
                     </Badge>
                   </div>
                 </div>
