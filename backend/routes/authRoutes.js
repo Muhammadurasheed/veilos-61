@@ -117,6 +117,7 @@ router.post('/register',
       .withMessage('Real name must be between 2 and 50 characters'),
     body('preferredAlias')
       .optional()
+      .if(body('preferredAlias').notEmpty())
       .isLength({ min: 2, max: 30 })
       .trim()
       .withMessage('Preferred alias must be between 2 and 30 characters'),

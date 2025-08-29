@@ -122,7 +122,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       logger.accountCreation('Registration attempt', userData);
       const response = await UserApi.register(userData);
 
-      if (response?.success && response?.data?.token && response?.data?.user) {
+      // Handle both success response formats
+      if ((response?.success || response?.data?.token) && response?.data?.user) {
         // Tokens are automatically saved by UserApi.register
         setUser(response.data.user);
         
@@ -137,7 +138,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Enhanced error handling with detailed validation errors
       let errorMessage = 'Failed to create account.';
       
-      if (response?.errors && Array.isArray(response.errors)) {
+      if (response?.errors && Array.isArray(response.errors) && response.errors.length > 0) {
         errorMessage = response.errors.map((err: any) => err.message).join(', ');
       } else if (response?.error) {
         errorMessage = response.error;
