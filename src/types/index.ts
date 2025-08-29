@@ -88,6 +88,7 @@ export interface Expert {
   responseTime?: string;
   isOnline?: boolean;
   lastActive?: string;
+  createdAt: string;
   testimonials?: Array<{
     id: string;
     text: string;
@@ -157,7 +158,6 @@ export interface Expert {
   profileViews: number;
   profileViewsThisMonth: number;
   lastUpdated: string;
-  createdAt: string;
   followers?: string[];
   followersCount: number;
   socialLinks?: {
@@ -378,5 +378,46 @@ export interface PostFormData {
   feeling?: string;
   topic?: string;
   wantsExpertHelp?: boolean;
+}
+
+// Admin API type definitions
+export interface AdminApiType {
+  login: (credentials: { email: string; password: string }) => Promise<ApiResponse<any>>;
+  getUsers: (params?: any) => Promise<ApiResponse<any>>;
+  getExperts: (params?: any) => Promise<ApiResponse<any>>;
+  getExpertsAdvanced: (params: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    verificationLevel?: string;
+    search?: string;
+    sortBy?: string;
+    sortOrder?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }) => Promise<ApiResponse<any>>;
+  bulkExpertAction: (data: {
+    expertIds: string[];
+    action: 'approve' | 'reject' | 'suspend' | 'reactivate';
+    notes?: string;
+  }) => Promise<ApiResponse<any>>;
+  getPlatformOverview: (params?: { timeframe?: string }) => Promise<ApiResponse<any>>;
+  getPendingExperts: () => Promise<ApiResponse<any>>;
+  verifyExpert: (expertId: string, data: ApiVerificationRequest) => Promise<ApiResponse<{ success: boolean }>>;
+  approveExpert: (expertId: string) => Promise<ApiResponse<any>>;
+  rejectExpert: (expertId: string, reason: string) => Promise<ApiResponse<any>>;
+  moderateContent: (contentId: string, action: string) => Promise<ApiResponse<any>>;
+  getAnalytics: (params?: any) => Promise<ApiResponse<any>>;
+  getModerationQueue: (params?: { priority?: string; type?: string }) => Promise<ApiResponse<any>>;
+  getCrisisDetection: () => Promise<ApiResponse<any>>;
+  getSanctuaryMonitoring: () => Promise<ApiResponse<any>>;
+  getExpertPerformance: () => Promise<ApiResponse<any>>;
+  getExpertApplications: () => Promise<ApiResponse<any>>;
+  getFlaggedContent: () => Promise<ApiResponse<any>>;
+  resolveFlag: (contentId: string, action: "approve" | "remove") => Promise<ApiResponse<any>>;
+  getAllExperts: () => Promise<ApiResponse<any>>;
+  getGlobalMetrics: () => Promise<ApiResponse<any>>;
+  getRecentActivity: () => Promise<ApiResponse<any>>;
+  updateExpertStatus: (expertId: string, status: string) => Promise<ApiResponse<any>>;
 }
 

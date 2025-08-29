@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { logger } from './logger';
 import { tokenManager } from './tokenManager';
-import type { ApiResponse } from '@/types';
+import type { ApiResponse, AdminApiType } from '@/types';
 
 // API Configuration - Use proxy in development, direct URL in production
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '' : 'http://localhost:3000');
@@ -458,8 +458,21 @@ export const AdminApi = {
 
   async resolveFlag(contentId: string, action: 'approve' | 'remove', notes?: string) {
     return apiRequest('POST', `/api/admin/content/${contentId}/resolve`, { action, notes });
+  },
+
+  // Additional methods for comprehensive admin functionality
+  async getGlobalMetrics() {
+    return apiRequest('GET', '/api/admin/analytics/global-metrics');
+  },
+
+  async getRecentActivity(params?: any) {
+    return apiRequest('GET', '/api/admin/analytics/recent-activity', null, { params });
+  },
+
+  async updateExpertStatus(expertId: string, status: string) {
+    return apiRequest('PATCH', `/api/admin/experts/${expertId}/status`, { status });
   }
-} as const;
+} satisfies AdminApiType;
 
 // Post API methods
 export const PostApi = {
