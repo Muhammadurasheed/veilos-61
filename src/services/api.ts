@@ -162,9 +162,12 @@ const apiRequest = async <T = any>(
     });
     return response.data;
   } catch (error: any) {
+    const response = error.response?.data;
     return {
       success: false,
-      error: error.response?.data?.error || error.message || 'An error occurred',
+      error: response?.error || response?.message || error.message || 'An error occurred',
+      errors: response?.errors || [],
+      message: response?.message,
     };
   }
 };

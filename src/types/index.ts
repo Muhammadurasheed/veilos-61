@@ -356,6 +356,7 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
   message?: string;
+  errors?: Array<{ field: string; message: string; value?: any }>;
 }
 
 // Gemini API request types

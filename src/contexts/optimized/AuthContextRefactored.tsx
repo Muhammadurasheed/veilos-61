@@ -134,20 +134,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return true;
       }
       
+      // Enhanced error handling with detailed validation errors
+      let errorMessage = 'Failed to create account.';
+      
+      if (response?.errors && Array.isArray(response.errors)) {
+        errorMessage = response.errors.map((err: any) => err.message).join(', ');
+      } else if (response?.error) {
+        errorMessage = response.error;
+      }
+      
       toast({
         title: 'Registration Failed',
-        description: response?.error || 'Failed to create account.',
+        description: errorMessage,
         variant: 'destructive',
       });
       
       return false;
     } catch (error: any) {
       logger.error('Registration error:', error);
-      toast({
-        title: 'Registration Failed',
-        description: error.message || 'An error occurred during registration.',
-        variant: 'destructive',
-      });
+      
+      // Handle validation errors specifically
+      if (error.response?.data?.errors && Array.isArray(error.response.data.errors)) {
+        const validationErrors = error.response.data.errors.map((err: any) => err.message).join(', ');
+        toast({
+          title: 'Please Fix These Issues',
+          description: validationErrors,
+          variant: 'destructive',
+        });
+      } else {
+        const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'An error occurred during registration.';
+        toast({
+          title: 'Registration Failed',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+      }
+      
       return false;
     } finally {
       setIsLoading(false);

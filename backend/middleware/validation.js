@@ -14,14 +14,21 @@ const validate = (validations) => {
       return next();
     }
 
+    // Enhanced error response with better structure for frontend
+    const formattedErrors = errors.array().map(error => ({
+      field: error.path || error.param,
+      message: error.msg,
+      value: error.value
+    }));
+
+    console.log('🔍 Validation errors:', formattedErrors);
+
     return res.status(400).json({
       success: false,
       message: 'Validation failed',
-      errors: errors.array().map(error => ({
-        field: error.path,
-        message: error.msg,
-        value: error.value
-      }))
+      error: 'Please fix the following issues and try again.',
+      errors: formattedErrors,
+      data: null
     });
   };
 };

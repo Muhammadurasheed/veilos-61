@@ -98,18 +98,28 @@ router.post('/admin/login',
   }
 );
 
-// Register new user (now mandatory with real identity + shadow identity)
+// Register new user with flagship-level validation
 router.post('/register', 
   authLimiter,
   validate([
-    body('email').isEmail().normalizeEmail(),
+    body('email')
+      .isEmail()
+      .normalizeEmail()
+      .withMessage('Please enter a valid email address'),
     body('password')
       .isLength({ min: 8 })
       .withMessage('Password must be at least 8 characters long')
-      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).*$/)
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
       .withMessage('Password must contain at least one lowercase letter, one uppercase letter, and one number'),
-    body('realName').isLength({ min: 2, max: 50 }).trim(),
-    body('preferredAlias').optional().isLength({ min: 2, max: 30 }).trim(),
+    body('realName')
+      .isLength({ min: 2, max: 50 })
+      .trim()
+      .withMessage('Real name must be between 2 and 50 characters'),
+    body('preferredAlias')
+      .optional()
+      .isLength({ min: 2, max: 30 })
+      .trim()
+      .withMessage('Preferred alias must be between 2 and 30 characters'),
   ]),
   async (req, res) => {
     try {
