@@ -186,26 +186,21 @@ export const UserApi = {
     logger.accountCreation('Starting registration', userData);
     const response = await api.post('/api/auth/register', userData);
     
-    // Handle the response structure from res.success() in backend
-    const responseData = response.data?.data || response.data;
-    const success = response.data?.success !== false;
+    console.log('API: Registration response from backend:', response.data);
     
-    if (success && responseData?.token) {
-      tokenManager.setToken(responseData.token);
-      if (responseData.refreshToken) {
-        tokenManager.setRefreshToken(responseData.refreshToken);
+    // Backend sends { success: true, message: "...", data: { token, refreshToken, user } }
+    const backendData = response.data;
+    
+    if (backendData?.success === true && backendData?.data?.token) {
+      tokenManager.setToken(backendData.data.token);
+      if (backendData.data.refreshToken) {
+        tokenManager.setRefreshToken(backendData.data.refreshToken);
       }
-      logger.accountCreation('Registration successful - token saved');
+      logger.accountCreation('Registration successful - tokens saved');
     }
     
-    // Return in expected format for auth context
-    return {
-      success,
-      data: responseData,
-      message: response.data?.message,
-      error: response.data?.error,
-      errors: response.data?.errors || []
-    };
+    // Return the exact backend response format
+    return backendData;
   },
 
   // Login with email and password

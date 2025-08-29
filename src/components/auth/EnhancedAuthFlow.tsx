@@ -70,8 +70,9 @@ export const EnhancedAuthFlow: React.FC<EnhancedAuthFlowProps> = ({
         newErrors.realName = 'Name must be at least 2 characters';
       }
 
-      if (formData.preferredAlias && formData.preferredAlias.length < 2) {
-        newErrors.preferredAlias = 'Alias must be at least 2 characters';
+      // Platform alias is completely optional - only validate if provided
+      if (formData.preferredAlias && formData.preferredAlias.trim() && formData.preferredAlias.length < 2) {
+        newErrors.preferredAlias = 'Alias must be at least 2 characters if provided';
       }
     }
 
@@ -105,7 +106,7 @@ export const EnhancedAuthFlow: React.FC<EnhancedAuthFlowProps> = ({
         setStep('success');
         setTimeout(() => {
           onSuccess?.();
-        }, 2000);
+        }, 1500); // Reduced delay for better UX
       }
     } catch (error) {
       console.error('Auth error:', error);

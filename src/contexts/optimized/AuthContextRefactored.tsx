@@ -122,8 +122,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       logger.accountCreation('Registration attempt', userData);
       const response = await UserApi.register(userData);
 
-      // Handle both success response formats
-      if ((response?.success || response?.data?.token) && response?.data?.user) {
+      console.log('AuthContext: Registration response received:', response);
+
+      // Check for successful registration - backend sends success: true
+      if (response?.success === true && response?.data?.user && response?.data?.token) {
         // Tokens are automatically saved by UserApi.register
         setUser(response.data.user);
         
@@ -132,6 +134,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           description: `Hello ${response.data.user.alias}! Your sanctuary awaits.`,
         });
         
+        logger.accountCreation('Registration successful, user set in context');
         return true;
       }
       
@@ -142,7 +145,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         errorMessage = response.errors.map((err: any) => err.message).join(', ');
       } else if (response?.error) {
         errorMessage = response.error;
+      } else if (response?.message) {
+        errorMessage = response.message;
       }
+      
+      console.log('AuthContext: Registration failed with response:', response);
       
       toast({
         title: 'Registration Failed',
