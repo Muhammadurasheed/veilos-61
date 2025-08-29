@@ -36,7 +36,6 @@ export const EnhancedAuthFlow: React.FC<EnhancedAuthFlowProps> = ({
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    confirmPassword: '',
     realName: '',
     preferredAlias: ''
   });
@@ -69,10 +68,6 @@ export const EnhancedAuthFlow: React.FC<EnhancedAuthFlowProps> = ({
         newErrors.realName = 'Your real name is required';
       } else if (formData.realName.length < 2) {
         newErrors.realName = 'Name must be at least 2 characters';
-      }
-
-      if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = 'Passwords do not match';
       }
 
       if (formData.preferredAlias && formData.preferredAlias.length < 2) {
@@ -341,23 +336,6 @@ export const EnhancedAuthFlow: React.FC<EnhancedAuthFlowProps> = ({
             )}
           </div>
 
-          {/* Confirm Password (Register only) */}
-          {mode === 'register' && (
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                placeholder="Confirm your password"
-                className={cn(errors.confirmPassword && 'border-destructive')}
-              />
-              {errors.confirmPassword && (
-                <p className="text-sm text-destructive">{errors.confirmPassword}</p>
-              )}
-            </div>
-          )}
 
           <Button 
             type="submit" 
