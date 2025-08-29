@@ -110,7 +110,7 @@ const LiveAudioRoom = ({ session, participant }: LiveAudioRoomProps) => {
             joinedAt: new Date().toISOString(),
             connectionStatus: 'connected',
             audioLevel: agoraP.audioLevel,
-            speakingTime: 0
+            reactions: []
           });
         } else {
           // Update existing participant

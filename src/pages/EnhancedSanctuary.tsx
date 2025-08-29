@@ -119,7 +119,8 @@ const EnhancedSanctuary = () => {
         connectionStatus: 'connected',
         audioLevel: 0,
         speakingTime: 0,
-        avatarIndex: Math.floor(Math.random() * 7) + 1
+        avatarIndex: Math.floor(Math.random() * 7) + 1,
+        reactions: []
       };
 
       setParticipant(mockParticipant);

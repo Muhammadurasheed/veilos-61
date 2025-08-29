@@ -46,10 +46,10 @@ export interface UserContextType {
   logout: () => void;
   refreshIdentity: () => void;
   createAnonymousAccount: (alias?: string, avatarIndex?: number) => Promise<boolean>;
-  isLoading: boolean;
-  updateAvatar: (avatarUrl: string) => Promise<void>;
   creationState: UserCreationStateInterface;
   retryAccountCreation: () => Promise<boolean>;
+  isLoading: boolean;
+  updateAvatar: (avatarUrl: string) => Promise<void>;
 }
 
 // Initial creation state

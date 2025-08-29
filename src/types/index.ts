@@ -48,6 +48,16 @@ export interface Comment {
   languageCode: string;
 }
 
+// Re-export sanctuary types to avoid import issues
+export interface SanctuaryMessage {
+  id: string;
+  participantId: string;
+  participantAlias: string;
+  content: string;
+  timestamp: string;
+  type: "text" | "system" | "emoji-reaction";
+}
+
 // Expert-related types
 export interface Expert {
   id: string;
@@ -358,5 +368,13 @@ export interface ApiGeminiImproveRequest {
 
 export interface ApiGeminiModerateImageRequest {
   imageUrl: string;
+}
+
+// Post form data type
+export interface PostFormData {
+  content: string;
+  feeling?: string;
+  topic?: string;
+  wantsExpertHelp?: boolean;
 }
 

@@ -691,10 +691,7 @@ export const AppealApi = {
 // Export apiRequest for components that need it
 export { apiRequest };
 
-// API Response type export  
+// Export type without redeclaring const
 export type { ApiResponse };
-
-// Analytics API export
-export { AnalyticsApi };
 
 export default api;

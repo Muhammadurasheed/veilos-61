@@ -66,10 +66,22 @@ export interface LiveSanctuarySession {
   hostId: string;
   hostAlias: string;
   createdAt: string;
+  startTime?: string;
   isActive: boolean;
+  status?: 'pending' | 'active' | 'ended';
   mode: 'public' | 'private' | 'invite-only';
   participants: LiveParticipant[];
   maxParticipants: number;
+  currentParticipants?: number;
+  estimatedDuration?: number;
+  tags?: string[];
+  aiMonitoring?: boolean;
+  moderationLevel?: 'low' | 'medium' | 'high' | 'strict';
+  emergencyProtocols?: boolean;
+  isRecorded?: boolean;
+  hostToken?: string;
+  agoraChannelName?: string;
+  agoraToken?: string;
 }
 
 export interface LiveParticipant {
@@ -80,9 +92,11 @@ export interface LiveParticipant {
   isHost: boolean;
   isMuted: boolean;
   isModerator?: boolean;
+  isBlocked?: boolean;
   audioLevel?: number;
   connectionStatus?: 'connected' | 'connecting' | 'disconnected';
   handRaised?: boolean;
+  speakingTime?: number;
   reactions: EmojiReaction[];
 }
 
