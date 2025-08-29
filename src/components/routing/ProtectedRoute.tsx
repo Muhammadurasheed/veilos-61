@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/optimized/AuthContextRefactored';
+import { AuthGuard } from '@/components/auth/AuthGuard';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -14,18 +15,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   redirectTo = '/auth' 
 }) => {
   const { user, isLoading } = useAuth();
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!isLoading) {
-      if (requireAuth && !user) {
-        navigate(redirectTo);
-      } else if (!requireAuth && user) {
-        navigate('/dashboard');
-      }
-    }
-  }, [user, isLoading, requireAuth, redirectTo, navigate]);
-
+  // Don't render anything while loading
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -34,13 +25,20 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  if (requireAuth && !user) {
-    return null;
-  }
-
+  // If auth not required and user is logged in, redirect to dashboard
   if (!requireAuth && user) {
-    return null;
+    return <Navigate to="/dashboard" replace />;
   }
 
+  // If auth required, use AuthGuard
+  if (requireAuth) {
+    return (
+      <AuthGuard fallback={<Navigate to={redirectTo} replace />}>
+        {children}
+      </AuthGuard>
+    );
+  }
+
+  // Auth not required and no user - render children
   return <>{children}</>;
 };

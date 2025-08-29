@@ -58,7 +58,7 @@ const App: React.FC = () => {
     <ErrorBoundary>
       <ThemeProvider>
         <AuthProvider>
-          <ErrorBoundary fallback={AuthErrorFallback}>
+          <ErrorBoundary fallback={<AuthErrorFallback error={new Error("Auth error")} />}>
             <SmartRouter>
               <Routes>
                 <Route path="/" element={
@@ -77,17 +77,61 @@ const App: React.FC = () => {
                   </ProtectedRoute>
                 } />
                 <Route path="/sanctuary/join/:inviteCode" element={<SanctuaryJoinViaInvite />} />
-                        <Route path="/feed" element={<Feed />} />
-                        <Route path="/beacons" element={<BeaconsList />} />
-                        <Route path="/beacons/:expertId" element={<ExpertProfile />} />
-                        <Route path="/followed-experts" element={<FollowedExperts />} />
-                        <Route path="/expert/:expertId" element={<ExpertProfile />} />
-                        <Route path="/sessions/book/:expertId" element={<BookSession />} />
-                        <Route path="/call/:expertId/:type" element={<Chat />} />
-                        <Route path="/chat/:sessionId?" element={<Chat />} />
-                        <Route path="/sessions" element={<SessionHub />} />
-                        <Route path="/profile" element={<Profile />} />
-                        <Route path="/settings" element={<Settings />} />
+                        <Route path="/feed" element={
+                          <ProtectedRoute requireAuth={true}>
+                            <Feed />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/beacons" element={
+                          <ProtectedRoute requireAuth={true}>
+                            <BeaconsList />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/beacons/:expertId" element={
+                          <ProtectedRoute requireAuth={true}>
+                            <ExpertProfile />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/followed-experts" element={
+                          <ProtectedRoute requireAuth={true}>
+                            <FollowedExperts />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/expert/:expertId" element={
+                          <ProtectedRoute requireAuth={true}>
+                            <ExpertProfile />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/sessions/book/:expertId" element={
+                          <ProtectedRoute requireAuth={true}>
+                            <BookSession />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/call/:expertId/:type" element={
+                          <ProtectedRoute requireAuth={true}>
+                            <Chat />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/chat/:sessionId?" element={
+                          <ProtectedRoute requireAuth={true}>
+                            <Chat />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/sessions" element={
+                          <ProtectedRoute requireAuth={true}>
+                            <SessionHub />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/profile" element={
+                          <ProtectedRoute requireAuth={true}>
+                            <Profile />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/settings" element={
+                          <ProtectedRoute requireAuth={true}>
+                            <Settings />
+                          </ProtectedRoute>
+                        } />
                         <Route path="/register-expert" element={<ExpertRegistration />} />
                         <Route path="/expert-dashboard" element={<ExpertDashboard />} />
                         <Route path="/admin/*" element={<AdminPanel />} />
@@ -99,7 +143,11 @@ const App: React.FC = () => {
         <Route path="/sanctuary/inbox/:sessionId" element={<SanctuaryInbox />} />
         <Route path="/sanctuary/recover/:sessionId" element={<SanctuaryRecover />} />
         <Route path="/sanctuary/live/:sessionId" element={<EnhancedLiveSanctuary />} />
-        <Route path="/my-sanctuaries" element={<MySanctuariesPage />} />
+        <Route path="/my-sanctuaries" element={
+          <ProtectedRoute requireAuth={true}>
+            <MySanctuariesPage />
+          </ProtectedRoute>
+        } />
                         <Route path="/sanctuary/:sessionId" element={<EnhancedSanctuary />} />
                         <Route path="/phase4-test" element={<Phase4Test />} />
                         <Route path="*" element={<NotFound />} />

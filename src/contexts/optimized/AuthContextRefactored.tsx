@@ -61,16 +61,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(userData.data.user);
         logger.info('Authentication successful', { userId: userData.data.user.id });
       } else {
-        logger.warn('Token authentication failed');
+        logger.warn('Token authentication failed - clearing tokens');
         tokenManager.clearAllTokens();
+        setUser(null);
       }
     } catch (error: any) {
-      // Let the axios interceptor handle token refresh on 401
-      // Only clear tokens if the error persists after refresh attempts
+      logger.error('Auth initialization error:', error);
+      
+      // Only clear tokens if it's not a network error (401 will be handled by interceptor)
       if (error.response?.status !== 401) {
-        logger.error('Auth initialization error:', error);
         tokenManager.clearAllTokens();
+        setUser(null);
       }
+      
+      // For 401 errors, let the axios interceptor handle token refresh
+      // If refresh fails, the interceptor will clear tokens
     } finally {
       setIsLoading(false);
     }

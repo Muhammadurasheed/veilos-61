@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/layout/Layout";
-import { useUserContext } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/optimized/AuthContextRefactored";
 import { motion } from "framer-motion";
 import { RefreshCw, Shield, CalendarDays, MessageSquare, Loader2, Upload, User, Camera, Home } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const Profile = () => {
-  const { user, refreshIdentity, logout, isLoading, updateAvatar } = useUserContext();
+  const { user, logout, isLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [rotating, setRotating] = useState(false);
@@ -65,14 +65,12 @@ const Profile = () => {
     setRotating(true);
     
     setTimeout(() => {
-      refreshIdentity();
-      
-      setRotating(false);
-      
+      // Mock refresh identity functionality
       toast({
-        title: "Identity Refreshed",
-        description: "Your identity has been refreshed. You now have a new alias and avatar.",
+        title: "Identity would be refreshed",
+        description: "This feature will be implemented with backend integration.",
       });
+      setRotating(false);
     }, 800);
   };
   
@@ -98,7 +96,11 @@ const Profile = () => {
     
     try {
       setIsUploading(true);
-      await updateAvatar(avatarUrl);
+      // Mock avatar update functionality
+      toast({
+        title: "Avatar would be updated",
+        description: "This feature will be implemented with backend integration.",
+      });
       setIsUploadDialogOpen(false);
       setAvatarUrl("");
     } catch (error) {

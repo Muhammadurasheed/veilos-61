@@ -10,7 +10,7 @@ import ExpertCard from '@/components/expert/ExpertCard';
 import { ExpertMatcher } from '@/components/recommendations/ExpertMatcher';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import Layout from '@/components/layout/Layout';
-import { useVeiloData } from '@/contexts/VeiloDataContext';
+import { useAuth } from '@/contexts/optimized/AuthContextRefactored';
 import { aiRecommendationEngine } from '@/services/aiRecommendationEngine';
 import { useToast } from '@/hooks/use-toast';
 import { Expert, User } from '@/types';
@@ -28,7 +28,29 @@ import {
 } from 'lucide-react';
 
 const EnhancedBeaconsList = () => {
-  const { experts } = useVeiloData();
+  const { user } = useAuth();
+  
+  // Mock experts data (in production, this would come from an API call)
+  const experts = [
+    {
+      id: '1',
+      name: 'Dr. Sarah Johnson',
+      specialization: 'Anxiety & Depression',
+      rating: 4.9,
+      testimonials: [{ text: 'Amazing therapist', author: 'Anonymous' }],
+      topicsHelped: ['anxiety', 'depression', 'stress'],
+      verificationLevel: 'platinum' as const
+    },
+    {
+      id: '2', 
+      name: 'Dr. Michael Chen',
+      specialization: 'Stress Management',
+      rating: 4.8,
+      testimonials: [{ text: 'Very helpful', author: 'Anonymous' }],
+      topicsHelped: ['stress', 'mindfulness', 'meditation'],
+      verificationLevel: 'gold' as const
+    }
+  ];
   const { toast } = useToast();
   
   const [searchTerm, setSearchTerm] = useState('');
