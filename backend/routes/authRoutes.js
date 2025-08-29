@@ -339,10 +339,13 @@ router.get('/verify', authMiddleware, async (req, res) => {
   try {
     const user = await User.findOne({ id: req.user.id });
     if (!user) {
+      console.log('❌ Auth verify: User not found for ID:', req.user.id);
       return res.error('User not found', 404);
     }
 
-    return res.success({
+    console.log('✅ Auth verify: User found, sending response for:', user.alias);
+    
+    const responseData = {
       user: {
         id: user.id,
         alias: user.alias,
@@ -353,7 +356,10 @@ router.get('/verify', authMiddleware, async (req, res) => {
         email: user.email,
         isAnonymous: user.isAnonymous
       }
-    }, 'Token valid');
+    };
+
+    console.log('🔍 Auth verify: Sending response structure:', responseData);
+    return res.success(responseData, 'Token valid');
 
   } catch (error) {
     console.error('Token verification error:', error);

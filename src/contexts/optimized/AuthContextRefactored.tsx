@@ -57,10 +57,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       logger.info('Initializing authentication with token verification');
       const userData = await UserApi.authenticate(token);
 
-      if (userData?.success && userData?.data?.user) {
+      console.log('🔍 AuthContext: Raw authentication response:', userData);
+      
+      // Backend returns: { success: true, data: { user: {...} } }
+      if (userData?.success === true && userData?.data?.user) {
         setUser(userData.data.user);
         logger.info('Authentication successful', { userId: userData.data.user.id });
+        console.log('✅ AuthContext: User set successfully:', userData.data.user);
       } else {
+        console.log('❌ AuthContext: Authentication failed, response structure:', {
+          hasSuccess: !!userData?.success,
+          successValue: userData?.success,
+          hasData: !!userData?.data,
+          hasUser: !!userData?.data?.user,
+          fullResponse: userData
+        });
         logger.warn('Token authentication failed - clearing tokens');
         tokenManager.clearAllTokens();
         setUser(null);

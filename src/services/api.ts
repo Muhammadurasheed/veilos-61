@@ -221,9 +221,11 @@ export const UserApi = {
 
   // Authenticate with token
   async authenticate(token: string) {
+    console.log('🔍 UserApi: Authenticating with token...');
     const response = await api.get('/api/auth/verify', {
       headers: { 'x-auth-token': token }
     });
+    console.log('🔍 UserApi: Auth verification response:', response.data);
     return response.data;
   },
 
