@@ -1,6 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AuthProvider } from '@/contexts/optimized/AuthContextRefactored';
 import { SmartRouter } from '@/components/routing/SmartRouter';
@@ -56,10 +57,11 @@ const App: React.FC = () => {
 
   return (
     <ErrorBoundary>
-      <ThemeProvider>
-        <AuthProvider>
-          <ErrorBoundary fallback={AuthErrorFallback}>
-            <SmartRouter>
+      <HelmetProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <ErrorBoundary fallback={AuthErrorFallback}>
+              <SmartRouter>
               <Routes>
                 <Route path="/" element={
                   <ProtectedRoute requireAuth={false}>
@@ -152,11 +154,12 @@ const App: React.FC = () => {
                         <Route path="/phase4-test" element={<Phase4Test />} />
                         <Route path="*" element={<NotFound />} />
               </Routes>
-            </SmartRouter>
-            <Toaster />
-          </ErrorBoundary>
-        </AuthProvider>
-      </ThemeProvider>
+              </SmartRouter>
+              <Toaster />
+            </ErrorBoundary>
+          </AuthProvider>
+        </ThemeProvider>
+      </HelmetProvider>
     </ErrorBoundary>
   );
 }
