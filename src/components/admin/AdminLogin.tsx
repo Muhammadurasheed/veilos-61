@@ -66,8 +66,8 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
       console.log('🔍 RAW ADMIN RESPONSE DEBUG:', JSON.stringify(response, null, 2));
       
       if (response.success) {
-        // Based on backend logs, the token is in response.message.token
-        const token = response.message && typeof response.message === 'object' ? (response.message as any).token : null;
+        // Extract token from response.data.token based on actual API response structure
+        const token = response.data?.token;
         
         if (!token) {
           console.error('❌ CRITICAL: No token found in admin login response');
@@ -77,10 +77,8 @@ const AdminLogin = ({ onLoginSuccess }: AdminLoginProps) => {
         
         console.log('✅ Token found in response, proceeding with admin validation...');
         
-        // Based on backend logs, admin user data is in response.message.admin or response.message.user
-        const adminUser = (response.message && typeof response.message === 'object') 
-          ? ((response.message as any).admin || (response.message as any).user) 
-          : null;
+        // Extract admin user data from response.data
+        const adminUser = response.data?.admin || response.data?.user;
         
         if (!adminUser || adminUser.role !== 'admin') {
           console.error('❌ Admin validation failed:', {

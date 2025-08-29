@@ -28,6 +28,10 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { ExpertApi } from '@/services/api';
 import { ApiExpertRegisterRequest } from '@/types';
 import { FileUpload } from '@/components/expert/FileUpload';
+import { CountryPicker } from '@/components/ui/CountryPicker';
+import { CityPicker } from '@/components/ui/LocationPicker';
+import { MultipleExperienceForm } from '@/components/expert/MultipleExperienceForm';
+import { ResumeUpload } from '@/components/expert/ResumeUpload';
 import { Calendar, Check, ChevronRight, Shield, User, MessageSquare, Video } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -483,15 +487,34 @@ const ExpertRegistration = () => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <FormField
                         control={form.control}
+                        name="country"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-gray-700 dark:text-gray-300">Country</FormLabel>
+                            <FormControl>
+                              <CountryPicker
+                                value={field.value}
+                                onValueChange={field.onChange}
+                                placeholder="Select country..."
+                                className="bg-white dark:bg-gray-800"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
                         name="city"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-gray-700 dark:text-gray-300">City</FormLabel>
                             <FormControl>
-                              <Input 
-                                placeholder="e.g., New York" 
+                              <CityPicker
+                                value={field.value}
+                                onValueChange={field.onChange}
+                                placeholder="Select city..."
                                 className="bg-white dark:bg-gray-800"
-                                {...field} 
                               />
                             </FormControl>
                             <FormMessage />
@@ -507,23 +530,6 @@ const ExpertRegistration = () => {
                             <FormControl>
                               <Input 
                                 placeholder="e.g., NY" 
-                                className="bg-white dark:bg-gray-800"
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="country"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-700 dark:text-gray-300">Country</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="e.g., United States" 
                                 className="bg-white dark:bg-gray-800"
                                 {...field} 
                               />
@@ -565,72 +571,40 @@ const ExpertRegistration = () => {
                   Tell us about your professional background, education, and skills to help users understand your expertise.
                 </p>
                 
-                {/* Work Experience Section */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Work Experience</h3>
-                  {workExperience.map((exp, index) => (
-                    <div key={exp.id} className="border rounded-lg p-4 space-y-4 bg-gray-50 dark:bg-gray-800">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Input
-                          placeholder="Job Title"
-                          value={exp.jobTitle}
-                          onChange={(e) => {
-                            const updated = [...workExperience];
-                            updated[index].jobTitle = e.target.value;
-                            setWorkExperience(updated);
-                          }}
-                        />
-                        <Input
-                          placeholder="Company/Organization"
-                          value={exp.company}
-                          onChange={(e) => {
-                            const updated = [...workExperience];
-                            updated[index].company = e.target.value;
-                            setWorkExperience(updated);
-                          }}
-                        />
-                      </div>
-                      <Textarea
-                        placeholder="Brief description of your role and achievements..."
-                        value={exp.description}
-                        onChange={(e) => {
-                          const updated = [...workExperience];
-                          updated[index].description = e.target.value;
-                          setWorkExperience(updated);
-                        }}
-                      />
-                    </div>
-                  ))}
-                </div>
+                {/* Multiple Work Experience Form */}
+                <MultipleExperienceForm
+                  experiences={workExperience.map(exp => ({
+                    id: exp.id,
+                    jobTitle: exp.jobTitle,
+                    company: exp.company,
+                    location: '',
+                    startDate: exp.startDate ? new Date(exp.startDate) : undefined,
+                    endDate: exp.endDate ? new Date(exp.endDate) : undefined,
+                    isCurrent: exp.isCurrent,
+                    description: exp.description
+                  }))}
+                  onChange={(experiences) => {
+                    setWorkExperience(experiences.map(exp => ({
+                      id: exp.id,
+                      jobTitle: exp.jobTitle,
+                      company: exp.company,
+                      startDate: exp.startDate ? exp.startDate.toISOString() : '',
+                      endDate: exp.endDate ? exp.endDate.toISOString() : '',
+                      description: exp.description,
+                      isCurrent: exp.isCurrent
+                    })));
+                  }}
+                />
 
-                {/* Education Section */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Education</h3>
-                  {education.map((edu, index) => (
-                    <div key={edu.id} className="border rounded-lg p-4 space-y-4 bg-gray-50 dark:bg-gray-800">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Input
-                          placeholder="Institution"
-                          value={edu.institution}
-                          onChange={(e) => {
-                            const updated = [...education];
-                            updated[index].institution = e.target.value;
-                            setEducation(updated);
-                          }}
-                        />
-                        <Input
-                          placeholder="Degree"
-                          value={edu.degree}
-                          onChange={(e) => {
-                            const updated = [...education];
-                            updated[index].degree = e.target.value;
-                            setEducation(updated);
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                {/* Resume Upload Section */}
+                <ResumeUpload
+                  onUploadComplete={(fileInfo) => {
+                    toast({
+                      title: 'Resume uploaded successfully',
+                      description: 'Your resume has been processed and added to your profile.',
+                    });
+                  }}
+                />
 
                 <div className="flex justify-between mt-6">
                   <Button 
