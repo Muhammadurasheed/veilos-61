@@ -131,7 +131,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         toast({
           title: 'Welcome to Veilo! 🕊️',
-          description: `Hello ${response.data.user.alias}! Your sanctuary awaits.`,
+          description: response.message || `Hello ${response.data.user.alias}! Your sanctuary awaits.`,
         });
         
         logger.accountCreation('Registration successful, user set in context');

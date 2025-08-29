@@ -180,7 +180,7 @@ router.post('/register',
         role: user.role
       });
 
-      return res.success(`Welcome to Veilo, ${user.alias}! Your secure shadow identity has been created.`, {
+      return res.success({
         token: accessToken,
         refreshToken,
         user: {
@@ -196,7 +196,7 @@ router.post('/register',
           activities: user.activities,
           preferences: user.preferences
         }
-      });
+      }, `Welcome to Veilo, ${user.alias}! Your secure shadow identity has been created.`);
 
     } catch (error) {
       console.error('Registration error:', error.message, {
