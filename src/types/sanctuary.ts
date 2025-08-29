@@ -62,6 +62,7 @@ export interface LiveSanctuarySession {
   id: string;
   topic: string;
   description?: string;
+  emoji?: string;
   hostId: string;
   hostAlias: string;
   createdAt: string;
@@ -74,9 +75,14 @@ export interface LiveSanctuarySession {
 export interface LiveParticipant {
   id: string;
   alias: string;
+  avatarIndex?: number;
   joinedAt: string;
   isHost: boolean;
   isMuted: boolean;
+  isModerator?: boolean;
+  audioLevel?: number;
+  connectionStatus?: 'connected' | 'connecting' | 'disconnected';
+  handRaised?: boolean;
   reactions: EmojiReaction[];
 }
 
@@ -85,6 +91,7 @@ export interface EmojiReaction {
   emoji: string;
   participantId: string;
   timestamp: string;
+  duration?: number;
 }
 
 // Socket service interface for real-time features

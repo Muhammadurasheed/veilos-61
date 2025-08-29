@@ -74,7 +74,7 @@ const EnhancedExpertDocumentViewer = ({ expert, isOpen, onClose }: Props) => {
       if (!expert?.verificationDocuments) return null;
       
       const resumeDoc = expert.verificationDocuments.find(
-        doc => doc.type === 'resume' || doc.type === 'cv'
+        (doc): doc is any => ['resume', 'cv'].includes(doc.type as string)
       );
       
       if (!resumeDoc) return null;

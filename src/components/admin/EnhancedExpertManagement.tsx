@@ -472,7 +472,7 @@ const EnhancedExpertManagement = () => {
                       </TableCell>
                       <TableCell>
                         <div className="text-sm text-muted-foreground">
-                          {expert.createdAt ? format(new Date(expert.createdAt), 'MMM dd, yyyy') : 'N/A'}
+                          {(expert as any).createdAt ? format(new Date((expert as any).createdAt), 'MMM dd, yyyy') : 'N/A'}
                         </div>
                       </TableCell>
                       <TableCell>

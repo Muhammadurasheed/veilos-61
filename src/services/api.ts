@@ -691,10 +691,10 @@ export const AppealApi = {
 // Export apiRequest for components that need it
 export { apiRequest };
 
-// API Response type export
+// API Response type export  
 export type { ApiResponse };
 
-// Fixed re-export to avoid conflicts
-export * from './temporaryApiExports';
+// Analytics API export
+export { AnalyticsApi };
 
 export default api;
