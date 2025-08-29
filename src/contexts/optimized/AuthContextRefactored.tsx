@@ -1,4 +1,5 @@
 import { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { UserApi } from '@/services/api';
 import { toast } from '@/hooks/use-toast';
 import { tokenManager } from '@/services/tokenManager';
@@ -39,6 +40,7 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   const isAuthenticated = !!user;
 
@@ -93,6 +95,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           description: `Hello ${response.data.user.alias}!`,
         });
         
+        // Navigate to dashboard after successful login
+        navigate('/dashboard');
+        
         return true;
       }
       
@@ -135,6 +140,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
         
         logger.accountCreation('Registration successful, user set in context');
+        
+        // Navigate to dashboard after successful registration
+        navigate('/dashboard');
+        
         return true;
       }
       

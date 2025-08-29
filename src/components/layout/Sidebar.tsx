@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { useUserContext } from '@/contexts/UserContext';
+import { useAuth } from '@/contexts/optimized/AuthContextRefactored';
 import { 
   Home,
   MessageSquare,
@@ -11,11 +11,11 @@ import {
   Settings,
   Shield,
   X,
-  ChevronRight
+  ChevronRight,
+  LayoutDashboard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { UserRole } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface SidebarProps {
@@ -23,7 +23,7 @@ interface SidebarProps {
 }
 
 export const Sidebar = ({ className }: SidebarProps) => {
-  const { user } = useUserContext();
+  const { user } = useAuth();
   const location = useLocation();
   const isMobile = useIsMobile();
   // Set collapsed to true by default for all devices
@@ -45,9 +45,9 @@ export const Sidebar = ({ className }: SidebarProps) => {
 
   const navigationItems = [
     {
-      name: 'Home',
-      href: '/',
-      icon: Home
+      name: 'Dashboard',
+      href: '/dashboard',
+      icon: LayoutDashboard
     },
     {
       name: 'Feed',
@@ -87,7 +87,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
   ];
 
   // Add expert dashboard for beacon users
-  if (user?.role === UserRole.BEACON || (user && 'expertId' in user)) {
+  if (user?.role === 'beacon') {
     navigationItems.splice(4, 0, {
       name: 'Expert Dashboard',
       href: '/expert-dashboard',
@@ -96,7 +96,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
   }
 
   // Admin link for admin users
-  if (user?.role === UserRole.ADMIN) {
+  if (user?.role === 'admin') {
     navigationItems.push({
       name: 'Admin',
       href: '/admin',
@@ -165,7 +165,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="text-xl font-semibold bg-gradient-to-r from-veilo-blue to-veilo-purple bg-clip-text text-transparent"
+                className="text-xl font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent"
               >
                 Veilo
               </motion.div>
@@ -190,22 +190,22 @@ export const Sidebar = ({ className }: SidebarProps) => {
           <ul className="space-y-1 px-2">
             {navigationItems.map((item) => (
               <li key={item.name}>
-                <NavLink
+                 <NavLink
                   to={item.href}
                   onClick={handleNavigation}
                   className={({ isActive }) => cn(
                     'flex items-center px-3 py-2 rounded-lg transition-all',
                     isActive 
-                      ? 'bg-veilo-blue-light text-veilo-blue-dark dark:bg-veilo-blue-dark/30 dark:text-veilo-blue-light'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800',
+                      ? 'bg-primary/20 text-primary dark:bg-primary/30 dark:text-primary'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                     collapsed ? 'justify-center' : 'space-x-3'
                   )}
                 >
                   <item.icon className={cn(
                     'h-5 w-5',
                     location.pathname === item.href 
-                      ? 'text-veilo-blue-dark dark:text-veilo-blue-light' 
-                      : 'text-gray-500 dark:text-gray-400'
+                      ? 'text-primary' 
+                      : 'text-muted-foreground'
                   )} />
                   <AnimatePresence mode="wait">
                     {!collapsed && (
@@ -232,7 +232,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
         )}>
           <NavLink to="/register-expert" onClick={handleNavigation}>
             <Button 
-              variant="veilo-primary"
+              variant="default"
               className={cn(
                 "w-full transition-all shadow-md",
                 collapsed && "p-2"

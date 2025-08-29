@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useUserContext } from '@/contexts/UserContext';
+import { useAuth } from '@/contexts/optimized/AuthContextRefactored';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -20,7 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSanctuaryManager } from '@/hooks/useSanctuaryManager';
 
 const Header = () => {
-  const { user, logout, isLoading, createAnonymousAccount } = useUserContext();
+  const { user, logout, isLoading } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -33,7 +33,7 @@ const Header = () => {
   const hasActiveSanctuaries = activeSanctuaries.length > 0;
   
   // Determine if user is authenticated based on user object existence
-  const isAuthenticated = !!user?.loggedIn;
+  const isAuthenticated = !!user;
 
   // Toggle sidebar function
   const toggleSidebar = () => {
@@ -59,26 +59,8 @@ const Header = () => {
     });
   };
 
-  const handleCreateAnonymousAccount = async () => {
-    try {
-      setIsCreatingAccount(true);
-      toast({
-        title: "Creating account",
-        description: "Setting up your anonymous identity...",
-      });
-      
-      await createAnonymousAccount();
-      navigate('/profile');
-    } catch (error) {
-      console.error('Error creating anonymous account:', error);
-      toast({
-        title: "Account creation failed",
-        description: "There was an error creating your anonymous account. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsCreatingAccount(false);
-    }
+  const handleGoToAuth = () => {
+    navigate('/auth');
   };
 
   // Use a default level (1) if user doesn't have a level property
@@ -102,14 +84,14 @@ const Header = () => {
           <Button 
             variant="ghost" 
             size="icon" 
-            className="md:hidden rounded-full" 
+            className="rounded-full" 
             onClick={toggleSidebar}
           >
             <Menu className="h-5 w-5" />
             <span className="sr-only">Toggle sidebar</span>
           </Button>
-          <Link to="/" className="flex items-center">
-            <span className="text-xl font-bold bg-gradient-to-r from-veilo-blue to-veilo-purple bg-clip-text text-transparent">Veilo</span>
+          <Link to={isAuthenticated ? "/dashboard" : "/"} className="flex items-center">
+            <span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Veilo</span>
           </Link>
         </div>
 
@@ -236,25 +218,10 @@ const Header = () => {
           ) : (
             <div className="flex items-center gap-2">
               <Button 
-                onClick={handleCreateAnonymousAccount} 
-                className="bg-veilo-green hover:bg-veilo-green-dark text-white font-medium"
-                disabled={isCreatingAccount}
+                onClick={handleGoToAuth}
+                variant="default"
               >
-                {isCreatingAccount ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  'Create Anonymous Account'
-                )}
-              </Button>
-              <Button 
-                asChild 
-                variant="outline" 
-                className="border-veilo-blue text-veilo-blue hover:bg-veilo-blue hover:text-white"
-              >
-                <Link to="/">Sign in</Link>
+                Get Started
               </Button>
             </div>
           )}

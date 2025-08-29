@@ -34,6 +34,7 @@ import EnhancedLiveSanctuary from '@/pages/EnhancedLiveSanctuary';
 import Phase4Test from '@/pages/Phase4Test';
 import FollowedExperts from '@/pages/FollowedExperts';
 import { SessionProvider } from '@/contexts/SessionContext';
+import { ProtectedRoute } from '@/components/routing/ProtectedRoute';
 
 import './App.css';
 
@@ -60,9 +61,21 @@ const App: React.FC = () => {
           <ErrorBoundary fallback={AuthErrorFallback}>
             <SmartRouter>
               <Routes>
-                <Route path="/" element={<FlagshipLanding />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/" element={
+                  <ProtectedRoute requireAuth={false}>
+                    <FlagshipLanding />
+                  </ProtectedRoute>
+                } />
+                <Route path="/auth" element={
+                  <ProtectedRoute requireAuth={false}>
+                    <Auth />
+                  </ProtectedRoute>
+                } />
+                <Route path="/dashboard" element={
+                  <ProtectedRoute requireAuth={true}>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } />
                 <Route path="/sanctuary/join/:inviteCode" element={<SanctuaryJoinViaInvite />} />
                         <Route path="/feed" element={<Feed />} />
                         <Route path="/beacons" element={<BeaconsList />} />
