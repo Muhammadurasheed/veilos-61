@@ -2,14 +2,14 @@
 import React, { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@/contexts/ThemeContext';
-import { AppStateProvider } from '@/contexts/AppStateContext';
-import { UserProvider } from '@/contexts/UserContext';
-import { VeiloDataProvider } from '@/contexts/VeiloDataContext';
+import { AuthProvider } from '@/contexts/optimized/AuthContextRefactored';
 import { SmartRouter } from '@/components/routing/SmartRouter';
 import { Toaster } from '@/components/ui/toaster';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 
-import Index from '@/pages/Index';
+import FlagshipLanding from '@/pages/FlagshipLanding';
+import Dashboard from '@/pages/Dashboard';
+import SanctuaryJoinViaInvite from '@/components/sanctuary/SanctuaryJoinViaInvite';
 import Feed from '@/pages/Feed';
 import BeaconsList from '@/pages/BeaconsList';
 import ExpertProfile from '@/pages/ExpertProfile';
@@ -36,15 +36,12 @@ import { SessionProvider } from '@/contexts/SessionContext';
 
 import './App.css';
 
-const UserErrorFallback = ({ error }: { error: Error }) => (
-  <div className="min-h-screen flex items-center justify-center">
-    <p>Unable to load user data. Please refresh the page.</p>
-  </div>
-);
-
-const DataErrorFallback = ({ error }: { error: Error }) => (
-  <div className="min-h-screen flex items-center justify-center">
-    <p>Unable to load application data. Please refresh the page.</p>
+const AuthErrorFallback = ({ error }: { error: Error }) => (
+  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-primary/5">
+    <div className="text-center space-y-4">
+      <h2 className="text-2xl font-bold text-foreground">Authentication Error</h2>
+      <p className="text-muted-foreground">Unable to load authentication. Please refresh the page.</p>
+    </div>
   </div>
 );
 
@@ -58,15 +55,12 @@ const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <AppStateProvider>
-          <UserProvider>
-            <ErrorBoundary fallback={UserErrorFallback}>
-              <VeiloDataProvider>
-                <ErrorBoundary fallback={DataErrorFallback}>
-                  <SessionProvider>
-                    <SmartRouter>
-                      <Routes>
-                        <Route path="/" element={<Index />} />
+        <AuthProvider>
+          <ErrorBoundary fallback={AuthErrorFallback}>
+            <SmartRouter>
+              <Routes>
+                <Route path="/" element={<FlagshipLanding />} />
+                <Route path="/sanctuary/join/:inviteCode" element={<SanctuaryJoinViaInvite />} />
                         <Route path="/feed" element={<Feed />} />
                         <Route path="/beacons" element={<BeaconsList />} />
                         <Route path="/beacons/:expertId" element={<ExpertProfile />} />
@@ -93,15 +87,11 @@ const App: React.FC = () => {
                         <Route path="/sanctuary/:sessionId" element={<EnhancedSanctuary />} />
                         <Route path="/phase4-test" element={<Phase4Test />} />
                         <Route path="*" element={<NotFound />} />
-                      </Routes>
-                    </SmartRouter>
-                    <Toaster />
-                  </SessionProvider>
-                </ErrorBoundary>
-              </VeiloDataProvider>
-            </ErrorBoundary>
-          </UserProvider>
-        </AppStateProvider>
+              </Routes>
+            </SmartRouter>
+            <Toaster />
+          </ErrorBoundary>
+        </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
