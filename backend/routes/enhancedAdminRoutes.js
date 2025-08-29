@@ -1,179 +1,92 @@
 const express = require('express');
-const router = express.Router();
+const { authMiddleware } = require('../middleware/auth');
 const Expert = require('../models/Expert');
-const User = require('../models/User');
-const { authMiddleware, adminMiddleware } = require('../middleware/auth');
-const { notifyExpertStatusUpdate, notifyAdminPanelUpdate } = require('../socket/socketHandler');
-const { nanoid } = require('nanoid');
+const Post = require('../models/Post');
+const router = express.Router();
 
-// Enhanced Admin API Routes for flagship admin panel
-
-// Get experts with advanced filtering and pagination
-// GET /api/admin/experts/advanced
-router.get('/experts/advanced', authMiddleware, adminMiddleware, async (req, res) => {
+// Enhanced expert management with advanced filtering
+router.get('/experts/advanced', authMiddleware, async (req, res) => {
   try {
-    const { 
-      page = 1, 
-      limit = 10, 
-      status, 
-      verificationLevel, 
-      search, 
-      sortBy = 'createdAt', 
+    const {
+      page = 1,
+      limit = 10,
+      status,
+      verificationLevel,
+      search,
+      sortBy = 'createdAt',
       sortOrder = 'desc',
       dateFrom,
       dateTo
     } = req.query;
-    
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const limitNum = parseInt(limit);
-    
-    // Build query
+
     let query = {};
     
-    // Status filter
+    // Apply filters
     if (status && status !== 'all_statuses') {
       query.accountStatus = status;
     }
     
-    // Verification level filter
     if (verificationLevel && verificationLevel !== 'all_levels') {
       query.verificationLevel = verificationLevel;
     }
     
-    // Search filter
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
-        { specialization: { $regex: search, $options: 'i' } },
-        { bio: { $regex: search, $options: 'i' } }
+        { specialization: { $regex: search, $options: 'i' } }
       ];
     }
     
-    // Date range filter
     if (dateFrom || dateTo) {
       query.createdAt = {};
       if (dateFrom) query.createdAt.$gte = new Date(dateFrom);
       if (dateTo) query.createdAt.$lte = new Date(dateTo);
     }
 
-    // Build sort
-    const sort = {};
-    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+    const sortObj = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
+    const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Execute query with aggregation for enhanced data
-    const experts = await Expert.aggregate([
-      { $match: query },
-      { $sort: sort },
-      { $skip: skip },
-      { $limit: limitNum },
-      {
-        $addFields: {
-          documentCount: { $size: '$verificationDocuments' },
-          approvedDocuments: {
-            $size: {
-              $filter: {
-                input: '$verificationDocuments',
-                cond: { $eq: ['$$this.status', 'approved'] }
-              }
-            }
-          },
-          pendingDocuments: {
-            $size: {
-              $filter: {
-                input: '$verificationDocuments',
-                cond: { $eq: ['$$this.status', 'pending'] }
-              }
-            }
-          },
-          daysSinceApplication: {
-            $divide: [
-              { $subtract: [new Date(), '$createdAt'] },
-              86400000
-            ]
-          }
-        }
-      }
+    const [experts, total] = await Promise.all([
+      Expert.find(query)
+        .sort(sortObj)
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean(),
+      Expert.countDocuments(query)
     ]);
-    
-    const total = await Expert.countDocuments(query);
-    
-    // Calculate additional statistics
-    const stats = await Expert.aggregate([
-      { $match: query },
-      {
-        $group: {
-          _id: null,
-          totalExperts: { $sum: 1 },
-          pendingApplications: {
-            $sum: { $cond: [{ $eq: ['$accountStatus', 'pending'] }, 1, 0] }
-          },
-          approvedExperts: {
-            $sum: { $cond: [{ $eq: ['$accountStatus', 'approved'] }, 1, 0] }
-          },
-          rejectedApplications: {
-            $sum: { $cond: [{ $eq: ['$accountStatus', 'rejected'] }, 1, 0] }
-          },
-          averageDocuments: { $avg: { $size: '$verificationDocuments' } }
-        }
-      }
-    ]);
-    
-    res.json({
-      success: true,
-      data: {
-        experts,
-        pagination: {
-          page: parseInt(page),
-          limit: limitNum,
-          total,
-          totalPages: Math.ceil(total / limitNum),
-          hasNext: skip + limitNum < total,
-          hasPrev: parseInt(page) > 1
-        },
-        statistics: stats[0] || {
-          totalExperts: 0,
-          pendingApplications: 0,
-          approvedExperts: 0,
-          rejectedApplications: 0,
-          averageDocuments: 0
-        }
+
+    return res.success('Experts retrieved successfully', {
+      experts,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / parseInt(limit)),
+        total,
+        limit: parseInt(limit)
       }
     });
-  } catch (err) {
-    console.error('Enhanced experts query error:', err.message);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch experts data'
-    });
+
+  } catch (error) {
+    console.error('Enhanced experts fetch error:', error);
+    return res.error('Failed to fetch experts', 500);
   }
 });
 
-// Bulk actions on experts
-// POST /api/admin/experts/bulk-action
-router.post('/experts/bulk-action', authMiddleware, adminMiddleware, async (req, res) => {
+// Bulk expert actions
+router.post('/experts/bulk-action', authMiddleware, async (req, res) => {
   try {
     const { expertIds, action, notes } = req.body;
-    
+
     if (!expertIds || !Array.isArray(expertIds) || expertIds.length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Expert IDs array is required'
-      });
+      return res.error('Expert IDs are required', 400);
     }
-    
-    if (!action || !['approve', 'reject', 'suspend', 'reactivate'].includes(action)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Valid action is required'
-      });
+
+    if (!['approve', 'reject', 'suspend', 'reactivate'].includes(action)) {
+      return res.error('Invalid action', 400);
     }
+
+    const updateData = {};
     
-    const updateData = {
-      lastUpdated: new Date()
-    };
-    
-    // Set status based on action
     switch (action) {
       case 'approve':
         updateData.accountStatus = 'approved';
@@ -181,245 +94,186 @@ router.post('/experts/bulk-action', authMiddleware, adminMiddleware, async (req,
         break;
       case 'reject':
         updateData.accountStatus = 'rejected';
-        updateData.verified = false;
         break;
       case 'suspend':
         updateData.accountStatus = 'suspended';
-        updateData.verified = false;
         break;
       case 'reactivate':
         updateData.accountStatus = 'approved';
-        updateData.verified = true;
         break;
     }
-    
-    // Update experts
+
+    // Add admin note
+    if (notes) {
+      updateData.$push = {
+        adminNotes: {
+          id: `note-${Date.now()}`,
+          note: notes,
+          category: 'bulk_action',
+          date: new Date(),
+          adminId: req.user.id,
+          action
+        }
+      };
+    }
+
     const result = await Expert.updateMany(
       { id: { $in: expertIds } },
-      {
-        $set: updateData,
-        $push: {
-          adminNotes: {
-            id: nanoid(8),
-            note: notes || `Bulk action: ${action}`,
-            category: 'bulk_action',
-            date: new Date(),
-            adminId: req.user.id,
-            action: action
-          }
-        }
-      }
+      updateData
     );
-    
-    // Send real-time notifications
-    const experts = await Expert.find({ id: { $in: expertIds } });
-    
-    experts.forEach(expert => {
-      notifyExpertStatusUpdate(
-        expert.id, 
-        expert.accountStatus, 
-        notes || `Bulk action: ${action}`,
-        {
-          name: expert.name,
-          email: expert.email,
-          specialization: expert.specialization
-        }
-      );
-    });
-    
-    // Send bulk update notification to admin panel
-    notifyAdminPanelUpdate({
-      type: 'bulk_action_completed',
+
+    return res.success(`Bulk action completed: ${result.modifiedCount} experts updated`, {
       action,
-      expertCount: expertIds.length,
-      adminId: req.user.id
+      modifiedCount: result.modifiedCount,
+      expertIds
     });
-    
-    res.json({
-      success: true,
-      data: {
-        modifiedCount: result.modifiedCount,
-        action,
-        expertIds,
-        timestamp: new Date()
-      }
-    });
-  } catch (err) {
-    console.error('Bulk action error:', err.message);
-    res.status(500).json({
-      success: false,
-      error: 'Bulk action failed'
-    });
+
+  } catch (error) {
+    console.error('Bulk expert action error:', error);
+    return res.error('Failed to perform bulk action', 500);
   }
 });
 
-// Platform analytics overview
-// GET /api/admin/analytics/platform-overview
-router.get('/analytics/platform-overview', authMiddleware, adminMiddleware, async (req, res) => {
+// Platform overview analytics
+router.get('/analytics/platform-overview', authMiddleware, async (req, res) => {
   try {
     const { timeframe = '7d' } = req.query;
     
     // Calculate date range
     const now = new Date();
-    let startDate;
+    let startDate = new Date();
     
     switch (timeframe) {
       case '24h':
-        startDate = new Date(now - 24 * 60 * 60 * 1000);
+        startDate.setHours(now.getHours() - 24);
         break;
       case '7d':
-        startDate = new Date(now - 7 * 24 * 60 * 60 * 1000);
+        startDate.setDate(now.getDate() - 7);
         break;
       case '30d':
-        startDate = new Date(now - 30 * 24 * 60 * 60 * 1000);
+        startDate.setDate(now.getDate() - 30);
+        break;
+      case '90d':
+        startDate.setDate(now.getDate() - 90);
         break;
       default:
-        startDate = new Date(now - 7 * 24 * 60 * 60 * 1000);
+        startDate.setDate(now.getDate() - 7);
     }
-    
-    // Get comprehensive analytics
-    const analytics = await Promise.all([
-      // Expert statistics
-      Expert.aggregate([
-        {
-          $group: {
-            _id: null,
-            totalExperts: { $sum: 1 },
-            pendingApplications: {
-              $sum: { $cond: [{ $eq: ['$accountStatus', 'pending'] }, 1, 0] }
-            },
-            approvedExperts: {
-              $sum: { $cond: [{ $eq: ['$accountStatus', 'approved'] }, 1, 0] }
-            },
-            rejectedApplications: {
-              $sum: { $cond: [{ $eq: ['$accountStatus', 'rejected'] }, 1, 0] }
-            },
-            suspendedExperts: {
-              $sum: { $cond: [{ $eq: ['$accountStatus', 'suspended'] }, 1, 0] }
-            }
-          }
-        }
-      ]),
-      
-      // Recent applications (last 7 days)
-      Expert.aggregate([
-        {
-          $match: {
-            createdAt: { $gte: startDate }
-          }
-        },
-        {
-          $group: {
-            _id: {
-              $dateToString: {
-                format: '%Y-%m-%d',
-                date: '$createdAt'
-              }
-            },
-            count: { $sum: 1 }
-          }
-        },
-        { $sort: { _id: 1 } }
-      ]),
-      
-      // User statistics
-      User.aggregate([
-        {
-          $group: {
-            _id: null,
-            totalUsers: { $sum: 1 },
-            adminUsers: {
-              $sum: { $cond: [{ $eq: ['$role', 'admin'] }, 1, 0] }
-            },
-            expertUsers: {
-              $sum: { $cond: [{ $eq: ['$role', 'beacon'] }, 1, 0] }
-            },
-            regularUsers: {
-              $sum: { $cond: [{ $eq: ['$role', 'shadow'] }, 1, 0] }
-            }
-          }
-        }
-      ])
+
+    // Aggregate platform stats
+    const [
+      totalExperts,
+      pendingExperts,
+      approvedExperts,
+      totalPosts,
+      recentExperts,
+      recentPosts
+    ] = await Promise.all([
+      Expert.countDocuments(),
+      Expert.countDocuments({ accountStatus: 'pending' }),
+      Expert.countDocuments({ accountStatus: 'approved' }),
+      Post.countDocuments(),
+      Expert.countDocuments({ createdAt: { $gte: startDate } }),
+      Post.countDocuments({ timestamp: { $gte: startDate.toISOString() } })
     ]);
-    
-    const [expertStats, applicationTrend, userStats] = analytics;
-    
-    res.json({
-      success: true,
-      data: {
-        timeframe,
-        experts: expertStats[0] || {
-          totalExperts: 0,
-          pendingApplications: 0,
-          approvedExperts: 0,
-          rejectedApplications: 0,
-          suspendedExperts: 0
-        },
-        users: userStats[0] || {
-          totalUsers: 0,
-          adminUsers: 0,
-          expertUsers: 0,
-          regularUsers: 0
-        },
-        applicationTrend: applicationTrend || [],
-        generatedAt: new Date()
-      }
-    });
-  } catch (err) {
-    console.error('Platform analytics error:', err.message);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch platform analytics'
-    });
+
+    const overview = {
+      experts: {
+        total: totalExperts,
+        pending: pendingExperts,
+        approved: approvedExperts,
+        recent: recentExperts
+      },
+      content: {
+        totalPosts,
+        recentPosts
+      },
+      timeframe,
+      generatedAt: new Date().toISOString()
+    };
+
+    return res.success('Platform overview retrieved successfully', overview);
+
+  } catch (error) {
+    console.error('Platform overview error:', error);
+    return res.error('Failed to get platform overview', 500);
   }
 });
 
-// Real-time expert application monitoring
-// GET /api/admin/monitoring/expert-applications
-router.get('/monitoring/expert-applications', authMiddleware, adminMiddleware, async (req, res) => {
+// Flagged content management
+router.get('/content/flagged', authMiddleware, async (req, res) => {
   try {
-    // Get recent applications requiring attention
-    const urgentApplications = await Expert.find({
-      accountStatus: 'pending',
-      createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
-    })
-    .sort({ createdAt: -1 })
-    .limit(10)
-    .select('id name email specialization createdAt verificationDocuments');
+    const { priority, type, page = 1, limit = 20 } = req.query;
     
-    // Get application statistics for the dashboard
-    const stats = await Expert.aggregate([
-      {
-        $group: {
-          _id: '$accountStatus',
-          count: { $sum: 1 },
-          avgProcessingTime: {
-            $avg: {
-              $cond: [
-                { $ne: ['$lastUpdated', '$createdAt'] },
-                { $subtract: ['$lastUpdated', '$createdAt'] },
-                null
-              ]
-            }
-          }
-        }
-      }
+    let query = { flagged: true };
+    
+    if (type) {
+      query.type = type; // Assuming posts have a type field
+    }
+    
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const [posts, total] = await Promise.all([
+      Post.find(query)
+        .sort({ timestamp: -1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean(),
+      Post.countDocuments(query)
     ]);
-    
-    res.json({
-      success: true,
-      data: {
-        urgentApplications,
-        statistics: stats,
-        lastUpdated: new Date()
+
+    return res.success('Flagged content retrieved successfully', {
+      posts,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / parseInt(limit)),
+        total,
+        limit: parseInt(limit)
       }
     });
-  } catch (err) {
-    console.error('Application monitoring error:', err.message);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch application monitoring data'
-    });
+
+  } catch (error) {
+    console.error('Flagged content fetch error:', error);
+    return res.error('Failed to fetch flagged content', 500);
+  }
+});
+
+// Resolve flagged content
+router.post('/content/:contentId/resolve', authMiddleware, async (req, res) => {
+  try {
+    const { contentId } = req.params;
+    const { action, notes } = req.body;
+
+    if (!['approve', 'remove'].includes(action)) {
+      return res.error('Invalid action', 400);
+    }
+
+    const updateData = {
+      flagged: false,
+      status: action === 'approve' ? 'active' : 'hidden',
+      resolvedAt: new Date(),
+      resolvedBy: req.user.id
+    };
+
+    if (notes) {
+      updateData.moderationNotes = notes;
+    }
+
+    const post = await Post.findOneAndUpdate(
+      { id: contentId },
+      updateData,
+      { new: true }
+    );
+
+    if (!post) {
+      return res.error('Content not found', 404);
+    }
+
+    return res.success(`Content ${action}d successfully`, { post });
+
+  } catch (error) {
+    console.error('Content resolution error:', error);
+    return res.error('Failed to resolve content', 500);
   }
 });
 

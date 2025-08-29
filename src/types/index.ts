@@ -238,7 +238,7 @@ export interface Testimonial {
 
 export interface VerificationDocument {
   id: string;
-  type: "id" | "credential" | "certificate" | "other" | "photo" | "resume" | "cv";
+  type: 'id' | 'credential' | 'certificate' | 'other' | 'photo' | 'resume' | 'cv';
   fileUrl: string;
   fileName: string;
   uploadedAt: string;

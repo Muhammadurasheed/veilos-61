@@ -437,7 +437,16 @@ export const AdminApi = {
   },
 
   // Additional admin methods for complete coverage
-  getAllExperts: async () => apiRequest('GET', '/api/admin/experts/all')
+  getAllExperts: async () => apiRequest('GET', '/api/admin/experts/all'),
+
+  // Content Moderation
+  async getFlaggedContent(params?: any) {
+    return apiRequest('GET', '/api/admin/content/flagged', null, { params });
+  },
+
+  async resolveFlag(contentId: string, action: 'approve' | 'remove', notes?: string) {
+    return apiRequest('POST', `/api/admin/content/${contentId}/resolve`, { action, notes });
+  }
 } as const;
 
 // Post API methods
@@ -681,6 +690,9 @@ export const AppealApi = {
 
 // Export apiRequest for components that need it
 export { apiRequest };
+
+// API Response type export
+export type { ApiResponse };
 
 // Fixed re-export to avoid conflicts
 export * from './temporaryApiExports';
