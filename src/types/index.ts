@@ -350,11 +350,12 @@ export interface ApiSanctuaryJoinRequest {
   isAnonymous?: boolean;
 }
 
-// API response type
+// Uncommented API response type
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
   error?: string;
+  message?: string;
 }
 
 // Gemini API request types

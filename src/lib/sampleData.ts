@@ -91,7 +91,7 @@ export const sampleExperts: Expert[] = [
     specialization: 'Mental Health Counselor',
     verificationLevel: 'platinum',
     bio: 'Licensed mental health counselor with over 10 years of experience in anxiety, depression, and trauma therapy. I believe in creating a safe, non-judgmental space for healing.',
-    pricingModel: 'fixed',
+    pricingModel: 'donation',
     pricingDetails: '$75/hour - Professional therapy sessions with flexible payment options',
     rating: 4.8,
     testimonials: [],

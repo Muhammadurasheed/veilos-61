@@ -75,6 +75,10 @@ export interface LiveSanctuarySession {
   currentParticipants?: number;
   estimatedDuration?: number;
   tags?: string[];
+  language?: string;
+  expiresAt?: string;
+  allowAnonymous?: boolean;
+  recordingConsent?: boolean;
   aiMonitoring?: boolean;
   moderationLevel?: 'low' | 'medium' | 'high' | 'strict';
   emergencyProtocols?: boolean;

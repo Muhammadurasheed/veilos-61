@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { logger } from './logger';
 import { tokenManager } from './tokenManager';
+import type { ApiResponse } from '@/types';
 
 // API Configuration - Use proxy in development, direct URL in production
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '' : 'http://localhost:3000');
@@ -121,13 +122,13 @@ api.interceptors.response.use(
   }
 );
 
-// Types
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
-}
+// Remove duplicate ApiResponse declaration here
+// interface ApiResponse<T = any> {
+//   success: boolean;
+//   data?: T;
+//   error?: string;
+//   message?: string;
+// }
 
 // Token management utilities
 export const setAdminToken = (token: string) => {
@@ -691,7 +692,7 @@ export const AppealApi = {
 // Export apiRequest for components that need it
 export { apiRequest };
 
-// Export type without redeclaring const
-export type { ApiResponse };
+// Export only type reference
+export type { ApiResponse } from '@/types';
 
 export default api;
