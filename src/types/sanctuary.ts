@@ -86,6 +86,10 @@ export interface LiveSanctuarySession {
   hostToken?: string;
   agoraChannelName?: string;
   agoraToken?: string;
+  audioOnly?: boolean;
+  breakoutRooms?: any[];
+  moderationEnabled?: boolean;
+  emergencyContactEnabled?: boolean;
 }
 
 export interface LiveParticipant {
