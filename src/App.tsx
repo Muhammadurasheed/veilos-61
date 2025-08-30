@@ -2,6 +2,7 @@
 import React, { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AuthProvider } from '@/contexts/optimized/AuthContextRefactored';
 import { SmartRouter } from '@/components/routing/SmartRouter';
@@ -49,6 +50,16 @@ const AuthErrorFallback = ({ error }: { error: Error }) => (
   </div>
 );
 
+// Create a query client for React Query
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
 const App: React.FC = () => {
   // Initialize i18n and other global services
   useEffect(() => {
@@ -59,10 +70,11 @@ const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <HelmetProvider>
-        <ThemeProvider>
-          <AuthProvider>
-            <ErrorBoundary fallback={AuthErrorFallback}>
-              <SmartRouter>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <AuthProvider>
+              <ErrorBoundary fallback={AuthErrorFallback}>
+                <SmartRouter>
               <Routes>
                 <Route path="/" element={
                   <ProtectedRoute requireAuth={false}>
@@ -152,6 +164,7 @@ const App: React.FC = () => {
             </ErrorBoundary>
           </AuthProvider>
         </ThemeProvider>
+        </QueryClientProvider>
       </HelmetProvider>
     </ErrorBoundary>
   );

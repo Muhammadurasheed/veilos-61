@@ -12,7 +12,13 @@ import {
   Shield,
   X,
   ChevronRight,
-  LayoutDashboard
+  LayoutDashboard,
+  Rss,
+  Users,
+  Clock,
+  UserCog,
+  ShieldCheck,
+  Star
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -52,7 +58,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
     {
       name: 'Feed',
       href: '/feed',
-      icon: MessageSquare
+      icon: Rss
     },
     {
       name: 'Sanctuary',
@@ -62,17 +68,17 @@ export const Sidebar = ({ className }: SidebarProps) => {
     {
       name: 'My Sanctuaries',
       href: '/my-sanctuaries',
-      icon: MessageSquare
+      icon: Users
     },
     {
       name: 'Beacons',
       href: '/beacons',
-      icon: Shield
+      icon: Star
     },
     {
       name: 'Sessions',
       href: '/sessions',
-      icon: Calendar
+      icon: Clock
     },
     {
       name: 'Profile',
@@ -91,7 +97,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
     navigationItems.splice(4, 0, {
       name: 'Expert Dashboard',
       href: '/expert-dashboard',
-      icon: Shield
+      icon: UserCog
     });
   }
 
@@ -100,7 +106,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
     navigationItems.push({
       name: 'Admin',
       href: '/admin',
-      icon: Shield
+      icon: ShieldCheck
     });
   }
 

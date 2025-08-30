@@ -39,7 +39,7 @@ const AdminPanel = () => {
   }
 
   if (!isAuthenticated) {
-    return <AdminLogin onLoginSuccess={() => window.location.reload()} />;
+    return <AdminLogin onLoginSuccess={() => navigate('/admin/dashboard')} />;
   }
 
   const getCurrentTab = () => {
