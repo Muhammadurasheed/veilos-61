@@ -422,25 +422,37 @@ router.get('/dashboard/stats', authMiddleware, adminMiddleware, async (req, res)
 });
 
 // Admin verify route for authentication check
-router.get('/verify', authMiddleware, async (req, res) => {
+router.get('/verify', async (req, res) => {
   try {
-    if (!req.user || req.user.role !== 'admin') {
-      return res.error('Access denied: Admin privileges required', 403);
+    const token = req.headers.authorization?.replace('Bearer ', '') || req.headers['x-auth-token'];
+    
+    if (!token) {
+      return res.status(401).json({ success: false, error: 'No token provided' });
     }
 
-    res.success('Admin token verified', {
-      user: {
-        id: req.user.id,
-        alias: req.user.alias,
-        email: req.user.email,
-        role: req.user.role,
-        avatarIndex: req.user.avatarIndex,
-        avatarUrl: req.user.avatarUrl
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findOne({ id: decoded.userId });
+    
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Access denied - admin role required' });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          alias: user.alias,
+          createdAt: user.createdAt
+        }
       }
     });
   } catch (error) {
     console.error('Admin verification error:', error);
-    res.error('Token verification failed', 500);
+    res.status(500).json({ success: false, error: 'Token verification failed' });
   }
 });
 

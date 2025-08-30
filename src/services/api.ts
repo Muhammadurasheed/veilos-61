@@ -147,7 +147,7 @@ export const setAdminToken = (token: string) => {
 };
 
 // Generic API request function
-const apiRequest = async <T = any>(
+export const apiRequest = async <T = any>(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
   url: string,
   data?: any,

@@ -145,19 +145,33 @@ const EnhancedLiveSanctuary: React.FC = () => {
     fetchSession();
   }, [sessionId, searchParams, toast]);
 
-  // Join session when loaded and authenticated
+  // Auto-join when authenticated and session loaded
   useEffect(() => {
     const doJoin = async () => {
-      if (!sessionId || !session || !isAuthenticated || joinedRef.current) return;
+      if (!sessionId || !session || !isAuthenticated || !user || joinedRef.current) return;
+      
       try {
-        await LiveSanctuaryApi.joinSession(sessionId, { alias: user?.alias || 'Participant' });
-        joinedRef.current = true;
-        toast({ title: 'Joined Sanctuary', description: 'You are now connected to the session.' });
+        const response = await LiveSanctuaryApi.joinSession(sessionId, { 
+          alias: user.alias || 'Participant' 
+        });
+        
+        if (response.success) {
+          joinedRef.current = true;
+          toast({ 
+            title: 'Joined Successfully', 
+            description: 'You are now connected to the sanctuary.' 
+          });
+        }
       } catch (err: any) {
-        console.error('❌ Join failed:', err);
-        toast({ title: 'Join failed', description: err.message || 'Please sign in to join this space.', variant: 'destructive' });
+        console.error('❌ Auto-join failed:', err);
+        toast({ 
+          title: 'Join Failed', 
+          description: err.message || 'Unable to join this sanctuary automatically.',
+          variant: 'destructive' 
+        });
       }
     };
+    
     doJoin();
   }, [sessionId, session, isAuthenticated, user, toast]);
 
