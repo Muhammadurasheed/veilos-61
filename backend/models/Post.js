@@ -77,6 +77,15 @@ const postSchema = new mongoose.Schema({
     type: String
   }],
   comments: [commentSchema],
+  attachments: [{
+    type: {
+      type: String,
+      enum: ['image', 'video']
+    },
+    url: String,
+    filename: String,
+    size: Number
+  }],
   wantsExpertHelp: {
     type: Boolean,
     default: false

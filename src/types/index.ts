@@ -18,6 +18,13 @@ export interface User {
 }
 
 // Post-related types
+export interface PostAttachment {
+  type: 'image' | 'video';
+  url: string;
+  filename: string;
+  size: number;
+}
+
 export interface Post {
   id: string;
   userId: string;
@@ -29,6 +36,7 @@ export interface Post {
   timestamp: string;
   likes: string[];
   comments: Comment[];
+  attachments?: PostAttachment[];
   wantsExpertHelp: boolean;
   languageCode: string;
   flagged?: boolean;

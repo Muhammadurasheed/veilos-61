@@ -80,16 +80,8 @@ const App: React.FC = () => {
                   </ProtectedRoute>
                 } />
                 <Route path="/sanctuary/join/:inviteCode" element={<SanctuaryJoinViaInvite />} />
-                        <Route path="/feed" element={
-                          <ProtectedRoute requireAuth={true}>
-                            <Feed />
-                          </ProtectedRoute>
-                        } />
-                        <Route path="/beacons" element={
-                          <ProtectedRoute requireAuth={true}>
-                            <BeaconsList />
-                          </ProtectedRoute>
-                        } />
+                        <Route path="/feed" element={<Feed />} />
+                        <Route path="/beacons" element={<BeaconsList />} />
                         <Route path="/beacons/:expertId" element={
                           <ProtectedRoute requireAuth={true}>
                             <ExpertProfile />

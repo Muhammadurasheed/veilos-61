@@ -510,6 +510,12 @@ export const PostApi = {
 
   async addComment(postId: string, content: string) {
     return apiRequest('POST', `/api/posts/${postId}/comment`, { content });
+  },
+
+  async createPostWithAttachments(formData: FormData) {
+    return apiRequest('POST', '/api/posts/with-attachments', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
   }
 };
 

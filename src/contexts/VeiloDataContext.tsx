@@ -18,7 +18,7 @@ interface VeiloDataContextType {
   refreshExperts: () => Promise<void>;
   likePost: (postId: string) => Promise<void>;
   unlikePost: (postId: string) => Promise<void>;
-  createPost: (content: string, feeling?: string, topic?: string, wantsExpertHelp?: boolean) => Promise<Post | null>;
+  createPost: (content: string, feeling?: string, topic?: string, wantsExpertHelp?: boolean, attachments?: File[]) => Promise<Post | null>;
   addComment: (postId: string, content: string) => Promise<Post | null>;
   flagPost: (postId: string, reason: string) => Promise<boolean>;
 }
@@ -154,7 +154,8 @@ export const VeiloDataProvider = ({ children }: { children: ReactNode }) => {
     content: string, 
     feeling?: string, 
     topic?: string,
-    wantsExpertHelp: boolean = false
+    wantsExpertHelp: boolean = false,
+    attachments: File[] = []
   ): Promise<Post | null> => {
     if (!isAuthenticated || !user) {
       toast({
@@ -166,12 +167,30 @@ export const VeiloDataProvider = ({ children }: { children: ReactNode }) => {
     }
     
     try {
-      const response = await PostApi.createPost({
-        content,
-        feeling,
-        topic,
-        wantsExpertHelp,
-      });
+      let response;
+      
+      if (attachments.length > 0) {
+        // Use FormData for posts with attachments
+        const formData = new FormData();
+        formData.append('content', content);
+        if (feeling) formData.append('feeling', feeling);
+        if (topic) formData.append('topic', topic);
+        formData.append('wantsExpertHelp', wantsExpertHelp.toString());
+        
+        attachments.forEach((file, index) => {
+          formData.append(`attachments`, file);
+        });
+        
+        response = await PostApi.createPostWithAttachments(formData);
+      } else {
+        // Use JSON for text-only posts
+        response = await PostApi.createPost({
+          content,
+          feeling,
+          topic,
+          wantsExpertHelp,
+        });
+      }
       
       if (response.success && response.data) {
         // Add the new post to the local state

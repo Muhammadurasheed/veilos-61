@@ -5,6 +5,7 @@ const Post = require('../models/Post');
 const { authMiddleware, optionalAuthMiddleware } = require('../middleware/auth');
 const { moderateContent } = require('../middleware/contentModeration');
 const { aiModerateContent } = require('../middleware/aiContentModeration');
+const upload = require('../middleware/upload');
 
 // Create post
 // POST /api/posts
@@ -398,6 +399,104 @@ router.post('/:id/translate', async (req, res) => {
     });
   } catch (err) {
     console.error(err.message);
+    res.status(500).json({
+      success: false,
+      error: 'Server error'
+    });
+  }
+});
+
+// Create post with attachments (images/videos)
+// POST /api/posts/with-attachments
+router.post('/with-attachments', authMiddleware, upload.array('attachments', 4), aiModerateContent, moderateContent, async (req, res) => {
+  try {
+    const {
+      content,
+      feeling,
+      topic,
+      wantsExpertHelp
+    } = req.body;
+    
+    console.log('Creating post with attachments:', {
+      userId: req.user.id,
+      userAlias: req.user.alias,
+      contentLength: content?.length || 0,
+      feeling,
+      topic,
+      wantsExpertHelp: Boolean(wantsExpertHelp),
+      attachmentCount: req.files?.length || 0
+    });
+    
+    // Validation
+    if (!content && (!req.files || req.files.length === 0)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Content or attachments are required'
+      });
+    }
+    
+    // Create attachments array
+    const attachments = (req.files || []).map(file => ({
+      type: file.mimetype.startsWith('image/') ? 'image' : 'video',
+      url: `/uploads/${file.filename}`,
+      filename: file.originalname,
+      size: file.size
+    }));
+    
+    // Create post
+    const post = new Post({
+      userId: req.user.id,
+      userAlias: req.user.alias,
+      userAvatarIndex: req.user.avatarIndex,
+      content: content || '',
+      feeling,
+      topic,
+      wantsExpertHelp: wantsExpertHelp === 'true' || wantsExpertHelp === true,
+      attachments,
+      likes: [],
+      comments: []
+    });
+    
+    // Check if content was flagged by AI moderation (priority)
+    if (req.aiModeration?.flagged || req.aiModeration?.recommendedAction === 'flag') {
+      post.flagged = true;
+      post.flagReason = req.aiModeration.flagReason || 'ai_flagged_content';
+    }
+    // Fallback to basic moderation if AI didn't flag
+    else if (req.contentModeration?.flagged) {
+      post.flagged = true;
+      post.flagReason = req.contentModeration.flagReason;
+    }
+    
+    // Handle urgent cases
+    if (req.urgentFlag || req.aiModeration?.severity === 'urgent') {
+      post.flagged = true;
+      post.flagReason = 'urgent_review_needed';
+      console.log('URGENT: Post with attachments requires immediate review:', post.id);
+    }
+    
+    await post.save();
+    
+    console.log('Post with attachments created successfully:', {
+      postId: post.id,
+      userId: req.user.id,
+      flagged: post.flagged,
+      attachmentCount: attachments.length
+    });
+    
+    res.json({
+      success: true,
+      data: post
+    });
+  } catch (err) {
+    console.error('Post with attachments creation error:', {
+      error: err.message,
+      stack: err.stack,
+      userId: req.user?.id,
+      userAlias: req.user?.alias,
+      contentLength: req.body?.content?.length || 0,
+      fileCount: req.files?.length || 0
+    });
     res.status(500).json({
       success: false,
       error: 'Server error'
