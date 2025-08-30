@@ -1,4 +1,3 @@
-
 // User-related types
 export enum UserRole {
   SHADOW = "shadow",
@@ -172,6 +171,7 @@ export interface Expert {
     linkedin?: string;
     twitter?: string;
     website?: string;
+    instagram?: string;
   };
   achievements?: string[];
   yearsOfExperience?: number;
@@ -358,7 +358,7 @@ export interface ApiSanctuaryJoinRequest {
   isAnonymous?: boolean;
 }
 
-// Uncommented API response type
+// API response type
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
@@ -429,3 +429,70 @@ export interface AdminApiType {
   updateExpertStatus: (expertId: string, status: string) => Promise<ApiResponse<any>>;
 }
 
+// Live Sanctuary types
+export interface CreateLiveSanctuaryRequest {
+  topic: string;
+  description?: string;
+  emoji?: string;
+  maxParticipants?: number;
+  audioOnly?: boolean;
+  allowAnonymous?: boolean;
+  moderationEnabled?: boolean;
+  emergencyContactEnabled?: boolean;
+  expireHours?: number;
+  scheduledDateTime?: string;
+  estimatedDuration?: number;
+  tags?: string[];
+  language?: string;
+  moderationLevel?: string;
+}
+
+export interface LiveSanctuarySession {
+  id: string;
+  topic: string;
+  description?: string;
+  emoji?: string;
+  hostId: string;
+  hostAlias: string;
+  participants: LiveSanctuaryParticipant[];
+  participantCount: number;
+  maxParticipants: number;
+  audioOnly: boolean;
+  allowAnonymous: boolean;
+  moderationEnabled: boolean;
+  emergencyContactEnabled: boolean;
+  status: 'scheduled' | 'active' | 'ended';
+  scheduledDateTime?: string;
+  startedAt?: string;
+  endedAt?: string;
+  estimatedDuration?: number;
+  tags?: string[];
+  language?: string;
+  moderationLevel?: string;
+  hostToken: string;
+  inviteLink: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LiveSanctuaryParticipant {
+  id: string;
+  alias: string;
+  isHost: boolean;
+  isAnonymous: boolean;
+  joinedAt: string;
+  isMuted?: boolean;
+  micPermission?: 'granted' | 'denied' | 'pending';
+}
+
+export interface LiveSanctuaryInvitation {
+  id: string;
+  sessionId: string;
+  invitedBy: string;
+  invitedByAlias: string;
+  inviteToken: string;
+  message?: string;
+  status: 'pending' | 'accepted' | 'declined' | 'expired';
+  createdAt: string;
+  expiresAt: string;
+}

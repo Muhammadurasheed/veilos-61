@@ -147,7 +147,7 @@ export const setAdminToken = (token: string) => {
 };
 
 // Generic API request function
-export const apiRequest = async <T = any>(
+const apiRequest = async <T = any>(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
   url: string,
   data?: any,
@@ -173,7 +173,7 @@ export const apiRequest = async <T = any>(
 };
 
 // User API methods
-export const UserApi = {
+const UserApi = {
   // Register new user with secure identity system
   async register(userData: { 
     alias?: string; 
@@ -271,7 +271,7 @@ export const UserApi = {
 };
 
 // Expert API methods
-export const ExpertApi = {
+const ExpertApi = {
   async register(expertData: any) {
     return apiRequest('POST', '/api/experts/register', expertData);
   },
@@ -328,7 +328,7 @@ export const ExpertApi = {
 };
 
 // Admin API methods
-export const AdminApi = {
+const AdminApi = {
   async login(credentials: { email: string; password: string }) {
     console.log('🔐 AdminApi.login called with:', { email: credentials.email, hasPassword: !!credentials.password });
     
@@ -475,7 +475,7 @@ export const AdminApi = {
 } satisfies AdminApiType;
 
 // Post API methods
-export const PostApi = {
+const PostApi = {
   async createPost(postData: any) {
     return apiRequest('POST', '/api/posts', postData);
   },
@@ -520,7 +520,7 @@ export const PostApi = {
 };
 
 // Analytics API methods (consolidated)
-export const AnalyticsApi = {
+const AnalyticsApi = {
   async getOverview(params?: any) {
     return apiRequest('GET', '/api/analytics/overview', null, { params });
   },
@@ -567,7 +567,7 @@ export const AnalyticsApi = {
 };
 
 // Sanctuary API methods
-export const SanctuaryApi = {
+const SanctuaryApi = {
   async createSanctuary(sanctuaryData: any) {
     return apiRequest('POST', '/api/sanctuary/sessions', sanctuaryData);
   },
@@ -632,7 +632,7 @@ export const SanctuaryApi = {
 };
 
 // Live Sanctuary API methods - EXACT PATTERN as SanctuaryApi
-export const LiveSanctuaryApi = {
+const LiveSanctuaryApi = {
   async createSession(sessionData: any) {
     return apiRequest('POST', '/api/live-sanctuary', sessionData);
   },
@@ -662,7 +662,7 @@ export const LiveSanctuaryApi = {
 };
 
 // Session API methods
-export const SessionApi = {
+const SessionApi = {
   async createSession(sessionData: any) {
     return apiRequest('POST', '/api/sessions', sessionData);
   },
@@ -685,7 +685,7 @@ export const SessionApi = {
 };
 
 // Gemini API methods
-export const GeminiApi = {
+const GeminiApi = {
   async refineContent(content: string, instructions?: string) {
     // Map to backend improve endpoint
     return apiRequest('POST', '/api/gemini/improve', { content, instructions });
@@ -705,7 +705,7 @@ export const GeminiApi = {
 };
 
 // AppealApi for content appeals
-export const AppealApi = {
+const AppealApi = {
   async submitAppeal(appealData: any) {
     return apiRequest('POST', '/api/appeals', appealData);
   },
@@ -719,8 +719,8 @@ export const AppealApi = {
   }
 };
 
-// Export apiRequest for components that need it
-export { apiRequest };
+// Export main API instances
+export { ExpertApi, SanctuaryApi, LiveSanctuaryApi, PostApi, SessionApi, GeminiApi, AppealApi, UserApi, AdminApi, AnalyticsApi, apiRequest };
 
 // Export only type reference
 export type { ApiResponse } from '@/types';
