@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +26,7 @@ import { LiveSanctuaryApi } from '@/services/api';
 import { useSanctuarySocket } from '@/hooks/useSanctuarySocket';
 import { cn } from '@/lib/utils';
 import Layout from '@/components/layout/Layout';
+import { useAuth } from '@/contexts/optimized/AuthContextRefactored';
 
 interface LiveSanctuarySession {
   id: string;
@@ -64,6 +65,8 @@ const EnhancedLiveSanctuary: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, isAuthenticated } = useAuth();
+  const joinedRef = useRef(false);
   
   const [session, setSession] = useState<LiveSanctuarySession | null>(null);
   const [loading, setLoading] = useState(true);
@@ -141,6 +144,22 @@ const EnhancedLiveSanctuary: React.FC = () => {
 
     fetchSession();
   }, [sessionId, searchParams, toast]);
+
+  // Join session when loaded and authenticated
+  useEffect(() => {
+    const doJoin = async () => {
+      if (!sessionId || !session || !isAuthenticated || joinedRef.current) return;
+      try {
+        await LiveSanctuaryApi.joinSession(sessionId, { alias: user?.alias || 'Participant' });
+        joinedRef.current = true;
+        toast({ title: 'Joined Sanctuary', description: 'You are now connected to the session.' });
+      } catch (err: any) {
+        console.error('❌ Join failed:', err);
+        toast({ title: 'Join failed', description: err.message || 'Please sign in to join this space.', variant: 'destructive' });
+      }
+    };
+    doJoin();
+  }, [sessionId, session, isAuthenticated, user, toast]);
 
   // Handle leaving the sanctuary
   const handleLeaveSanctuary = async () => {

@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/optimized/AuthContextRefactored';
 import { aiRecommendationEngine } from '@/services/aiRecommendationEngine';
 import { useToast } from '@/hooks/use-toast';
 import { Expert, User } from '@/types';
+import { ExpertApi } from '@/services/api';
 import { 
   Users, 
   Search, 
@@ -29,67 +30,9 @@ import {
 
 const EnhancedBeaconsList = () => {
   const { user } = useAuth();
-  
-  // Mock experts data (in production, this would come from an API call)
-  const experts: Expert[] = [
-    {
-      id: '1',
-      userId: 'user-1',
-      name: 'Dr. Sarah Johnson',
-      email: 'sarah.johnson@veilo.com',
-      bio: 'Experienced therapist specializing in anxiety and depression with over 10 years of practice.',
-      specialization: 'Anxiety & Depression',
-      verificationLevel: 'platinum',
-      verified: true,
-      pricingModel: 'fixed',
-      rating: 4.9,
-      totalRatings: 150,
-      totalSessions: 200,
-      completedSessions: 195,
-      accountStatus: 'approved',
-      profileViews: 500,
-      profileViewsThisMonth: 50,
-      lastUpdated: new Date().toISOString(),
-      createdAt: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
-      followersCount: 25,
-      testimonials: [{ 
-        id: 'test-1', 
-        text: 'Amazing therapist', 
-        user: { alias: 'Anonymous', avatarIndex: 1 }
-      }],
-      topicsHelped: ['anxiety', 'depression', 'stress'],
-      hourlyRate: 120
-    },
-    {
-      id: '2',
-      userId: 'user-2', 
-      name: 'Dr. Michael Chen',
-      email: 'michael.chen@veilo.com',
-      bio: 'Mindfulness expert helping people manage stress and find inner peace.',
-      specialization: 'Stress Management',
-      verificationLevel: 'gold',
-      verified: true,
-      pricingModel: 'fixed',
-      rating: 4.8,
-      totalRatings: 120,
-      totalSessions: 150,
-      completedSessions: 145,
-      accountStatus: 'approved',
-      profileViews: 350,
-      profileViewsThisMonth: 35,
-      lastUpdated: new Date().toISOString(),
-      createdAt: new Date(Date.now() - 200 * 24 * 60 * 60 * 1000).toISOString(),
-      followersCount: 18,
-      testimonials: [{ 
-        id: 'test-2', 
-        text: 'Very helpful', 
-        user: { alias: 'Anonymous', avatarIndex: 2 }
-      }],
-      topicsHelped: ['stress', 'mindfulness', 'meditation'],
-      hourlyRate: 100
-    }
-  ];
   const { toast } = useToast();
+  const [experts, setExperts] = useState<Expert[]>([]);
+  const [expertsLoading, setExpertsLoading] = useState(false);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('ai_recommended');
@@ -101,11 +44,30 @@ const EnhancedBeaconsList = () => {
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
   const [userProfile, setUserProfile] = useState<Partial<User> | null>(null);
 
-  // Load user profile and AI recommendations on mount
-  useEffect(() => {
-    loadAIRecommendations();
-    loadUserProfile();
-  }, []);
+  // Load experts from backend (approved beacons)
+  const loadExperts = async () => {
+    setExpertsLoading(true);
+    try {
+      const res = await ExpertApi.getExperts();
+      if (res.success && res.data) {
+        setExperts(res.data as Expert[]);
+      } else {
+        toast({ title: 'Failed to load experts', description: res.error || 'Unexpected error', variant: 'destructive' });
+      }
+    } catch (e: any) {
+      console.error('Failed to load experts:', e);
+      toast({ title: 'Failed to load experts', description: e.message || 'Unexpected error', variant: 'destructive' });
+    } finally {
+      setExpertsLoading(false);
+    }
+  };
+
+// Load user profile and AI recommendations on mount
+useEffect(() => {
+  loadExperts();
+  loadAIRecommendations();
+  loadUserProfile();
+}, []);
 
   const loadUserProfile = async () => {
     try {

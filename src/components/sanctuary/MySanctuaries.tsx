@@ -20,7 +20,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { SanctuaryApi } from '@/services/api';
+import { SanctuaryApi, LiveSanctuaryApi } from '@/services/api';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -51,51 +51,73 @@ const MySanctuaries = () => {
     try {
       setIsLoading(true);
       const storedSanctuaries: StoredSanctuary[] = [];
+      const now = new Date();
       
-      // Get all sanctuary tokens from localStorage
+      // Iterate all keys once and handle both anon-inbox and live-audio
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key?.startsWith('sanctuary-host-') && !key.endsWith('-expires')) {
-          const sanctuaryId = key.replace('sanctuary-host-', '');
-          const hostToken = localStorage.getItem(key);
-          const expiryKey = `${key}-expires`;
-          const expiryTime = localStorage.getItem(expiryKey);
-          
-          if (hostToken && expiryTime) {
-            const expiryDate = new Date(expiryTime);
-            const now = new Date();
-            
-            // Check if token is expired
-            if (now > expiryDate) {
-              // Clean up expired token
-              localStorage.removeItem(key);
-              localStorage.removeItem(expiryKey);
-              continue;
+        if (!key) continue;
+        
+        const isAnonKey = key.startsWith('sanctuary-host-') && !key.endsWith('-expires');
+        const isLiveKey = key.startsWith('live-sanctuary-host-') && !key.endsWith('-expires');
+        if (!isAnonKey && !isLiveKey) continue;
+        
+        const sanctuaryId = key.replace(isLiveKey ? 'live-sanctuary-host-' : 'sanctuary-host-', '');
+        const hostToken = localStorage.getItem(key) as string | null;
+        const expiryKey = `${key}-expires`;
+        const expiryTime = localStorage.getItem(expiryKey);
+        
+        if (!hostToken || !expiryTime) continue;
+        const expiryDate = new Date(expiryTime);
+        
+        // Clean up expired tokens
+        if (now > expiryDate) {
+          localStorage.removeItem(key);
+          localStorage.removeItem(expiryKey);
+          continue;
+        }
+        
+        try {
+          if (isAnonKey) {
+            // Validate anonymous inbox sanctuary
+            const response = await SanctuaryApi.getSubmissions(sanctuaryId, hostToken);
+            if (response.success && response.data) {
+              storedSanctuaries.push({
+                id: sanctuaryId,
+                topic: response.data.session.topic || 'Untitled Sanctuary',
+                description: response.data.session.description,
+                emoji: response.data.session.emoji,
+                mode: response.data.session.mode || 'anon-inbox',
+                createdAt: response.data.session.createdAt,
+                expiresAt: response.data.session.expiresAt,
+                hostToken,
+                isActive: new Date(response.data.session.expiresAt) > now,
+                submissionCount: response.data.submissions?.length || 0,
+                lastAccessed: localStorage.getItem(`sanctuary-last-accessed-${sanctuaryId}`) || undefined,
+              });
             }
-            
-            try {
-              // Validate with backend and get session details
-              const response = await SanctuaryApi.getSubmissions(sanctuaryId, hostToken);
-              if (response.success && response.data) {
-                const sanctuary: StoredSanctuary = {
-                  id: sanctuaryId,
-                  topic: response.data.session.topic || 'Untitled Sanctuary',
-                  description: response.data.session.description,
-                  emoji: response.data.session.emoji,
-                  mode: response.data.session.mode || 'anon-inbox',
-                  createdAt: response.data.session.createdAt,
-                  expiresAt: response.data.session.expiresAt,
-                  hostToken,
-                  isActive: new Date(response.data.session.expiresAt) > now,
-                  submissionCount: response.data.submissions?.length || 0,
-                  lastAccessed: localStorage.getItem(`sanctuary-last-accessed-${sanctuaryId}`)
-                };
-                storedSanctuaries.push(sanctuary);
-              }
-            } catch (error) {
-              console.warn(`Failed to validate sanctuary ${sanctuaryId}:`, error);
+          } else if (isLiveKey) {
+            // Validate live audio sanctuary
+            const response = await LiveSanctuaryApi.getSession(sanctuaryId);
+            if (response.success && response.data) {
+              const s = response.data.session || response.data;
+              storedSanctuaries.push({
+                id: sanctuaryId,
+                topic: s.topic || 'Live Sanctuary',
+                description: s.description,
+                emoji: s.emoji,
+                mode: 'live-audio',
+                createdAt: s.createdAt || s.expiresAt, // fallback
+                expiresAt: s.expiresAt,
+                hostToken,
+                isActive: new Date(s.expiresAt) > now,
+                submissionCount: s.currentParticipants || 0,
+                lastAccessed: localStorage.getItem(`sanctuary-last-accessed-${sanctuaryId}`) || undefined,
+              });
             }
           }
+        } catch (error) {
+          console.warn(`Failed to validate sanctuary ${sanctuaryId}:`, error);
         }
       }
       

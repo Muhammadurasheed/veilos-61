@@ -55,11 +55,11 @@ export const VeiloDataProvider = ({ children }: { children: ReactNode }) => {
 
   // Fetch initial data
   useEffect(() => {
-    if (isAuthenticated) {
-      refreshPosts();
-      refreshExperts();
-    }
-  }, [isAuthenticated]);
+    // Always load posts and experts so anonymous users also see content
+    refreshPosts();
+    refreshExperts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const refreshPosts = async () => {
     setLoading(prev => ({ ...prev, posts: true }));
