@@ -18,6 +18,13 @@ export interface CreateLiveSanctuaryRequest {
   moderationEnabled?: boolean;
   emergencyContactEnabled?: boolean;
   expireHours?: number;
+  scheduledDateTime?: string | Date;
+  estimatedDuration?: number;
+  tags?: string[];
+  language?: string;
+  moderationLevel?: string;
+  aiMonitoring?: boolean;
+  isRecorded?: boolean;
 }
 
 export interface JoinAudioRoomRequest {

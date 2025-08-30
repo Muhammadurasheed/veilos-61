@@ -27,7 +27,7 @@ export const useAdminAuth = () => {
       console.log('🔍 Checking admin auth status with token:', token.substring(0, 20) + '...');
 
       // Verify token with backend
-      const response = await fetch('/api/admin/verify', {
+      const response = await fetch('/api/auth/admin/verify', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'x-auth-token': token,
@@ -75,6 +75,9 @@ export const useAdminAuth = () => {
           title: 'Login Successful',
           description: 'Welcome to the admin panel',
         });
+        
+        // Navigate to admin panel after successful login
+        navigate('/admin/dashboard');
         
         return { success: true };
       } else {

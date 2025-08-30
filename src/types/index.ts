@@ -432,6 +432,7 @@ export interface AdminApiType {
 // Live Sanctuary types
 export interface CreateLiveSanctuaryRequest {
   topic: string;
+  title?: string;
   description?: string;
   emoji?: string;
   maxParticipants?: number;
