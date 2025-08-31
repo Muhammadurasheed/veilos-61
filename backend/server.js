@@ -84,6 +84,7 @@ const postRoutes = require('./routes/postRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const sanctuaryRoutes = require('./routes/sanctuaryRoutes');
 const liveSanctuaryRoutes = require('./routes/liveSanctuaryRoutes');
+const flagshipSanctuaryRoutes = require('./routes/flagshipSanctuaryRoutes');
 const sanctuaryInvitationRoutes = require('./routes/sanctuaryInvitationRoutes');
 const sanctuaryChatRoutes = require('./routes/sanctuaryChatRoutes');
 const chatRoutes = require('./routes/chatRoutes');
@@ -113,6 +114,7 @@ app.use('/api/live-sanctuary', (req, res, next) => {
   next();
 });
 app.use('/api/live-sanctuary', liveSanctuaryRoutes);
+app.use('/api/flagship-sanctuary', flagshipSanctuaryRoutes);
 app.use('/api/sanctuary-invitations', sanctuaryInvitationRoutes);
 app.use('/api/sanctuary-chat', sanctuaryChatRoutes);
 app.use('/api/bookings', bookingRoutes);
