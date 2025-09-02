@@ -36,6 +36,7 @@ import EnhancedSanctuary from '@/pages/EnhancedSanctuary';
 import EnhancedLiveSanctuary from '@/pages/EnhancedLiveSanctuary';
 import Phase4Test from '@/pages/Phase4Test';
 import FollowedExperts from '@/pages/FollowedExperts';
+import FlagshipSanctuary from '@/pages/FlagshipSanctuary';
 import { SessionProvider } from '@/contexts/SessionContext';
 import { ProtectedRoute } from '@/components/routing/ProtectedRoute';
 
@@ -156,6 +157,7 @@ const App: React.FC = () => {
           </ProtectedRoute>
         } />
                         <Route path="/sanctuary/:sessionId" element={<EnhancedSanctuary />} />
+                        <Route path="/flagship/:sessionId?" element={<FlagshipSanctuary />} />
                         <Route path="/phase4-test" element={<Phase4Test />} />
                         <Route path="*" element={<NotFound />} />
               </Routes>

@@ -29,8 +29,8 @@ export interface FlagshipSanctuarySession {
   invitationCode?: string;
   invitationLink?: string;
   
-  // Session State
-  status: 'scheduled' | 'waiting' | 'live' | 'completed' | 'cancelled';
+  // Session State  
+  status: 'pending' | 'active' | 'ended' | 'scheduled' | 'waiting' | 'live' | 'completed' | 'cancelled';
   actualStartTime?: string;
   actualEndTime?: string;
   
@@ -86,7 +86,7 @@ export interface FlagshipParticipant {
   
   // Session Data
   joinedAt: string;
-  connectionStatus: 'connected' | 'reconnecting' | 'disconnected';
+  connectionStatus: 'connected' | 'connecting' | 'disconnected';
   networkQuality: 'excellent' | 'good' | 'fair' | 'poor';
   speakingTime: number;
   messageCount: number;
@@ -224,6 +224,7 @@ export interface JoinFlagshipSanctuaryRequest {
   invitationCode?: string;
   voicePreference?: string;
   acknowledgement?: boolean;
+  acknowledged?: boolean;
 }
 
 export interface UpdateVoiceRequest {
