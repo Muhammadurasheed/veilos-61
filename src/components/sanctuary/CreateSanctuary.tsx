@@ -177,6 +177,8 @@ const CreateSanctuary: React.FC = () => {
           : await FlagshipSanctuaryApi.createSession(flagshipSanctuaryData);
         
         if (response.success && response.data) {
+          console.log('🎯 Flagship Response Data:', response.data);
+          
           // Store host token for anonymous hosts with expiry
           if (response.data.hostToken) {
             const expiryDate = new Date();
@@ -198,16 +200,27 @@ const CreateSanctuary: React.FC = () => {
             });
           }
           
-          setCreatedSession({
-            ...response.data,
-            type: 'flagship-audio'
-          });
-          setShowShareOptions(true);
-          
-          toast({
-            title: "Flagship Audio Sanctuary created!",
-            description: "Your live audio space is ready to share."
-          });
+          // Navigate directly to the session for scheduled sessions
+          if (values.scheduledTime) {
+            toast({
+              title: "Scheduled Audio Sanctuary created!",
+              description: `Your session will start at ${values.scheduledTime.toLocaleString()}.`
+            });
+            
+            // Navigate directly to the session
+            navigate(`/flagship-sanctuary/${response.data.id}${response.data.hostToken ? `?role=host&token=${response.data.hostToken}` : ''}`);
+          } else {
+            setCreatedSession({
+              ...response.data,
+              type: 'flagship-audio'
+            });
+            setShowShareOptions(true);
+            
+            toast({
+              title: "Flagship Audio Sanctuary created!",
+              description: "Your live audio space is ready to share."
+            });
+          }
         } else {
           throw new Error(response.error || "Failed to create flagship sanctuary session");
         }
