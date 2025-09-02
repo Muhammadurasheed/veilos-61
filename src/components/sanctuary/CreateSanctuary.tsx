@@ -159,17 +159,21 @@ const CreateSanctuary: React.FC = () => {
           emoji: values.emoji,
           duration: values.expireHours * 60, // Convert to minutes
           maxParticipants: values.maxParticipants,
-          scheduledTime: values.scheduledTime,
           accessType: 'public' as const,
           voiceModulationEnabled: true,
           aiModerationEnabled: true,
           recordingEnabled: false,
-          allowAnonymous: true
+          allowAnonymous: true,
+          tags: [],
+          category: 'support'
         };
         
         // Use flagship sanctuary API service for proper error handling
         const response = values.scheduledTime 
-          ? await FlagshipSanctuaryApi.scheduleSession(flagshipSanctuaryData)
+          ? await FlagshipSanctuaryApi.scheduleSession({
+              ...flagshipSanctuaryData,
+              scheduledDateTime: values.scheduledTime.toISOString() // Fix field name
+            })
           : await FlagshipSanctuaryApi.createSession(flagshipSanctuaryData);
         
         if (response.success && response.data) {
@@ -456,16 +460,18 @@ const CreateSanctuary: React.FC = () => {
                   <FormItem>
                     <FormLabel>Schedule Time</FormLabel>
                     <FormControl>
-                      <input
+                      <Input
                         type="datetime-local"
-                        value={field.value ? new Date(field.value.getTime() - field.value.getTimezoneOffset() * 60000).toISOString().slice(0, -1) : ''}
+                        value={field.value ? 
+                          new Date(field.value.getTime() - field.value.getTimezoneOffset() * 60000)
+                            .toISOString().slice(0, 16) : ''}
                         onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        min={new Date().toISOString().slice(0, -1)}
+                        min={new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 16)} // 5 minutes from now
+                        className="text-base"
                       />
                     </FormControl>
                     <FormDescription>
-                      Select when this live audio session should start.
+                      Select when this live audio session should start (minimum 5 minutes from now).
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
