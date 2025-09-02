@@ -114,6 +114,15 @@ app.use('/api/live-sanctuary', (req, res, next) => {
   next();
 });
 app.use('/api/live-sanctuary', liveSanctuaryRoutes);
+app.use('/api/flagship-sanctuary', (req, res, next) => {
+  console.log('🎯 Flagship Sanctuary API Debug:', {
+    method: req.method,
+    path: req.path,
+    url: req.url,
+    body: req.method === 'POST' ? req.body : 'N/A'
+  });
+  next();
+});
 app.use('/api/flagship-sanctuary', flagshipSanctuaryRoutes);
 app.use('/api/sanctuary-invitations', sanctuaryInvitationRoutes);
 app.use('/api/sanctuary-chat', sanctuaryChatRoutes);

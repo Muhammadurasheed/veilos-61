@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { SanctuaryApi, LiveSanctuaryApi } from '@/services/api';
+import { FlagshipSanctuaryApi } from '@/services/flagshipSanctuaryApi';
 import { ApiSanctuaryCreateRequest } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -151,7 +152,7 @@ const CreateSanctuary: React.FC = () => {
           throw new Error(response.error || "Failed to create sanctuary session");
         }
         } else {
-        // Handle scheduled live audio session using flagship sanctuary
+        // Handle scheduled/live audio session using flagship sanctuary API
         const flagshipSanctuaryData = {
           topic: values.topic,
           description: values.description,
@@ -159,20 +160,17 @@ const CreateSanctuary: React.FC = () => {
           duration: values.expireHours * 60, // Convert to minutes
           maxParticipants: values.maxParticipants,
           scheduledTime: values.scheduledTime,
-          accessType: 'public',
+          accessType: 'public' as const,
           voiceModulationEnabled: true,
           aiModerationEnabled: true,
           recordingEnabled: false,
           allowAnonymous: true
         };
         
-        const response = await fetch('/api/flagship-sanctuary/create', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(flagshipSanctuaryData)
-        }).then(res => res.json());
+        // Use flagship sanctuary API service for proper error handling
+        const response = values.scheduledTime 
+          ? await FlagshipSanctuaryApi.scheduleSession(flagshipSanctuaryData)
+          : await FlagshipSanctuaryApi.createSession(flagshipSanctuaryData);
         
         if (response.success && response.data) {
           // Store host token for anonymous hosts with expiry

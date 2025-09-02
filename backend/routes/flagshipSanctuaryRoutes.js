@@ -11,6 +11,245 @@ const aiModerationService = require('../services/aiModerationService');
 
 // 🎯 FLAGSHIP ROUTES - Anonymous Live Audio Sanctuary
 
+// ================== INSTANT SESSION CREATION ==================
+
+// Create instant live session (immediate start)
+router.post('/create', authMiddleware, async (req, res) => {
+  try {
+    const {
+      topic,
+      description,
+      emoji = '🎙️',
+      duration = 60, // minutes
+      maxParticipants = 50,
+      allowAnonymous = true,
+      moderationEnabled = true,
+      recordingEnabled = false,
+      voiceModulationEnabled = true,
+      aiModerationEnabled = true,
+      accessType = 'public',
+      tags = [],
+      category = 'support'
+    } = req.body;
+
+    console.log('🎯 Creating instant flagship session:', { 
+      topic, 
+      duration,
+      hostId: req.user.id 
+    });
+
+    // Validate required fields
+    if (!topic || topic.trim().length < 5) {
+      return res.error('Topic must be at least 5 characters', 400);
+    }
+
+    // Generate unique identifiers
+    const sessionId = `flagship-${nanoid(8)}`;
+    const channelName = `flagship_${sessionId}`;
+    
+    // Generate Agora tokens
+    const sessionDurationSeconds = duration * 60;
+    let agoraToken, hostToken;
+    
+    try {
+      agoraToken = generateRtcToken(channelName, 0, 'subscriber', sessionDurationSeconds);
+      hostToken = generateRtcToken(channelName, req.user.id, 'publisher', sessionDurationSeconds);
+    } catch (agoraError) {
+      console.warn('⚠️ Agora token generation failed:', agoraError.message);
+      agoraToken = `temp_token_${nanoid(16)}`;
+      hostToken = `temp_host_token_${nanoid(16)}`;
+    }
+
+    // Create live session
+    const liveSession = new LiveSanctuarySession({
+      id: sessionId,
+      topic: topic.trim(),
+      description: description?.trim(),
+      emoji: emoji || '🎙️',
+      hostId: req.user.id,
+      hostAlias: req.user.alias || `Host_${nanoid(4)}`,
+      hostToken,
+      agoraChannelName: channelName,
+      agoraToken,
+      maxParticipants,
+      allowAnonymous,
+      moderationEnabled,
+      emergencyContactEnabled: true,
+      isRecorded: recordingEnabled,
+      expiresAt: new Date(Date.now() + (sessionDurationSeconds * 1000)),
+      participants: [{
+        id: req.user.id,
+        alias: req.user.alias || `Host_${nanoid(4)}`,
+        isHost: true,
+        isModerator: true,
+        joinedAt: new Date(),
+        avatarIndex: req.user.avatarIndex || 1
+      }],
+      status: 'active',
+      isActive: true,
+      startTime: new Date(),
+      tags,
+      estimatedDuration: duration,
+      language: 'en'
+    });
+
+    await liveSession.save();
+
+    // Cache session data in Redis
+    await redisService.setSessionState(sessionId, {
+      type: 'flagship-live',
+      topic: liveSession.topic,
+      hostId: liveSession.hostId,
+      participants: liveSession.participants,
+      status: 'active',
+      voiceModulationEnabled,
+      aiModerationEnabled
+    }, sessionDurationSeconds);
+
+    console.log('✅ Instant flagship session created:', {
+      sessionId,
+      channelName,
+      duration
+    });
+
+    res.success({
+      session: {
+        id: liveSession.id,
+        topic: liveSession.topic,
+        description: liveSession.description,
+        emoji: liveSession.emoji,
+        hostAlias: liveSession.hostAlias,
+        hostToken: liveSession.hostToken,
+        agoraChannelName: liveSession.agoraChannelName,
+        agoraToken: liveSession.agoraToken,
+        maxParticipants: liveSession.maxParticipants,
+        currentParticipants: liveSession.currentParticipants,
+        participants: liveSession.participants,
+        status: liveSession.status,
+        startTime: liveSession.startTime,
+        expiresAt: liveSession.expiresAt,
+        voiceModulationEnabled,
+        aiModerationEnabled,
+        type: 'flagship-audio'
+      }
+    }, 'Flagship session created successfully');
+
+  } catch (error) {
+    console.error('❌ Flagship session creation error:', error);
+    res.error('Failed to create flagship session: ' + error.message, 500);
+  }
+});
+
+// Get session by ID
+router.get('/:sessionId', optionalAuthMiddleware, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    
+    console.log('🔍 Getting flagship session:', sessionId);
+
+    // Try to get from live sessions first
+    let session = await LiveSanctuarySession.findOne({ id: sessionId });
+    
+    if (!session) {
+      // Try scheduled sessions
+      const scheduledSession = await ScheduledSession.findOne({ 
+        $or: [
+          { id: sessionId },
+          { liveSessionId: sessionId }
+        ]
+      });
+      
+      if (scheduledSession) {
+        if (scheduledSession.liveSessionId) {
+          session = await LiveSanctuarySession.findOne({ id: scheduledSession.liveSessionId });
+        }
+        
+        if (!session) {
+          // Return scheduled session data
+          return res.success({
+            session: {
+              id: scheduledSession.id,
+              topic: scheduledSession.topic,
+              description: scheduledSession.description,
+              emoji: scheduledSession.emoji,
+              hostId: scheduledSession.hostId,
+              hostAlias: scheduledSession.hostAlias,
+              scheduledAt: scheduledSession.scheduledDateTime,
+              duration: scheduledSession.duration,
+              maxParticipants: scheduledSession.maxParticipants,
+              currentParticipants: scheduledSession.preRegisteredParticipants.length,
+              participants: scheduledSession.preRegisteredParticipants,
+              status: scheduledSession.status,
+              accessType: scheduledSession.accessType,
+              invitationCode: scheduledSession.invitationCode,
+              tags: scheduledSession.tags,
+              category: scheduledSession.category,
+              allowAnonymous: scheduledSession.allowAnonymous,
+              moderationEnabled: scheduledSession.moderationEnabled,
+              recordingEnabled: scheduledSession.recordingEnabled,
+              createdAt: scheduledSession.createdAt,
+              expiresAt: scheduledSession.estimatedEndTime
+            }
+          }, 'Scheduled session retrieved');
+        }
+      }
+    }
+
+    if (!session) {
+      return res.error('Session not found', 404);
+    }
+
+    // Check if user has access to this session
+    if (!session.allowAnonymous && !req.user) {
+      return res.error('Authentication required', 401);
+    }
+
+    console.log('✅ Session retrieved:', {
+      sessionId: session.id,
+      participantCount: session.participants.length,
+      status: session.status
+    });
+
+    res.success({
+      session: {
+        id: session.id,
+        topic: session.topic,
+        description: session.description,
+        emoji: session.emoji,
+        hostId: session.hostId,
+        hostAlias: session.hostAlias,
+        hostToken: session.hostToken,
+        agoraChannelName: session.agoraChannelName,
+        agoraToken: session.agoraToken,
+        maxParticipants: session.maxParticipants,
+        currentParticipants: session.currentParticipants,
+        participants: session.participants,
+        allowAnonymous: session.allowAnonymous,
+        moderationEnabled: session.moderationEnabled,
+        emergencyContactEnabled: session.emergencyContactEnabled,
+        isRecorded: session.isRecorded,
+        status: session.status,
+        isActive: session.isActive,
+        startTime: session.startTime,
+        endedAt: session.endedAt,
+        expiresAt: session.expiresAt,
+        scheduledAt: session.scheduledAt,
+        estimatedDuration: session.estimatedDuration,
+        tags: session.tags,
+        language: session.language,
+        audioOnly: session.audioOnly,
+        moderationLevel: session.moderationLevel,
+        emergencyProtocols: session.emergencyProtocols,
+        aiMonitoring: session.aiMonitoring
+      }
+    }, 'Session retrieved successfully');
+
+  } catch (error) {
+    console.error('❌ Get session error:', error);
+    res.error('Failed to retrieve session: ' + error.message, 500);
+  }
+});
+
 // ================== SCHEDULING SYSTEM ==================
 
 // Create scheduled session
