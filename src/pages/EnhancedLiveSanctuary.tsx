@@ -20,8 +20,10 @@ import {
   Clock,
   Loader2,
   HandIcon,
-  MessageSquare
+  MessageSquare,
+  Share2
 } from 'lucide-react';
+import { RealTimeChat } from '@/components/sanctuary/RealTimeChat';
 import { LiveSanctuaryApi } from '@/services/api';
 import { useSanctuarySocket } from '@/hooks/useSanctuarySocket';
 import { cn } from '@/lib/utils';
@@ -450,20 +452,15 @@ const EnhancedLiveSanctuary: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* Chat (placeholder) */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5" />
-                  Chat
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-sm text-muted-foreground text-center py-8">
-                  Chat functionality coming soon
-                </div>
-              </CardContent>
-            </Card>
+            {/* Real-time Chat */}
+            <RealTimeChat
+              sessionId={sessionId || 'demo-session'}
+              participant={user ? {
+                id: user.id || 'anonymous-user',
+                alias: user.alias || 'Anonymous'
+              } : null}
+              className="h-[500px]"
+            />
           </div>
         </div>
       </div>

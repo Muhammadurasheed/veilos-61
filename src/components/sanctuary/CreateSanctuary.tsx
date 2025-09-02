@@ -151,17 +151,28 @@ const CreateSanctuary: React.FC = () => {
           throw new Error(response.error || "Failed to create sanctuary session");
         }
         } else {
-        // Handle scheduled live audio session
-        const liveSanctuaryData = {
+        // Handle scheduled live audio session using flagship sanctuary
+        const flagshipSanctuaryData = {
           topic: values.topic,
           description: values.description,
           emoji: values.emoji,
-          expireHours: values.expireHours,
+          duration: values.expireHours * 60, // Convert to minutes
           maxParticipants: values.maxParticipants,
-          scheduledAt: values.scheduledTime
+          scheduledTime: values.scheduledTime,
+          accessType: 'public',
+          voiceModulationEnabled: true,
+          aiModerationEnabled: true,
+          recordingEnabled: false,
+          allowAnonymous: true
         };
         
-        const response = await LiveSanctuaryApi.createSession(liveSanctuaryData);
+        const response = await fetch('/api/flagship-sanctuary/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(flagshipSanctuaryData)
+        }).then(res => res.json());
         
         if (response.success && response.data) {
           // Store host token for anonymous hosts with expiry
@@ -169,8 +180,8 @@ const CreateSanctuary: React.FC = () => {
             const expiryDate = new Date();
             expiryDate.setHours(expiryDate.getHours() + 48); // 48 hours
             
-            localStorage.setItem(`live-sanctuary-host-${response.data.id}`, response.data.hostToken);
-            localStorage.setItem(`live-sanctuary-host-${response.data.id}-expires`, expiryDate.toISOString());
+            localStorage.setItem(`flagship-sanctuary-host-${response.data.id}`, response.data.hostToken);
+            localStorage.setItem(`flagship-sanctuary-host-${response.data.id}-expires`, expiryDate.toISOString());
             
             // Add to sanctuary management list
             addSanctuaryToList({
@@ -178,7 +189,7 @@ const CreateSanctuary: React.FC = () => {
               topic: response.data.topic,
               description: response.data.description,
               emoji: response.data.emoji,
-              mode: 'live-audio',
+              mode: 'live-audio' as any, // Type assertion for now
               hostToken: response.data.hostToken,
               createdAt: new Date().toISOString(),
               expiresAt: expiryDate.toISOString()
@@ -186,17 +197,17 @@ const CreateSanctuary: React.FC = () => {
           }
           
           setCreatedSession({
-            ...response.data.session,
-            type: 'live-audio'
+            ...response.data,
+            type: 'flagship-audio'
           });
           setShowShareOptions(true);
           
           toast({
-            title: "Live Audio Sanctuary created!",
+            title: "Flagship Audio Sanctuary created!",
             description: "Your live audio space is ready to share."
           });
         } else {
-          throw new Error(response.error || "Failed to create live sanctuary session");
+          throw new Error(response.error || "Failed to create flagship sanctuary session");
         }
       }
     } catch (error: any) {
@@ -212,7 +223,9 @@ const CreateSanctuary: React.FC = () => {
 
   const shareOnTwitter = () => {
     // Different URLs based on sanctuary type
-    const url = createdSession.type === 'live-audio' 
+    const url = createdSession.type === 'flagship-audio' 
+      ? `${window.location.origin}/flagship-sanctuary/${createdSession.id}`
+      : createdSession.type === 'live-audio' 
       ? `${window.location.origin}/sanctuary/live/${createdSession.id}`
       : `${window.location.origin}/sanctuary/submit/${createdSession.id}`;
     const text = `Join me in a safe space to discuss: ${createdSession.topic}`;
@@ -221,7 +234,9 @@ const CreateSanctuary: React.FC = () => {
 
   const shareOnWhatsApp = () => {
     // Different URLs based on sanctuary type  
-    const url = createdSession.type === 'live-audio'
+    const url = createdSession.type === 'flagship-audio'
+      ? `${window.location.origin}/flagship-sanctuary/${createdSession.id}`
+      : createdSession.type === 'live-audio'
       ? `${window.location.origin}/sanctuary/live/${createdSession.id}`
       : `${window.location.origin}/sanctuary/submit/${createdSession.id}`;
     const text = `Join me in a safe sanctuary space to discuss: ${createdSession.topic} ${url}`;
@@ -230,7 +245,9 @@ const CreateSanctuary: React.FC = () => {
 
   const copyToClipboard = () => {
     // Different URLs based on sanctuary type
-    const url = createdSession.type === 'live-audio'
+    const url = createdSession.type === 'flagship-audio'
+      ? `${window.location.origin}/flagship-sanctuary/${createdSession.id}`
+      : createdSession.type === 'live-audio'
       ? `${window.location.origin}/sanctuary/live/${createdSession.id}`
       : `${window.location.origin}/sanctuary/submit/${createdSession.id}`;
     navigator.clipboard.writeText(url);
@@ -268,7 +285,9 @@ const CreateSanctuary: React.FC = () => {
           
             <div className="space-y-3">
               <h4 className="font-medium text-center">
-                {createdSession.type === 'live-audio' 
+                {createdSession.type === 'flagship-audio' 
+                  ? 'Share flagship audio sanctuary:' 
+                  : createdSession.type === 'live-audio' 
                   ? 'Share live audio space:' 
                   : 'Share anonymous submission link:'
                 }
@@ -302,12 +321,14 @@ const CreateSanctuary: React.FC = () => {
               My Sanctuaries
             </Button>
             <Button variant="veilo-primary" onClick={() => {
-              const route = createdSession.type === 'live-audio' 
+              const route = createdSession.type === 'flagship-audio' 
+                ? `/flagship-sanctuary/${createdSession.id}`
+                : createdSession.type === 'live-audio' 
                 ? `/sanctuary/live/${createdSession.id}`
                 : `/sanctuary/inbox/${createdSession.id}`;
               navigate(route);
             }}>
-              {createdSession.type === 'live-audio' ? 'Enter Live Space' : 'View Inbox'}
+              {createdSession.type === 'flagship-audio' ? 'Enter Flagship Space' : createdSession.type === 'live-audio' ? 'Enter Live Space' : 'View Inbox'}
             </Button>
           </div>
         </CardFooter>
@@ -427,6 +448,59 @@ const CreateSanctuary: React.FC = () => {
                 </FormItem>
               )}
             />
+
+            {/* Show scheduled time input for scheduled-audio */}
+            {watchSanctuaryType === 'scheduled-audio' && (
+              <FormField
+                control={form.control}
+                name="scheduledTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Schedule Time</FormLabel>
+                    <FormControl>
+                      <input
+                        type="datetime-local"
+                        value={field.value ? new Date(field.value.getTime() - field.value.getTimezoneOffset() * 60000).toISOString().slice(0, -1) : ''}
+                        onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        min={new Date().toISOString().slice(0, -1)}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Select when this live audio session should start.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Show max participants for scheduled-audio */}
+            {watchSanctuaryType === 'scheduled-audio' && (
+              <FormField
+                control={form.control}
+                name="maxParticipants"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Max Participants: {field.value}</FormLabel>
+                    <FormControl>
+                      <Slider
+                        min={2}
+                        max={50}
+                        step={1}
+                        value={[field.value]}
+                        onValueChange={(values) => field.onChange(values[0])}
+                        className="py-4"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Maximum number of participants allowed in this session.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}

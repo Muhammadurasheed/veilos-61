@@ -20,6 +20,7 @@ import LiveAudioRoom from '@/components/sanctuary/LiveAudioRoom';
 import BreakoutRoomManager from '@/components/sanctuary/BreakoutRoomManager';
 import SessionRecorder from '@/components/sanctuary/SessionRecorder';
 import AIModerationDashboard from '@/components/sanctuary/AIModerationDashboard';
+import { RealTimeChat } from '@/components/sanctuary/RealTimeChat';
 
 // Create a mock function for generating a random avatar color
 const getAvatarColor = (alias: string): string => {
