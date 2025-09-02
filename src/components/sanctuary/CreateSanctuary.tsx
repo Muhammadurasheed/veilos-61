@@ -207,8 +207,9 @@ const CreateSanctuary: React.FC = () => {
               description: `Your session will start at ${values.scheduledTime.toLocaleString()}.`
             });
             
-            // Navigate directly to the session
-            navigate(`/flagship-sanctuary/${response.data.id}${response.data.hostToken ? `?role=host&token=${response.data.hostToken}` : ''}`);
+            // Navigate directly to the session with proper session ID
+            const sessionId = response.data.id;
+            navigate(`/flagship-sanctuary/${sessionId}${response.data.hostToken ? `?role=host&token=${response.data.hostToken}` : ''}`);
           } else {
             setCreatedSession({
               ...response.data,

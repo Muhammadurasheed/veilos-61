@@ -296,38 +296,53 @@ export const useFlagshipSanctuary = (options: UseFlagshipSanctuaryOptions = {}):
     checkLevel();
   }, [isMuted, isSpeaking, session, currentParticipant]);
 
-  // Load available voices
+  // Load available voices - memoized to prevent infinite loops
   const loadVoices = useCallback(async () => {
     if (!options.voiceModulation) return;
     
     try {
       const response = await FlagshipSanctuaryApi.getAvailableVoices();
       if (response.success && response.data) {
-        setAvailableVoices(response.data);
-        if (response.data.length > 0) {
-          setSelectedVoice(response.data[0]);
+        // Handle response format - can be {voices: [...]} or direct array
+        let voicesArray: ElevenLabsVoice[] = [];
+        
+        // Type-safe way to handle different response formats
+        const data = response.data as any;
+        if (Array.isArray(data)) {
+          voicesArray = data;
+        } else if (data && Array.isArray(data.voices)) {
+          voicesArray = data.voices;
+        }
+        
+        setAvailableVoices(voicesArray);
+        if (voicesArray.length > 0) {
+          setSelectedVoice(voicesArray[0]);
         }
       }
     } catch (error) {
       console.error('❌ Failed to load voices:', error);
+      // Set default voices to prevent infinite retries
+      setAvailableVoices([]);
     }
   }, [options.voiceModulation]);
 
-  // Initialize on mount
+  // Initialize on mount - only run once
   useEffect(() => {
     initializeSocket();
     initializeAudio();
-    loadVoices();
+    if (options.voiceModulation) {
+      loadVoices();
+    }
     
     return () => cleanup();
-  }, [initializeSocket, initializeAudio, loadVoices]);
+  }, []); // Empty dependency array to run only once
 
-  // Auto-join if sessionId provided
+  // Auto-join if sessionId provided - prevent infinite loops
   useEffect(() => {
-    if (options.sessionId && options.autoJoin && !session) {
+    if (options.sessionId && options.autoJoin && !session && !isLoading) {
       joinSession(options.sessionId);
     }
-  }, [options.sessionId, options.autoJoin, session]);
+  }, [options.sessionId, options.autoJoin]); // Removed session and isLoading to prevent loops
 
   // Session Management Functions
   const createSession = useCallback(async (data: CreateFlagshipSanctuaryRequest): Promise<FlagshipSanctuarySession | null> => {

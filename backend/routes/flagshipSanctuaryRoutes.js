@@ -250,6 +250,23 @@ router.get('/:sessionId', optionalAuthMiddleware, async (req, res) => {
   }
 });
 
+// ================== VOICE MODULATION ==================
+
+// Get available ElevenLabs voices
+router.get('/voices', async (req, res) => {
+  try {
+    console.log('🎭 Getting available voices');
+    
+    const voices = await elevenLabsService.getAvailableVoices();
+    
+    res.success(voices, 'Available voices retrieved successfully');
+    
+  } catch (error) {
+    console.error('❌ Get voices error:', error);
+    res.error('Failed to retrieve voices: ' + error.message, 500);
+  }
+});
+
 // ================== SCHEDULING SYSTEM ==================
 
 // Create scheduled session
@@ -584,58 +601,6 @@ router.post('/schedule/:sessionId/start', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('❌ Session start error:', error);
     res.error('Failed to start session: ' + error.message, 500);
-  }
-});
-
-// ================== VOICE MODULATION ==================
-
-// Get available voice options
-router.get('/voices', optionalAuthMiddleware, async (req, res) => {
-  try {
-    const voices = elevenLabsService.getAvailableVoices();
-    
-    res.success({
-      voices,
-      serviceStatus: {
-        available: !!process.env.ELEVENLABS_API_KEY,
-        fallbackEnabled: true
-      }
-    }, 'Voice options retrieved');
-
-  } catch (error) {
-    console.error('❌ Voice options error:', error);
-    res.error('Failed to get voice options: ' + error.message, 500);
-  }
-});
-
-// Generate voice preview
-router.post('/voices/:voiceId/preview', optionalAuthMiddleware, async (req, res) => {
-  try {
-    const { voiceId } = req.params;
-    const { text } = req.body;
-    
-    const previewText = text || "Welcome to the anonymous sanctuary. Your voice is now masked for privacy.";
-    
-    const result = await elevenLabsService.processWithFallback(
-      () => elevenLabsService.generateVoicePreview(voiceId, previewText),
-      () => ({ success: false, fallback: true, message: 'Voice preview unavailable' })
-    );
-
-    if (result.success) {
-      res.success({
-        audioPreview: result.audioPreview,
-        voiceId
-      }, 'Voice preview generated');
-    } else {
-      res.success({
-        fallback: true,
-        message: 'Voice modulation service temporarily unavailable'
-      }, 'Voice preview unavailable');
-    }
-
-  } catch (error) {
-    console.error('❌ Voice preview error:', error);
-    res.error('Failed to generate voice preview: ' + error.message, 500);
   }
 });
 
