@@ -200,23 +200,22 @@ const CreateSanctuary: React.FC = () => {
             });
           }
           
-          // Navigate directly to the session for scheduled sessions
+          // Both scheduled and instant sessions show the success screen
+          const sessionId = response.data.id;
+          
+          setCreatedSession({
+            ...response.data,
+            id: sessionId, // Ensure consistent ID field
+            type: values.scheduledTime ? 'scheduled-audio' : 'flagship-audio'
+          });
+          setShowShareOptions(true);
+          
           if (values.scheduledTime) {
             toast({
               title: "Scheduled Audio Sanctuary created!",
               description: `Your session will start at ${values.scheduledTime.toLocaleString()}.`
             });
-            
-            // Navigate directly to the session with proper session ID
-            const sessionId = response.data.id;
-            navigate(`/flagship-sanctuary/${sessionId}${response.data.hostToken ? `?role=host&token=${response.data.hostToken}` : ''}`);
           } else {
-            setCreatedSession({
-              ...response.data,
-              type: 'flagship-audio'
-            });
-            setShowShareOptions(true);
-            
             toast({
               title: "Flagship Audio Sanctuary created!",
               description: "Your live audio space is ready to share."
@@ -239,7 +238,7 @@ const CreateSanctuary: React.FC = () => {
 
   const shareOnTwitter = () => {
     // Different URLs based on sanctuary type
-    const url = createdSession.type === 'flagship-audio' 
+    const url = createdSession.type === 'flagship-audio' || createdSession.type === 'scheduled-audio'
       ? `${window.location.origin}/flagship-sanctuary/${createdSession.id}`
       : createdSession.type === 'live-audio' 
       ? `${window.location.origin}/sanctuary/live/${createdSession.id}`
@@ -261,7 +260,7 @@ const CreateSanctuary: React.FC = () => {
 
   const copyToClipboard = () => {
     // Different URLs based on sanctuary type
-    const url = createdSession.type === 'flagship-audio'
+    const url = createdSession.type === 'flagship-audio' || createdSession.type === 'scheduled-audio'
       ? `${window.location.origin}/flagship-sanctuary/${createdSession.id}`
       : createdSession.type === 'live-audio'
       ? `${window.location.origin}/sanctuary/live/${createdSession.id}`
@@ -301,7 +300,7 @@ const CreateSanctuary: React.FC = () => {
           
             <div className="space-y-3">
               <h4 className="font-medium text-center">
-                {createdSession.type === 'flagship-audio' 
+                {createdSession.type === 'flagship-audio' || createdSession.type === 'scheduled-audio'
                   ? 'Share flagship audio sanctuary:' 
                   : createdSession.type === 'live-audio' 
                   ? 'Share live audio space:' 
@@ -337,14 +336,15 @@ const CreateSanctuary: React.FC = () => {
               My Sanctuaries
             </Button>
             <Button variant="veilo-primary" onClick={() => {
-              const route = createdSession.type === 'flagship-audio' 
-                ? `/flagship-sanctuary/${createdSession.id}`
+              const sessionId = createdSession.id;
+              const route = createdSession.type === 'flagship-audio' || createdSession.type === 'scheduled-audio'
+                ? `/flagship-sanctuary/${sessionId}`
                 : createdSession.type === 'live-audio' 
-                ? `/sanctuary/live/${createdSession.id}`
-                : `/sanctuary/inbox/${createdSession.id}`;
+                ? `/sanctuary/live/${sessionId}`
+                : `/sanctuary/inbox/${sessionId}`;
               navigate(route);
             }}>
-              {createdSession.type === 'flagship-audio' ? 'Enter Flagship Space' : createdSession.type === 'live-audio' ? 'Enter Live Space' : 'View Inbox'}
+              {createdSession.type === 'flagship-audio' || createdSession.type === 'scheduled-audio' ? 'Enter Flagship Space' : createdSession.type === 'live-audio' ? 'Enter Live Space' : 'View Inbox'}
             </Button>
           </div>
         </CardFooter>
