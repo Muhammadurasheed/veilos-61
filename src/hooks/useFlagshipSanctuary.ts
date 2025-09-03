@@ -330,12 +330,17 @@ export const useFlagshipSanctuary = (options: UseFlagshipSanctuaryOptions = {}):
   useEffect(() => {
     initializeSocket();
     initializeAudio();
-    if (options.voiceModulation) {
-      loadVoices();
-    }
+    // Don't load voices on mount to prevent the infinite loop
     
     return () => cleanup();
   }, []); // Empty dependency array to run only once
+
+  // Load voices separately when voice modulation is enabled and we have a session
+  useEffect(() => {
+    if (options.voiceModulation && session?.id) {
+      loadVoices();
+    }
+  }, [options.voiceModulation, session?.id, loadVoices]);
 
   // Auto-join if sessionId provided - prevent infinite loops
   useEffect(() => {

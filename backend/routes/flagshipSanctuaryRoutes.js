@@ -140,6 +140,23 @@ router.post('/create', authMiddleware, async (req, res) => {
   }
 });
 
+// ================== VOICE MODULATION ==================
+
+// Get available ElevenLabs voices
+router.get('/voices', async (req, res) => {
+  try {
+    console.log('🎭 Getting available voices');
+    
+    const voices = await elevenLabsService.getAvailableVoices();
+    
+    res.success(voices, 'Available voices retrieved successfully');
+    
+  } catch (error) {
+    console.error('❌ Get voices error:', error);
+    res.error('Failed to retrieve voices: ' + error.message, 500);
+  }
+});
+
 // Get session by ID
 router.get('/:sessionId', optionalAuthMiddleware, async (req, res) => {
   try {
@@ -247,23 +264,6 @@ router.get('/:sessionId', optionalAuthMiddleware, async (req, res) => {
   } catch (error) {
     console.error('❌ Get session error:', error);
     res.error('Failed to retrieve session: ' + error.message, 500);
-  }
-});
-
-// ================== VOICE MODULATION ==================
-
-// Get available ElevenLabs voices
-router.get('/voices', async (req, res) => {
-  try {
-    console.log('🎭 Getting available voices');
-    
-    const voices = await elevenLabsService.getAvailableVoices();
-    
-    res.success(voices, 'Available voices retrieved successfully');
-    
-  } catch (error) {
-    console.error('❌ Get voices error:', error);
-    res.error('Failed to retrieve voices: ' + error.message, 500);
   }
 });
 
