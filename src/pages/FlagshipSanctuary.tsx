@@ -96,8 +96,14 @@ const FlagshipSanctuary: React.FC = () => {
     );
   }
 
-  // Show waiting room if session is scheduled
-  if (session && (session.status === 'scheduled' || session.status === 'waiting') && hasAcknowledged) {
+  // Check if session is scheduled but not yet started
+  const isWaitingForScheduledStart = session && 
+    session.scheduledDateTime && 
+    new Date(session.scheduledDateTime) > new Date() &&
+    (session.status === 'scheduled' || session.status === 'waiting');
+
+  // Show waiting room for scheduled sessions that haven't started yet
+  if (isWaitingForScheduledStart && hasAcknowledged) {
     return (
       <SessionWaitingRoom
         session={session}

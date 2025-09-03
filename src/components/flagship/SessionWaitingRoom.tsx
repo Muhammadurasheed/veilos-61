@@ -49,10 +49,14 @@ export const SessionWaitingRoom: React.FC<SessionWaitingRoomProps> = ({
       
       if (remainingSeconds <= 0) {
         setTimeRemaining({
-          display: 'Session is starting...',
+          display: 'Session is starting now!',
           seconds: 0,
           progress: 100
         });
+        // Auto-join when countdown reaches zero
+        setTimeout(() => {
+          window.location.reload(); // Refresh to trigger session join
+        }, 2000);
         return;
       }
 
@@ -107,6 +111,8 @@ export const SessionWaitingRoom: React.FC<SessionWaitingRoomProps> = ({
 
   const scheduledTime = session.scheduledDateTime ? new Date(session.scheduledDateTime) : null;
   const isStartingSoon = timeRemaining.seconds > 0 && timeRemaining.seconds <= 300; // 5 minutes
+  const isStartingNow = timeRemaining.seconds <= 0;
+  const showAutoJoinMessage = timeRemaining.seconds <= 10 && timeRemaining.seconds > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5 flex items-center justify-center p-4">
@@ -126,10 +132,13 @@ export const SessionWaitingRoom: React.FC<SessionWaitingRoomProps> = ({
           </div>
 
           <Badge 
-            variant={isStartingSoon ? "default" : "secondary"} 
-            className="px-4 py-2 text-lg"
+            variant={isStartingNow ? "default" : isStartingSoon ? "secondary" : "outline"} 
+            className={`px-4 py-2 text-lg ${
+              isStartingNow ? "bg-green-500 text-white animate-pulse" :
+              isStartingSoon ? "bg-yellow-500 text-white" : ""
+            }`}
           >
-            {isStartingSoon ? "🔔 Starting Soon" : "⏰ Scheduled Session"}
+            {isStartingNow ? "🎉 Starting Now!" : isStartingSoon ? "🔔 Starting Soon" : "⏰ Scheduled Session"}
           </Badge>
         </CardHeader>
 
@@ -139,7 +148,7 @@ export const SessionWaitingRoom: React.FC<SessionWaitingRoomProps> = ({
             <CardContent className="pt-6">
               <div className="text-center space-y-4">
                 <h3 className="text-xl font-semibold">Session starts in</h3>
-                <div className="text-4xl font-bold text-primary">
+                <div className={`text-4xl font-bold ${isStartingNow ? 'text-green-500 animate-bounce' : 'text-primary'}`}>
                   {timeRemaining.display}
                 </div>
                 
@@ -280,8 +289,38 @@ export const SessionWaitingRoom: React.FC<SessionWaitingRoomProps> = ({
             </Card>
           )}
 
+          {/* Auto-join Notice */}
+          {showAutoJoinMessage && (
+            <Card className="border-green-200 bg-green-50/50">
+              <CardContent className="pt-4">
+                <div className="flex items-center space-x-2 text-green-700">
+                  <CheckCircle className="h-5 w-5 animate-pulse" />
+                  <p className="font-medium">Auto-joining in {timeRemaining.seconds} seconds...</p>
+                </div>
+                <p className="text-sm text-green-600 mt-1">
+                  Get ready! The session will start automatically.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Session starting now notice */}
+          {isStartingNow && (
+            <Card className="border-green-200 bg-green-50">
+              <CardContent className="pt-4 text-center">
+                <div className="flex items-center justify-center space-x-2 text-green-700">
+                  <CheckCircle className="h-6 w-6 animate-spin" />
+                  <p className="font-bold text-lg">Session is starting now!</p>
+                </div>
+                <p className="text-sm text-green-600 mt-2">
+                  Refreshing page to join the live session...
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Reminder Settings */}
-          {isStartingSoon && (
+          {isStartingSoon && !showAutoJoinMessage && (
             <Card className="border-yellow-200 bg-yellow-50/50">
               <CardContent className="pt-4">
                 <div className="flex items-center space-x-2 text-yellow-700">
@@ -297,8 +336,8 @@ export const SessionWaitingRoom: React.FC<SessionWaitingRoomProps> = ({
 
           {/* Actions */}
           <div className="flex space-x-4">
-            <Button onClick={onLeave} variant="outline" size="lg" className="flex-1">
-              Leave Waiting Room
+            <Button onClick={onLeave} variant="outline" size="lg" className="flex-1" disabled={showAutoJoinMessage}>
+              {showAutoJoinMessage ? `Auto-joining in ${timeRemaining.seconds}s...` : 'Leave Waiting Room'}
             </Button>
           </div>
         </CardContent>

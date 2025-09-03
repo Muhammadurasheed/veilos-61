@@ -408,6 +408,35 @@ export const useFlagshipSanctuary = (options: UseFlagshipSanctuaryOptions = {}):
     setError(null);
     
     try {
+      const sessionResponse = await FlagshipSanctuaryApi.getSession(sessionId);
+      if (!sessionResponse.success || !sessionResponse.data) {
+        throw new Error('Session not found');
+      }
+      
+      setSession(sessionResponse.data);
+      const joinResponse = await FlagshipSanctuaryApi.joinSession(sessionId, data || {});
+      if (!joinResponse.success || !joinResponse.data) {
+        throw new Error(joinResponse.error || 'Failed to join session');
+      }
+      
+      setCurrentParticipant(joinResponse.data);
+      await initializeAudio();
+      connectSocket();
+      
+      return true;
+    } catch (error: any) {
+      setError(error.message || 'Failed to join session');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast, initializeAudio, connectSocket]);
+
+  const joinSession = useCallback(async (sessionId: string, data?: JoinFlagshipSanctuaryRequest): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
       // First get the session details
       const sessionResponse = await FlagshipSanctuaryApi.getSession(sessionId);
       if (!sessionResponse.success || !sessionResponse.data) {
