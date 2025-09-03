@@ -350,6 +350,29 @@ export const useFlagshipSanctuary = (options: UseFlagshipSanctuaryOptions = {}):
   }, [options.sessionId, options.autoJoin]); // Removed session and isLoading to prevent loops
 
   // Session Management Functions
+  const loadSessionData = useCallback(async (sessionId: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const sessionResponse = await FlagshipSanctuaryApi.getSession(sessionId);
+      if (!sessionResponse.success || !sessionResponse.data) {
+        throw new Error('Session not found');
+      }
+      
+      setSession(sessionResponse.data);
+      console.log('📋 Session data loaded successfully:', sessionResponse.data.status);
+      return true;
+    } catch (error: any) {
+      const errorMsg = error.message || 'Failed to load session';
+      setError(errorMsg);
+      console.error('❌ Failed to load session:', errorMsg);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const createSession = useCallback(async (data: CreateFlagshipSanctuaryRequest): Promise<FlagshipSanctuarySession | null> => {
     setIsLoading(true);
     setError(null);
