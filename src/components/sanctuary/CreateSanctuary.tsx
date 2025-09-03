@@ -201,10 +201,12 @@ const CreateSanctuary: React.FC = () => {
           }
           
           // Both scheduled and instant sessions show the success screen
-          const sessionId = response.data.id;
+          // Backend returns session data under 'session' key for scheduled sessions
+          const sessionData = (response.data as any).session || response.data;
+          const sessionId = sessionData.id;
           
           setCreatedSession({
-            ...response.data,
+            ...sessionData,
             id: sessionId, // Ensure consistent ID field
             type: values.scheduledTime ? 'scheduled-audio' : 'flagship-audio'
           });
