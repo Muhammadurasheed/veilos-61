@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { 
   Heart, Shield, Users, MessageCircle, Calendar, TrendingUp,
-  Plus, ArrowRight, Clock, Star, Zap, Award
+  Plus, ArrowRight, Clock, Star, Zap, Award, Mic
 } from 'lucide-react';
 import { useAuth } from '@/contexts/optimized/AuthContextRefactored';
 import { Link } from 'react-router-dom';
@@ -42,6 +42,13 @@ const Dashboard = () => {
       icon: <Shield className="h-6 w-6" />,
       action: '/sanctuary',
       color: 'from-blue-500 to-blue-600'
+    },
+    { 
+      title: 'Live Audio Space', 
+      description: 'Host voice-only live sessions',
+      icon: <Mic className="h-6 w-6" />,
+      action: '/flagship-sanctuary',
+      color: 'from-green-500 to-green-600'
     },
     { 
       title: 'Find Expert', 

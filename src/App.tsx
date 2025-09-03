@@ -158,6 +158,7 @@ const App: React.FC = () => {
           </ProtectedRoute>
         } />
                         <Route path="/sanctuary/:sessionId" element={<EnhancedSanctuary />} />
+                        <Route path="/flagship-sanctuary" element={<FlagshipSanctuaryCreate />} />
                         <Route path="/flagship-sanctuary/:sessionId" element={<FlagshipSanctuary />} />
                         <Route path="/phase4-test" element={<Phase4Test />} />
                         <Route path="*" element={<NotFound />} />

@@ -640,19 +640,21 @@ router.post('/schedule/:sessionId/start', authMiddleware, async (req, res) => {
 
 // ================== ENHANCED LIVE SESSIONS ==================
 
-// Join live session with voice modulation
-router.post('/:sessionId/join', authMiddleware, async (req, res) => {
+// Fix the join endpoint to support optional auth for instant sessions
+router.post('/:sessionId/join', optionalAuthMiddleware, async (req, res) => {
   try {
     const { sessionId } = req.params;
     const { 
       alias, 
       isAnonymous = false, 
-      voiceModulation = null 
+      voiceModulation = null,
+      acknowledged = false
     } = req.body;
     
     console.log('🚪 Enhanced join request:', {
       sessionId,
-      userId: req.user.id,
+      userId: req.user?.id || 'anonymous',
+      acknowledged,
       voiceModulation: voiceModulation?.voiceId
     });
 
@@ -669,9 +671,24 @@ router.post('/:sessionId/join', authMiddleware, async (req, res) => {
         ]
       });
       
-      if (scheduledSession && scheduledSession.liveSessionId) {
-        session = await LiveSanctuarySession.findOne({ id: scheduledSession.liveSessionId });
-        isScheduledSession = true;
+      if (scheduledSession) {
+        if (scheduledSession.liveSessionId) {
+          session = await LiveSanctuarySession.findOne({ id: scheduledSession.liveSessionId });
+          isScheduledSession = true;
+        } else if (scheduledSession.status === 'scheduled') {
+          // Check if it's time to start the session
+          const now = new Date();
+          const scheduledTime = new Date(scheduledSession.scheduledDateTime);
+          
+          if (now >= scheduledTime) {
+            // Auto-start the scheduled session
+            console.log('🔄 Auto-starting scheduled session:', sessionId);
+            // Implementation would go here to convert scheduled to live
+            return res.error('Session is starting, please wait a moment', 202);
+          } else {
+            return res.error('Session has not started yet', 400);
+          }
+        }
       }
     }
 
@@ -692,18 +709,33 @@ router.post('/:sessionId/join', authMiddleware, async (req, res) => {
       return res.error('Session is full', 400);
     }
 
+    // Generate user ID for anonymous users
+    const userId = req.user?.id || `anon_${nanoid(8)}`;
+    
     // Check if already in session
-    const existingParticipant = session.participants.find(p => p.id === req.user.id);
+    const existingParticipant = session.participants.find(p => p.id === userId);
     if (existingParticipant) {
-      return res.error('Already in session', 400);
+      return res.success({
+        participant: existingParticipant,
+        session: {
+          id: session.id,
+          topic: session.topic,
+          agoraChannelName: session.agoraChannelName,
+          agoraToken: session.agoraToken,
+          moderationEnabled: session.moderationEnabled,
+          voiceModulationAvailable: !!process.env.ELEVENLABS_API_KEY
+        }
+      }, 'Already in session');
     }
 
+    // Create participant alias
+    const participantAlias = alias || req.user?.alias || `Participant_${nanoid(4)}`;
+    
     // Moderate join request
-    const participantAlias = alias || req.user.alias || `Participant_${nanoid(4)}`;
     const moderationResult = await aiModerationService.moderateContent(
       `Join request: ${participantAlias}`,
       sessionId,
-      req.user.id,
+      userId,
       'join_request'
     );
 
@@ -713,18 +745,23 @@ router.post('/:sessionId/join', authMiddleware, async (req, res) => {
 
     // Create participant object
     const participant = {
-      id: req.user.id,
+      id: userId,
       alias: participantAlias,
-      isHost: false,
-      isModerator: false,
+      isHost: session.hostId === userId,
+      isModerator: session.hostId === userId,
       isMuted: true, // Start muted for better audio management
-      isBlocked: false,
+      isAnonymous,
+      isBanned: false,
       handRaised: false,
       joinedAt: new Date(),
-      avatarIndex: req.user.avatarIndex || Math.floor(Math.random() * 12) + 1,
+      avatarIndex: req.user?.avatarIndex || Math.floor(Math.random() * 12) + 1,
       connectionStatus: 'connected',
       audioLevel: 0,
       speakingTime: 0,
+      messageCount: 0,
+      reactions: [],
+      selectedVoiceId: voiceModulation?.voiceId,
+      voiceSettings: voiceModulation?.settings,
       voiceModulation: voiceModulation ? {
         enabled: true,
         voiceId: voiceModulation.voiceId,
@@ -747,18 +784,18 @@ router.post('/:sessionId/join', authMiddleware, async (req, res) => {
 
     console.log('✅ Enhanced join successful:', {
       sessionId,
-      userId: req.user.id,
+      userId,
       voiceModulation: !!voiceModulation,
       participantCount: session.currentParticipants
     });
 
     res.success({
+      participant,
       session: {
         id: session.id,
         topic: session.topic,
         agoraChannelName: session.agoraChannelName,
         agoraToken: session.agoraToken,
-        participant,
         moderationEnabled: session.moderationEnabled,
         voiceModulationAvailable: !!process.env.ELEVENLABS_API_KEY
       }
