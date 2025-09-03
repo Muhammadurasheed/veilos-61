@@ -182,7 +182,8 @@ router.get('/:sessionId', optionalAuthMiddleware, async (req, res) => {
         }
         
         if (!session) {
-          // Return scheduled session data
+          // Return scheduled session data with full session structure
+          console.log('📋 Returning scheduled session data for:', sessionId);
           return res.success({
             session: {
               id: scheduledSession.id,
@@ -191,21 +192,54 @@ router.get('/:sessionId', optionalAuthMiddleware, async (req, res) => {
               emoji: scheduledSession.emoji,
               hostId: scheduledSession.hostId,
               hostAlias: scheduledSession.hostAlias,
-              scheduledAt: scheduledSession.scheduledDateTime,
-              duration: scheduledSession.duration,
+              hostToken: null, // No token until live
+              agoraChannelName: scheduledSession.agoraChannelName,
+              agoraToken: null, // Generated when going live
               maxParticipants: scheduledSession.maxParticipants,
               currentParticipants: scheduledSession.preRegisteredParticipants.length,
-              participants: scheduledSession.preRegisteredParticipants,
-              status: scheduledSession.status,
-              accessType: scheduledSession.accessType,
-              invitationCode: scheduledSession.invitationCode,
-              tags: scheduledSession.tags,
-              category: scheduledSession.category,
+              participantCount: scheduledSession.preRegisteredParticipants.length,
+              participants: scheduledSession.preRegisteredParticipants.map(p => ({
+                id: p.id,
+                alias: p.alias,
+                avatarIndex: 1,
+                joinedAt: p.registeredAt,
+                isHost: p.id === scheduledSession.hostId,
+                isMuted: false,
+                isModerator: false,
+                isBanned: false,
+                audioLevel: 0,
+                connectionStatus: 'disconnected',
+                handRaised: false,
+                speakingTime: 0,
+                reactions: []
+              })),
               allowAnonymous: scheduledSession.allowAnonymous,
               moderationEnabled: scheduledSession.moderationEnabled,
+              emergencyContactEnabled: scheduledSession.emergencyContactEnabled,
+              isRecorded: scheduledSession.recordingEnabled,
               recordingEnabled: scheduledSession.recordingEnabled,
+              status: scheduledSession.status,
+              isActive: false,
+              startTime: null,
+              actualStartTime: scheduledSession.actualStartTime,
+              endedAt: scheduledSession.actualEndTime,
+              expiresAt: scheduledSession.estimatedEndTime,
+              scheduledAt: scheduledSession.scheduledDateTime,
+              scheduledDateTime: scheduledSession.scheduledDateTime,
+              estimatedDuration: scheduledSession.duration,
+              duration: scheduledSession.duration,
+              tags: scheduledSession.tags || [],
+              language: scheduledSession.language || 'en',
+              audioOnly: scheduledSession.audioOnly,
+              moderationLevel: 'standard',
+              emergencyProtocols: [],
+              aiMonitoring: scheduledSession.moderationEnabled,
+              aiModerationEnabled: scheduledSession.moderationEnabled,
+              accessType: scheduledSession.accessType,
+              invitationCode: scheduledSession.invitationCode,
+              category: scheduledSession.category,
               createdAt: scheduledSession.createdAt,
-              expiresAt: scheduledSession.estimatedEndTime
+              updatedAt: scheduledSession.updatedAt
             }
           }, 'Scheduled session retrieved');
         }

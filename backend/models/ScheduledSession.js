@@ -131,7 +131,10 @@ const scheduledSessionSchema = new mongoose.Schema({
   // Agora configuration
   agoraChannelName: {
     type: String,
-    unique: true
+    unique: true,
+    default: function() {
+      return `sanctuary_${this.id}`;
+    }
   },
   agoraToken: {
     type: String
