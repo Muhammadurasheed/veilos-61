@@ -234,7 +234,7 @@ router.get('/:sessionId', optionalAuthMiddleware, async (req, res) => {
               moderationLevel: 'standard',
               emergencyProtocols: [],
               aiMonitoring: scheduledSession.moderationEnabled,
-              aiModerationEnabled: scheduledSession.moderationEnabled,
+              moderationEnabled: scheduledSession.moderationEnabled,
               accessType: scheduledSession.accessType,
               invitationCode: scheduledSession.invitationCode,
               category: scheduledSession.category,

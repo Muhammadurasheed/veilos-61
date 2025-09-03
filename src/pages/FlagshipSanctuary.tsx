@@ -202,7 +202,7 @@ const FlagshipSanctuary: React.FC = () => {
             expiresAt: session.expiresAt,
             allowAnonymous: session.allowAnonymous,
             recordingConsent: session.recordingEnabled,
-            aiMonitoring: session.aiModerationEnabled,
+            aiMonitoring: session.moderationEnabled,
             moderationLevel: session.moderationLevel,
             emergencyProtocols: session.emergencyProtocols && session.emergencyProtocols.length > 0,
             isRecorded: session.recordingEnabled,

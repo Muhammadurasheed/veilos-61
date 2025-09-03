@@ -403,9 +403,6 @@ export const useFlagshipSanctuary = (options: UseFlagshipSanctuaryOptions = {}):
     }
   }, [toast]);
 
-  // removed duplicate joinSession
-
-
   const joinSession = useCallback(async (sessionId: string, data?: JoinFlagshipSanctuaryRequest): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
