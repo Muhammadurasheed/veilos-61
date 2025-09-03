@@ -53,9 +53,10 @@ export const SessionWaitingRoom: React.FC<SessionWaitingRoomProps> = ({
           seconds: 0,
           progress: 100
         });
-        // Auto-join when countdown reaches zero
+        // Auto-refresh the page to check session status
         setTimeout(() => {
-          window.location.reload(); // Refresh to trigger session join
+          console.log('🔄 Session should be starting, refreshing...');
+          window.location.href = window.location.href.replace(/[?&]acknowledged=true/, '') + '?acknowledged=true';
         }, 2000);
         return;
       }

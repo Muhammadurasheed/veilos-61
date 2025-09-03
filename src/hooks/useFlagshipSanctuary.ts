@@ -342,12 +342,7 @@ export const useFlagshipSanctuary = (options: UseFlagshipSanctuaryOptions = {}):
     }
   }, [options.voiceModulation, session?.id, loadVoices]);
 
-  // Auto-join if sessionId provided - prevent infinite loops
-  useEffect(() => {
-    if (options.sessionId && options.autoJoin && !session && !isLoading) {
-      joinSession(options.sessionId);
-    }
-  }, [options.sessionId, options.autoJoin]); // Removed session and isLoading to prevent loops
+  // This will be moved after function declarations
 
   // Session Management Functions
   const loadSessionData = useCallback(async (sessionId: string): Promise<boolean> => {

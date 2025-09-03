@@ -26,7 +26,7 @@ const FlagshipSanctuary: React.FC = () => {
     joinSession
   } = useFlagshipSanctuary({
     sessionId,
-    autoJoin: false, // Don't auto-join, show acknowledgment first
+    autoJoin: false, // Load session data but don't auto-join
     voiceModulation: true,
     moderationEnabled: true
   });
@@ -70,17 +70,7 @@ const FlagshipSanctuary: React.FC = () => {
     );
   }
 
-  // Show acknowledgment screen for new participants
-  if (showAcknowledgment && session) {
-    return (
-      <SessionAcknowledgment
-        session={session}
-        onJoin={handleAcknowledgmentJoin}
-        onDecline={handleAcknowledgmentDecline}
-        isLoading={isLoading}
-      />
-    );
-  }
+  // This logic is now handled in the waiting room section below
 
   // Loading state
   if (isLoading) {
@@ -102,6 +92,9 @@ const FlagshipSanctuary: React.FC = () => {
     new Date(session.scheduledDateTime) > new Date() &&
     (session.status === 'scheduled' || session.status === 'waiting');
 
+  // Check if this is an instant session (no scheduled time)
+  const isInstantSession = session && !session.scheduledDateTime;
+
   // Show waiting room for scheduled sessions that haven't started yet
   if (isWaitingForScheduledStart && hasAcknowledged) {
     return (
@@ -110,6 +103,20 @@ const FlagshipSanctuary: React.FC = () => {
         onLeave={leaveSession}
       />
     );
+  }
+
+  // For instant sessions or live scheduled sessions, show acknowledgment if needed
+  if (session && !hasAcknowledged && !currentParticipant && (isInstantSession || session.status === 'live' || session.status === 'active')) {
+    if (showAcknowledgment) {
+      return (
+        <SessionAcknowledgment
+          session={session}
+          onJoin={handleAcknowledgmentJoin}
+          onDecline={handleAcknowledgmentDecline}
+          isLoading={isLoading}
+        />
+      );
+    }
   }
 
   // Error state
