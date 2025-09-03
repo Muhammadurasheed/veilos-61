@@ -37,6 +37,7 @@ import EnhancedLiveSanctuary from '@/pages/EnhancedLiveSanctuary';
 import Phase4Test from '@/pages/Phase4Test';
 import FollowedExperts from '@/pages/FollowedExperts';
 import FlagshipSanctuary from '@/pages/FlagshipSanctuary';
+import FlagshipSanctuaryCreate from '@/pages/FlagshipSanctuaryCreate';
 import { SessionProvider } from '@/contexts/SessionContext';
 import { ProtectedRoute } from '@/components/routing/ProtectedRoute';
 

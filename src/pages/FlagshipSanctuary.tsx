@@ -59,6 +59,15 @@ const FlagshipSanctuary: React.FC = () => {
     window.history.back();
   };
 
+  // Auto-join when acknowledged via query or when countdown completes
+  React.useEffect(() => {
+    if (!sessionId || !session || currentParticipant) return;
+    const acknowledged = hasAcknowledged || searchParams.get('acknowledged') === 'true';
+    if (acknowledged && (session.status === 'live' || session.status === 'active' || (session.scheduledDateTime && new Date(session.scheduledDateTime) <= new Date()))) {
+      joinSession(sessionId, { acknowledged: true });
+    }
+  }, [sessionId, session, currentParticipant, hasAcknowledged, searchParams, joinSession]);
+
   // Show creator if no session ID
   if (!sessionId || showCreator) {
     return (
@@ -96,7 +105,7 @@ const FlagshipSanctuary: React.FC = () => {
   const isInstantSession = session && !session.scheduledDateTime;
 
   // Show waiting room for scheduled sessions that haven't started yet
-  if (isWaitingForScheduledStart && hasAcknowledged) {
+  if (isWaitingForScheduledStart) {
     return (
       <SessionWaitingRoom
         session={session}
