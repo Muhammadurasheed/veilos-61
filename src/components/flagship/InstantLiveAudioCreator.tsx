@@ -55,7 +55,7 @@ const InstantLiveAudioCreator: React.FC = () => {
         duration: data.duration,
         accessType: 'public',
         voiceModulationEnabled: true,
-        aiModerationEnabled: true,
+        moderationEnabled: true,
         recordingEnabled: false,
         allowAnonymous: true,
         tags: [],

@@ -18,11 +18,19 @@ import type {
 export const FlagshipSanctuaryApi = {
   // Session Management
   async createSession(data: CreateFlagshipSanctuaryRequest): Promise<FlagshipApiResponse<FlagshipSanctuarySession>> {
-    return apiRequest('POST', '/api/flagship-sanctuary/create', data);
+    const res = await apiRequest('POST', '/api/flagship-sanctuary/create', data);
+    if (res.success && (res.data as any)?.session) {
+      return { ...res, data: (res.data as any).session } as any;
+    }
+    return res;
   },
 
   async getSession(sessionId: string): Promise<FlagshipApiResponse<FlagshipSanctuarySession>> {
-    return apiRequest('GET', `/api/flagship-sanctuary/${sessionId}`);
+    const res = await apiRequest('GET', `/api/flagship-sanctuary/${sessionId}`);
+    if (res.success && (res.data as any)?.session) {
+      return { ...res, data: (res.data as any).session } as any;
+    }
+    return res;
   },
 
   async updateSession(sessionId: string, updates: Partial<FlagshipSanctuarySession>): Promise<FlagshipApiResponse<FlagshipSanctuarySession>> {
@@ -52,7 +60,11 @@ export const FlagshipSanctuaryApi = {
 
   // Scheduling
   async scheduleSession(data: CreateFlagshipSanctuaryRequest): Promise<FlagshipApiResponse<FlagshipSanctuarySession>> {
-    return apiRequest('POST', '/api/flagship-sanctuary/schedule', data);
+    const res = await apiRequest('POST', '/api/flagship-sanctuary/schedule', data);
+    if (res.success && (res.data as any)?.session) {
+      return { ...res, data: (res.data as any).session } as any;
+    }
+    return res;
   },
 
   async getScheduledSessions(params?: {

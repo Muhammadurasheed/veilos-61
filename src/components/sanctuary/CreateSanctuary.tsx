@@ -161,7 +161,7 @@ const CreateSanctuary: React.FC = () => {
           maxParticipants: values.maxParticipants,
           accessType: 'public' as const,
           voiceModulationEnabled: true,
-          aiModerationEnabled: true,
+          moderationEnabled: true,
           recordingEnabled: false,
           allowAnonymous: true,
           tags: [],
