@@ -398,6 +398,14 @@ export const useFlagshipSanctuary = (options: UseFlagshipSanctuaryOptions = {}):
     }
   }, [toast]);
 
+  // Load session data when sessionId is provided
+  useEffect(() => {
+    if (options.sessionId && !session && !isLoading) {
+      console.log('🔄 Loading session data for:', options.sessionId);
+      loadSessionData(options.sessionId);
+    }
+  }, [options.sessionId, session, isLoading, loadSessionData]);
+
   const joinSession = useCallback(async (sessionId: string, data?: JoinFlagshipSanctuaryRequest): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
