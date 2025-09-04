@@ -76,16 +76,20 @@ const FlagshipSanctuary: React.FC = () => {
           const { FlagshipSessionManager } = await import('@/services/flagshipSessionManager');
           const result = await FlagshipSessionManager.joinSessionSmart(sessionId, { acknowledged: true });
           
-          if (result.success && result.needsRedirect && result.redirectUrl) {
-            // Redirect to the new live session
-            window.location.href = result.redirectUrl;
-          } else if (!result.success) {
+          if (result.success) {
+            if (result.needsRedirect && result.redirectUrl) {
+              // Redirect to the new live session
+              console.log('🔄 Redirecting to live session:', result.redirectUrl);
+              window.location.href = result.redirectUrl;
+              return;
+            }
+            // Otherwise continue with regular join flow
+          } else {
             console.error('Smart join failed:', result.error);
+            // Show error to user but don't fallback to avoid loops
           }
         } catch (error) {
           console.error('Failed to load session manager:', error);
-          // Fallback to regular join
-          joinSession(sessionId, { acknowledged: true });
         }
       };
       

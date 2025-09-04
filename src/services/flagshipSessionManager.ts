@@ -86,31 +86,29 @@ export class FlagshipSessionManager {
           joinResponse.message === 'Session conversion required' ||
           (joinResponse as any).data?.needsConversion) {
         
-        console.log('🔄 Converting scheduled session to live:', sessionId);
+        console.log('🔄 Session conversion detected for:', sessionId);
         
-        // Convert the session
+        // If we have conversion data with liveSessionId, redirect immediately
+        const conversionData = (joinResponse as any).data;
+        if (conversionData?.liveSessionId && conversionData?.redirectTo) {
+          console.log('✅ Using existing live session:', conversionData.liveSessionId);
+          return {
+            success: true,
+            needsRedirect: true,
+            redirectUrl: conversionData.redirectTo
+          };
+        }
+        
+        // Otherwise convert the session
         const conversionResult = await this.convertScheduledSession(sessionId);
         
         if (conversionResult.success && conversionResult.liveSessionId) {
-          // Now try to join the live session
-          const liveJoinResponse = await FlagshipSanctuaryApi.joinSession(
-            conversionResult.liveSessionId, 
-            joinData
-          );
-          
-          if (liveJoinResponse.success) {
-            return {
-              success: true,
-              data: liveJoinResponse.data,
-              needsRedirect: true,
-              redirectUrl: `/flagship-sanctuary/${conversionResult.liveSessionId}`
-            };
-          } else {
-            return {
-              success: false,
-              error: 'Failed to join converted session: ' + liveJoinResponse.error
-            };
-          }
+          console.log('✅ Session converted, redirecting to:', conversionResult.liveSessionId);
+          return {
+            success: true,
+            needsRedirect: true,
+            redirectUrl: `/flagship-sanctuary/${conversionResult.liveSessionId}`
+          };
         } else {
           return {
             success: false,
