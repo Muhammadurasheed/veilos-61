@@ -16,6 +16,7 @@ const FlagshipSanctuary: React.FC = () => {
   const [showCreator, setShowCreator] = React.useState(!sessionId);
   const [showAcknowledgment, setShowAcknowledgment] = React.useState(false);
   const [hasAcknowledged, setHasAcknowledged] = React.useState(false);
+  const smartJoinTriggeredRef = React.useRef(false);
   
   const {
     session,
@@ -65,12 +66,14 @@ const FlagshipSanctuary: React.FC = () => {
   // Auto-join when acknowledged via query or when countdown completes
   React.useEffect(() => {
     if (!sessionId || !session || currentParticipant) return;
+    if (smartJoinTriggeredRef.current) return;
     
     const acknowledged = hasAcknowledged || searchParams.get('acknowledged') === 'true';
     const timeReached = session.scheduledDateTime && new Date(session.scheduledDateTime) <= new Date();
     const sessionLive = session.status === 'live' || session.status === 'active';
     
     if (acknowledged && (sessionLive || timeReached) && joinStatus === 'idle') {
+      smartJoinTriggeredRef.current = true;
       // Use smart join to handle conversion if needed
       const handleSmartJoin = async () => {
         try {
@@ -79,20 +82,16 @@ const FlagshipSanctuary: React.FC = () => {
           
           if (result.success) {
             if (result.needsRedirect && result.redirectUrl) {
-              // Redirect to the new live session immediately
               window.location.replace(result.redirectUrl);
               return;
             }
-            // Successfully joined current session
             console.log('✅ Successfully joined session');
           } else {
             console.error('Smart join failed:', result.error);
-            // Try fallback direct join
             await joinSession(sessionId, { acknowledged: true });
           }
         } catch (error) {
           console.error('Failed to load session manager:', error);
-          // Fallback to regular join
           await joinSession(sessionId, { acknowledged: true });
         }
       };
