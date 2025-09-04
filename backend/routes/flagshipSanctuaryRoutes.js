@@ -717,12 +717,57 @@ router.post('/:sessionId/join', optionalAuthMiddleware, async (req, res) => {
           const scheduledTime = new Date(scheduledSession.scheduledDateTime);
           
           if (now >= scheduledTime) {
-            // Auto-start the scheduled session (only if not already started)
-            console.log('🔄 Auto-starting scheduled session:', sessionId);
-            
-            // Create live session from scheduled session
-            const liveSessionData = {
-              id: `flagship-${nanoid(8)}`,
+            // Return error indicating session should be converted
+            return res.status(400).json({
+              success: false,
+              message: 'Session conversion required',
+              data: {
+                needsConversion: true,
+                scheduledSessionId: sessionId
+              }
+            });
+          } else {
+            return res.status(400).json({
+              success: false,
+              message: 'Session has not started yet',
+              data: {
+                scheduledTime: scheduledSession.scheduledDateTime,
+                timeRemaining: Math.ceil((scheduledTime - now) / 1000)
+              }
+            });
+          }
+        }
+      }
+    }
+
+    // Handle session start/conversion endpoint
+    if (req.path.endsWith('/start') && req.method === 'POST') {
+      try {
+        // Get the scheduled session
+        const scheduledSession = await redisService.getSessionState(sessionId);
+        if (!scheduledSession) {
+          return res.status(404).json({
+            success: false,
+            message: 'Scheduled session not found'
+          });
+        }
+
+        // Check if already converted
+        if (scheduledSession.liveSessionId) {
+          return res.status(200).json({
+            success: true,
+            message: 'Session already converted',
+            data: {
+              liveSessionId: scheduledSession.liveSessionId,
+              redirectTo: `/flagship-sanctuary/${scheduledSession.liveSessionId}`,
+              agoraToken: null // Will be generated on join
+            }
+          });
+        }
+
+        // Create live session from scheduled session
+        const liveSessionData = {
+          id: `flagship-${nanoid(8)}`,
               topic: scheduledSession.topic,
               description: scheduledSession.description,
               emoji: scheduledSession.emoji,
@@ -1211,6 +1256,129 @@ router.get('/user/sessions', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('❌ Get user sessions error:', error);
     res.error('Failed to retrieve user sessions: ' + error.message, 500);
+  }
+});
+
+// Add session start/conversion endpoint
+router.post('/:sessionId/start', authMiddleware, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    
+    // Get the scheduled session
+    let session = await redisService.getSessionState(sessionId);
+    if (!session) {
+      // Try MongoDB as fallback
+      const dbSession = await ScheduledSession.findOne({ id: sessionId });
+      if (dbSession) {
+        session = dbSession.toObject();
+        session.id = dbSession.id;
+      }
+    }
+    
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message: 'Scheduled session not found'
+      });
+    }
+    
+    // Check if already converted
+    if (session.liveSessionId) {
+      return res.status(200).json({
+        success: true,
+        message: 'Session already converted',
+        data: {
+          liveSessionId: session.liveSessionId,
+          redirectTo: `/flagship-sanctuary/${session.liveSessionId}`,
+          agoraToken: null // Will be generated on join
+        }
+      });
+    }
+
+    const now = new Date();
+    
+    // Create live session from scheduled session
+    const liveSessionData = {
+      id: `flagship-${nanoid(8)}`,
+      topic: session.topic,
+      description: session.description,
+      emoji: session.emoji,
+      hostId: session.hostId,
+      hostAlias: session.hostAlias,
+      hostAvatarIndex: session.hostAvatarIndex || 1,
+      accessType: session.accessType,
+      maxParticipants: session.maxParticipants,
+      allowAnonymous: session.allowAnonymous,
+      moderationEnabled: session.moderationEnabled,
+      recordingEnabled: session.recordingEnabled,
+      voiceModulationEnabled: session.voiceModulationEnabled,
+      tags: session.tags,
+      category: session.category,
+      language: session.language || 'en',
+      duration: session.duration,
+      participants: [],
+      participantCount: 0,
+      status: 'active',
+      actualStartTime: now,
+      createdAt: now,
+      expiresAt: new Date(now.getTime() + (session.duration * 60 * 1000)),
+      
+      // Audio/Agora settings
+      agoraChannelName: `flagship_${nanoid(12)}`,
+      agoraToken: '', // Will be generated when needed
+      hostToken: '', // Will be generated when needed
+      audioOnly: true,
+      
+      // Features
+      emergencyProtocols: session.emergencyProtocols || [],
+      emergencyContactEnabled: session.emergencyContactEnabled || false,
+      breakoutRoomsEnabled: false,
+      breakoutRooms: []
+    };
+    
+    // Save live session
+    await redisService.setSessionState(liveSessionData.id, liveSessionData);
+    
+    // Update scheduled session with live session reference
+    const updatedScheduledSession = { ...session, status: 'live', liveSessionId: liveSessionData.id, actualStartTime: now };
+    await redisService.setSessionState(sessionId, updatedScheduledSession);
+    
+    console.log('✅ Scheduled session converted to live:', liveSessionData.id);
+    
+    // Add to user's session history
+    if (req.user?.id) {
+      const userSessionKey = `user-sanctuaries-${req.user.id}`;
+      const userSessions = await redisService.getSessionState(userSessionKey) || [];
+      userSessions.push({
+        sessionId: liveSessionData.id,
+        originalScheduledId: sessionId,
+        topic: liveSessionData.topic,
+        emoji: liveSessionData.emoji,
+        mode: 'live-audio',
+        createdAt: now.toISOString(),
+        isHost: true
+      });
+      await redisService.setSessionState(userSessionKey, userSessions);
+      console.log('💾 Session saved to user history:', req.user.id);
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Session converted to live',
+      data: {
+        liveSessionId: liveSessionData.id,
+        redirectTo: `/flagship-sanctuary/${liveSessionData.id}`,
+        session: liveSessionData,
+        agoraToken: null // Will be generated on actual join
+      }
+    });
+    
+  } catch (conversionError) {
+    console.error('❌ Session conversion error:', conversionError);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to convert session: ' + conversionError.message
+    });
   }
 });
 

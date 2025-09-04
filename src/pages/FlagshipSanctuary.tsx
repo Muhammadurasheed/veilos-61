@@ -68,8 +68,28 @@ const FlagshipSanctuary: React.FC = () => {
     const acknowledged = hasAcknowledged || searchParams.get('acknowledged') === 'true';
     const timeReached = session.scheduledDateTime && new Date(session.scheduledDateTime) <= new Date();
     const sessionLive = session.status === 'live' || session.status === 'active';
+    
     if (acknowledged && (sessionLive || timeReached) && joinStatus === 'idle') {
-      joinSession(sessionId, { acknowledged: true });
+      // Use smart join to handle conversion if needed
+      const handleSmartJoin = async () => {
+        try {
+          const { FlagshipSessionManager } = await import('@/services/flagshipSessionManager');
+          const result = await FlagshipSessionManager.joinSessionSmart(sessionId, { acknowledged: true });
+          
+          if (result.success && result.needsRedirect && result.redirectUrl) {
+            // Redirect to the new live session
+            window.location.href = result.redirectUrl;
+          } else if (!result.success) {
+            console.error('Smart join failed:', result.error);
+          }
+        } catch (error) {
+          console.error('Failed to load session manager:', error);
+          // Fallback to regular join
+          joinSession(sessionId, { acknowledged: true });
+        }
+      };
+      
+      handleSmartJoin();
     }
   }, [sessionId, session, currentParticipant, hasAcknowledged, searchParams, joinSession, joinStatus]);
 

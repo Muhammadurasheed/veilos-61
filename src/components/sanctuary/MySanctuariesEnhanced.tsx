@@ -134,13 +134,20 @@ const MySanctuariesEnhanced = () => {
           
           if (flagshipResponse.ok) {
             const flagshipData = await flagshipResponse.json();
-            if (flagshipData.success) {
-              flagshipSessions = flagshipData.data || [];
+            console.log('🏁 Flagship sessions response:', flagshipData);
+            if (flagshipData.success && Array.isArray(flagshipData.data)) {
+              flagshipSessions = flagshipData.data;
               flagshipAnalytics = flagshipData.analytics;
+            } else {
+              console.warn('⚠️ Flagship sessions data is not an array:', flagshipData.data);
+              flagshipSessions = [];
             }
+          } else {
+            console.warn('⚠️ Flagship sessions request failed:', flagshipResponse.status);
           }
         } catch (flagshipError) {
-          console.log('Note: Could not fetch flagship sanctuary sessions:', flagshipError);
+          console.error('❌ Error fetching flagship sanctuary sessions:', flagshipError);
+          flagshipSessions = [];
         }
       }
 
@@ -164,8 +171,10 @@ const MySanctuariesEnhanced = () => {
         }
       }
 
-      // Combine sessions
-      const allSessions = [...flagshipSessions, ...regularSessions];
+      // Combine sessions - ensure both are arrays
+      const validFlagshipSessions = Array.isArray(flagshipSessions) ? flagshipSessions : [];
+      const validRegularSessions = Array.isArray(regularSessions) ? regularSessions : [];
+      const allSessions = [...validFlagshipSessions, ...validRegularSessions];
       
       // Combine analytics
       const combinedAnalytics = {
