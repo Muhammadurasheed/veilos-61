@@ -34,11 +34,13 @@ const FlagshipSanctuary: React.FC = () => {
   // Check if we need to show acknowledgment screen
   React.useEffect(() => {
     if (sessionId && !hasAcknowledged && !currentParticipant) {
-      const acknowledged = searchParams.get('acknowledged') === 'true';
+      const isInstant = searchParams.get('instant') === 'true';
+      const acknowledged = isInstant || searchParams.get('acknowledged') === 'true';
       if (!acknowledged) {
         setShowAcknowledgment(true);
       } else {
         setHasAcknowledged(true);
+        setShowAcknowledgment(false);
       }
     }
   }, [sessionId, hasAcknowledged, currentParticipant, searchParams]);
@@ -189,7 +191,7 @@ const FlagshipSanctuary: React.FC = () => {
             isActive: session.status === 'live' || session.status === 'active',
             status: session.status === 'live' ? 'active' : session.status === 'scheduled' ? 'pending' : 'ended',
             mode: session.accessType === 'public' ? 'public' : session.accessType === 'invite_only' ? 'invite-only' : 'private',
-            participants: session.participants.map(p => ({
+            participants: (session.participants || []).map(p => ({
               id: p.id,
               alias: p.alias,
               avatarIndex: p.avatarIndex,
@@ -202,7 +204,7 @@ const FlagshipSanctuary: React.FC = () => {
               connectionStatus: p.connectionStatus as 'connected' | 'connecting' | 'disconnected',
               handRaised: p.handRaised,
               speakingTime: p.speakingTime,
-              reactions: p.reactions.map(r => ({
+              reactions: (p.reactions || []).map(r => ({
                 id: `${p.id}-${r.timestamp}`,
                 emoji: r.emoji,
                 participantId: p.id,

@@ -84,6 +84,7 @@ export const useFlagshipSanctuary = (options: UseFlagshipSanctuaryOptions = {}):
   const audioContextRef = useRef<AudioContext | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const joinRetryRef = useRef<number>(0);
   
   // Session State
   const [session, setSession] = useState<FlagshipSanctuarySession | null>(null);
@@ -409,38 +410,59 @@ export const useFlagshipSanctuary = (options: UseFlagshipSanctuaryOptions = {}):
   const joinSession = useCallback(async (sessionId: string, data?: JoinFlagshipSanctuaryRequest): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      // First get the session details
+      // Always refresh latest session state
       const sessionResponse = await FlagshipSanctuaryApi.getSession(sessionId);
       if (!sessionResponse.success || !sessionResponse.data) {
         throw new Error('Session not found');
       }
-      
       setSession(sessionResponse.data);
-      
-      // Join the session
+
+      // Attempt to join
       const joinResponse = await FlagshipSanctuaryApi.joinSession(sessionId, data || {});
-      if (!joinResponse.success || !joinResponse.data) {
-        throw new Error(joinResponse.error || 'Failed to join session');
+
+      // Pending/startup state from backend (e.g., 202) often returns success=false with a message
+      const pendingMsg = (joinResponse.message || joinResponse.error || '').toLowerCase();
+      const isPending = joinResponse.success === false && (pendingMsg.includes('starting') || pendingMsg.includes('please wait'));
+      if (isPending) {
+        // Do NOT surface as an error – keep user in waiting state and retry
+        if (joinRetryRef.current === 0) {
+          toast({
+            title: 'Session is starting',
+            description: 'Please wait a moment, auto-joining shortly…',
+          });
+        }
+        joinRetryRef.current += 1;
+        const delay = Math.min(5000, 1000 + joinRetryRef.current * 500);
+        setTimeout(() => {
+          // Fire and forget; state updates handled in subsequent success
+          joinSession(sessionId, data);
+        }, delay);
+        return false;
       }
-      
+
+      if (!joinResponse.success || !joinResponse.data) {
+        throw new Error(joinResponse.error || joinResponse.message || 'Failed to join session');
+      }
+
+      // Success
+      joinRetryRef.current = 0;
       setCurrentParticipant(joinResponse.data.participant);
       setParticipants(sessionResponse.data.participants || []);
-      
-      // Join socket room
+
       if (socketRef.current) {
         socketRef.current.emit('sanctuary:join', {
           sessionId,
           participant: joinResponse.data.participant
         });
       }
-      
+
       toast({
         title: 'Joined Successfully',
         description: `Welcome to "${sessionResponse.data.topic}"`,
       });
-      
+
       return true;
     } catch (error: any) {
       const errorMsg = error.message || 'Failed to join sanctuary';
@@ -454,7 +476,7 @@ export const useFlagshipSanctuary = (options: UseFlagshipSanctuaryOptions = {}):
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, joinRetryRef]);
 
   const leaveSession = useCallback(async (): Promise<void> => {
     if (!session || !currentParticipant) return;
