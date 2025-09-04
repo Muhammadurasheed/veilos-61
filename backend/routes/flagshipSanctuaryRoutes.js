@@ -11,6 +11,121 @@ const aiModerationService = require('../services/aiModerationService');
 
 // 🎯 FLAGSHIP ROUTES - Anonymous Live Audio Sanctuary
 
+// Helper function to convert scheduled session to live
+async function convertScheduledToLive(sessionId, userId, res = null, internalCall = false) {
+  try {
+    console.log('🔄 Converting scheduled session to live:', sessionId);
+    
+    const scheduledSession = await ScheduledSession.findOne({ id: sessionId });
+    
+    if (!scheduledSession) {
+      const error = 'Scheduled session not found';
+      if (internalCall) throw new Error(error);
+      return res?.status(404).json({ success: false, message: error });
+    }
+    
+    // Check if already converted
+    if (scheduledSession.liveSessionId) {
+      const result = {
+        liveSessionId: scheduledSession.liveSessionId,
+        redirectTo: `/flagship-sanctuary/${scheduledSession.liveSessionId}`
+      };
+      if (internalCall) return result;
+      return res?.status(200).json({ success: true, message: 'Already converted', data: result });
+    }
+
+    const now = new Date();
+    const sessionDuration = scheduledSession.duration * 60; // convert to seconds
+    
+    // Generate Agora tokens
+    const channelName = scheduledSession.agoraChannelName;
+    let agoraToken, hostToken;
+    
+    try {
+      agoraToken = generateRtcToken(channelName, 0, 'subscriber', sessionDuration);
+      hostToken = generateRtcToken(channelName, userId, 'publisher', sessionDuration);
+    } catch (agoraError) {
+      console.warn('⚠️ Agora token generation failed:', agoraError.message);
+      agoraToken = `temp_token_${nanoid(16)}`;
+      hostToken = `temp_host_token_${nanoid(16)}`;
+    }
+
+    // Create live session
+    const liveSession = new LiveSanctuarySession({
+      id: `flagship-${nanoid(8)}`,
+      topic: scheduledSession.topic,
+      description: scheduledSession.description,
+      emoji: scheduledSession.emoji,
+      hostId: scheduledSession.hostId,
+      hostAlias: scheduledSession.hostAlias,
+      hostToken,
+      agoraChannelName: channelName,
+      agoraToken,
+      maxParticipants: scheduledSession.maxParticipants,
+      allowAnonymous: scheduledSession.allowAnonymous,
+      moderationEnabled: scheduledSession.moderationEnabled,
+      emergencyContactEnabled: true,
+      recordingEnabled: scheduledSession.recordingEnabled,
+      expiresAt: new Date(now.getTime() + (sessionDuration * 1000)),
+      participants: [],
+      status: 'active',
+      isActive: true,
+      startTime: now
+    });
+
+    await liveSession.save();
+
+    // Update scheduled session
+    await scheduledSession.startLiveSession(liveSession.id);
+
+    // Update Redis cache
+    await redisService.setSessionState(liveSession.id, {
+      type: 'live',
+      topic: liveSession.topic,
+      hostId: liveSession.hostId,
+      participants: liveSession.participants,
+      status: 'active',
+      agoraChannelName: liveSession.agoraChannelName,
+      agoraToken: liveSession.agoraToken,
+      expiresAt: liveSession.expiresAt,
+      maxParticipants: liveSession.maxParticipants,
+      allowAnonymous: liveSession.allowAnonymous,
+      moderationEnabled: liveSession.moderationEnabled
+    }, sessionDuration);
+
+    console.log('✅ Scheduled session converted to live:', liveSession.id);
+
+    const result = {
+      liveSessionId: liveSession.id,
+      redirectTo: `/flagship-sanctuary/${liveSession.id}`,
+      session: liveSession
+    };
+    
+    if (internalCall) return result;
+    
+    if (res) {
+      return res.status(200).json({
+        success: true,
+        message: 'Session converted successfully',
+        data: result
+      });
+    }
+    
+    return result;
+    
+  } catch (error) {
+    console.error('❌ Session conversion error:', error);
+    if (internalCall) throw error;
+    if (res) {
+      return res.status(500).json({
+        success: false,
+        message: 'Conversion failed: ' + error.message
+      });
+    }
+    throw error;
+  }
+}
+
 // ================== INSTANT SESSION CREATION ==================
 
 // Create instant live session (immediate start)
@@ -693,40 +808,63 @@ router.post('/:sessionId/join', optionalAuthMiddleware, async (req, res) => {
     
     if (!session) {
       // Check if it's a scheduled session that needs conversion
-      const scheduledSession = await redisService.getSessionState(sessionId);
+      const scheduledSession = await ScheduledSession.findOne({ id: sessionId });
       
-      if (scheduledSession && scheduledSession.type !== 'live') {
-        // This is a scheduled session
+      if (scheduledSession) {
+        // If already converted, redirect to live session
+        if (scheduledSession.liveSessionId) {
+          console.log('🔄 Session already converted, redirecting to:', scheduledSession.liveSessionId);
+          return res.status(200).json({
+            success: true,
+            message: 'Redirecting to live session',
+            data: {
+              liveSessionId: scheduledSession.liveSessionId,
+              redirectTo: `/flagship-sanctuary/${scheduledSession.liveSessionId}`,
+              participant: null // Will join after redirect
+            }
+          });
+        }
+        
+        // Check if it's time to convert (scheduled time has passed or is within 1 minute)
         const now = new Date();
         const scheduledTime = new Date(scheduledSession.scheduledDateTime);
+        const timeDiff = scheduledTime.getTime() - now.getTime();
         
-        if (now >= scheduledTime && scheduledSession.status === 'scheduled') {
-          // Return error indicating session should be converted
-          return res.status(400).json({
-            success: false,
-            message: 'Session conversion required',
-            data: {
-              needsConversion: true,
-              scheduledSessionId: sessionId
+        if (timeDiff <= 60000) { // Within 1 minute or past scheduled time
+          console.log('🔄 Auto-converting scheduled session to live');
+          
+          // Convert the session automatically using internal conversion function
+          try {
+            const conversionResult = await convertScheduledToLive(sessionId, req.user?.id || scheduledSession.hostId, res, true);
+            
+            if (conversionResult && conversionResult.liveSessionId) {
+              // Update session to point to the new live session
+              sessionId = conversionResult.liveSessionId;
+              session = await redisService.getSessionState(conversionResult.liveSessionId);
+              
+              console.log('✅ Session converted successfully, continuing with join');
+            } else {
+              return res.status(500).json({
+                success: false,
+                message: 'Failed to convert session',
+                error: 'Session conversion failed'
+              });
             }
-          });
-        } else if (now < scheduledTime) {
+          } catch (conversionError) {
+            console.error('❌ Session conversion error:', conversionError);
+            return res.status(500).json({
+              success: false,
+              message: 'Session conversion failed',
+              error: conversionError.message
+            });
+          }
+        } else {
           return res.status(400).json({
             success: false,
-            message: 'Session has not started yet',
+            message: 'Session not yet ready',
             data: {
-              scheduledTime: scheduledSession.scheduledDateTime,
-              timeRemaining: Math.ceil((scheduledTime - now) / 1000)
-            }
-          });
-        } else if (scheduledSession.liveSessionId) {
-          // Session already converted, redirect to live session
-          return res.status(400).json({
-            success: false,
-            message: 'Session moved to live',
-            data: {
-              redirectTo: `/flagship-sanctuary/${scheduledSession.liveSessionId}`,
-              liveSessionId: scheduledSession.liveSessionId
+              scheduledDateTime: scheduledSession.scheduledDateTime,
+              timeRemaining: timeDiff
             }
           });
         }

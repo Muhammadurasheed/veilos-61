@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,7 +27,10 @@ import {
   Share2,
   BarChart3,
   Zap,
-  AlertTriangle
+  AlertTriangle,
+  Mic,
+  Search,
+  Filter
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -77,11 +80,13 @@ const MySanctuariesEnhanced = () => {
   const [analytics, setAnalytics] = useState<SanctuaryAnalytics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'all' | 'active' | 'expiring' | 'expired'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'live-audio' | 'anonymous-inbox'>('all');
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
 
   // Load sanctuaries with enhanced analytics
-  const loadSanctuaries = useCallback(async (showRefreshIndicator = false) => {
+  const loadSanctuaries = React.useCallback(async (showRefreshIndicator = false) => {
     try {
       if (showRefreshIndicator) {
         setRefreshing(true);
@@ -233,6 +238,53 @@ const MySanctuariesEnhanced = () => {
     return () => clearInterval(interval);
   }, [loadSanctuaries]);
 
+  // Filter and sort sessions
+  const filteredAndSortedSessions = useMemo(() => {
+    let filtered = sanctuaries;
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(session => 
+        session.topic.toLowerCase().includes(query) ||
+        session.description?.toLowerCase().includes(query)
+      );
+    }
+
+    // Filter by tab
+    if (activeTab !== 'all') {
+      filtered = filtered.filter(session => {
+        if (activeTab === 'live-audio') {
+          return session.mode === 'live-audio' || session.type?.startsWith('flagship');
+        } else if (activeTab === 'anonymous-inbox') {
+          return session.mode === 'anon-inbox' || session.type === 'regular';
+        }
+        return true;
+      });
+    }
+
+    // Sort sessions
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'activity':
+          return (b.participantCount || 0) - (a.participantCount || 0);
+        case 'status':
+          // Active first, then by status priority
+          if (a.status !== b.status) {
+            const statusOrder = { 'active': 0, 'expiring_soon': 1, 'expired': 2 };
+            return (statusOrder[a.status] || 3) - (statusOrder[b.status] || 3);
+          }
+          return a.topic.localeCompare(b.topic);
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }, [sanctuaries, searchQuery, activeTab, sortBy]);
+
   const handleViewInbox = (sanctuary: EnhancedSanctuary) => {
     // Update last accessed time
     localStorage.setItem(`sanctuary-last-accessed-${sanctuary.id}`, new Date().toISOString());
@@ -282,19 +334,6 @@ const MySanctuariesEnhanced = () => {
     });
   };
 
-  const getFilteredSanctuaries = () => {
-    switch (activeTab) {
-      case 'active':
-        return sanctuaries.filter(s => s.status === 'active');
-      case 'expiring':
-        return sanctuaries.filter(s => s.status === 'expiring_soon');
-      case 'expired':
-        return sanctuaries.filter(s => s.status === 'expired');
-      default:
-        return sanctuaries;
-    }
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'text-green-600';
@@ -313,8 +352,6 @@ const MySanctuariesEnhanced = () => {
     const days = Math.floor(hours / 24);
     return `${days}d ${hours % 24}h`;
   };
-
-  const filteredSanctuaries = getFilteredSanctuaries();
 
   if (isLoading) {
     return (
@@ -366,7 +403,7 @@ const MySanctuariesEnhanced = () => {
                   {refreshing && <RefreshCw className="h-4 w-4 animate-spin" />}
                 </CardTitle>
                 <CardDescription>
-                  Flagship sanctuary management dashboard with advanced analytics
+                  Manage your live audio sessions and anonymous inboxes
                 </CardDescription>
               </div>
             </div>
@@ -401,7 +438,7 @@ const MySanctuariesEnhanced = () => {
               <div className="flex items-center gap-2">
                 <Shield className="h-4 w-4 text-green-600" />
                 <div>
-                  <p className="text-sm font-medium">Active Sanctuaries</p>
+                  <p className="text-sm font-medium">Active Sessions</p>
                   <p className="text-2xl font-bold text-green-600">{analytics.active}</p>
                 </div>
               </div>
@@ -458,206 +495,79 @@ const MySanctuariesEnhanced = () => {
         </Card>
       )}
 
+      {/* Search and Sort Controls */}
+      <div className="flex gap-4 items-center">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search sanctuaries..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="newest">Newest First</SelectItem>
+            <SelectItem value="activity">Most Active</SelectItem>
+            <SelectItem value="status">By Status</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Sanctuaries Tabs */}
       <Card>
         <CardHeader>
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="all" className="flex items-center gap-2">
                 <Archive className="h-3 w-3" />
                 All ({sanctuaries.length})
               </TabsTrigger>
-              <TabsTrigger value="active" className="flex items-center gap-2">
-                <Shield className="h-3 w-3" />
-                Active ({analytics?.active || 0})
+              <TabsTrigger value="live-audio" className="flex items-center gap-2">
+                <Mic className="h-3 w-3" />
+                Live Audio ({sanctuaries.filter(s => s.mode === 'live-audio' || s.type?.startsWith('flagship')).length})
               </TabsTrigger>
-              <TabsTrigger value="expiring" className="flex items-center gap-2">
-                <Timer className="h-3 w-3" />
-                Expiring ({analytics?.expiringSoon || 0})
-              </TabsTrigger>
-              <TabsTrigger value="expired" className="flex items-center gap-2">
-                <Clock className="h-3 w-3" />
-                Expired ({analytics?.expired || 0})
+              <TabsTrigger value="anonymous-inbox" className="flex items-center gap-2">
+                <MessageCircle className="h-3 w-3" />
+                Anonymous Inbox ({sanctuaries.filter(s => s.mode === 'anon-inbox' || s.type === 'regular').length})
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value={activeTab} className="mt-6">
-              {filteredSanctuaries.length > 0 ? (
+              {filteredAndSortedSessions.length > 0 ? (
                 <ScrollArea className="h-[600px]">
-                  <div className="space-y-4 pr-4">
-                    {filteredSanctuaries.map((sanctuary) => (
-                      <Card 
-                        key={sanctuary.id}
-                        className={cn(
-                          "transition-all hover:shadow-md",
-                          sanctuary.status === 'expired' && "opacity-70"
-                        )}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex items-start gap-3 flex-1">
-                              {sanctuary.emoji && (
-                                <span className="text-2xl">{sanctuary.emoji}</span>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <h3 className="font-medium truncate">{sanctuary.topic}</h3>
-                                  <Badge 
-                                    variant={sanctuary.mode === 'live-audio' ? 'default' : 'secondary'}
-                                    className="text-xs"
-                                  >
-                                    {sanctuary.mode === 'live-audio' ? 'Live Audio' : 'Anonymous Inbox'}
-                                  </Badge>
-                                  <Badge 
-                                    variant="outline" 
-                                    className={cn("text-xs", getStatusColor(sanctuary.status))}
-                                  >
-                                    {sanctuary.status.replace('_', ' ')}
-                                  </Badge>
-                                </div>
-                                
-                                {sanctuary.description && (
-                                  <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                                    {sanctuary.description}
-                                  </p>
-                                )}
-                                
-                                {/* Progress Bar for Time Remaining */}
-                                {sanctuary.status !== 'expired' && (
-                                  <div className="mb-3">
-                                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                                      <span>Time Remaining</span>
-                                      <span>{formatTimeRemaining(sanctuary.timeRemaining, sanctuary.status)}</span>
-                                    </div>
-                                    <Progress 
-                                      value={sanctuary.status === 'expiring_soon' ? 
-                                        Math.max(10, (sanctuary.timeRemaining / 60) * 100) : 
-                                        sanctuary.timeRemaining > 1440 ? 100 : (sanctuary.timeRemaining / 1440) * 100
-                                      }
-                                      className="h-2"
-                                    />
-                                  </div>
-                                )}
-                                
-                                 {/* Enhanced Metrics */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-muted-foreground">
-                                  <div className="flex items-center gap-1">
-                                    <MessageCircle className="h-3 w-3" />
-                                    <span>{sanctuary.submissionCount} messages</span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <Users className="h-3 w-3" />
-                                    <span>{sanctuary.uniqueParticipants} unique</span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <Activity className="h-3 w-3" />
-                                    <span>Score: {sanctuary.engagementScore}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <Calendar className="h-3 w-3" />
-                                    <span>{formatDistanceToNow(new Date(sanctuary.createdAt), { addSuffix: false })}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <Activity className="h-3 w-3" />
-                                    <span>{sanctuary.recentActivity} recent</span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <Target className="h-3 w-3" />
-                                    <span>{sanctuary.engagementScore} score</span>
-                                  </div>
-                                </div>
-                                
-                                <div className="mt-2 text-xs text-muted-foreground">
-                                  <span>Created {formatDistanceToNow(new Date(sanctuary.createdAt), { addSuffix: true })}</span>
-                                  {sanctuary.lastActivity && (
-                                    <span className="ml-3">
-                                      Last activity {formatDistanceToNow(new Date(sanctuary.lastActivity), { addSuffix: true })}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Action Buttons */}
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              {sanctuary.status !== 'expired' && (
-                                <>
-                                  <Button
-                                    variant="default"
-                                    size="sm"
-                                    onClick={() => handleViewInbox(sanctuary)}
-                                    className="flex items-center gap-1"
-                                  >
-                                    <Eye className="h-3 w-3" />
-                                    Inbox
-                                    {sanctuary.submissionCount > 0 && (
-                                      <Badge variant="secondary" className="ml-1 px-1">
-                                        {sanctuary.submissionCount}
-                                      </Badge>
-                                    )}
-                                  </Button>
-                                  
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleCopyShareLink(sanctuary.id, sanctuary)}
-                                  >
-                                    <Share2 className="h-3 w-3" />
-                                  </Button>
-                                </>
-                              )}
-                              
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-red-600 hover:text-red-700"
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Remove Sanctuary</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Remove this sanctuary from your dashboard? This won't delete the sanctuary itself.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction 
-                                      onClick={() => handleRemoveSanctuary(sanctuary.id)}
-                                      className="bg-red-600 hover:bg-red-700"
-                                    >
-                                      Remove
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                  <div className="space-y-4">
+                    {filteredAndSortedSessions.map((sanctuary) => (
+                      <SanctuaryCard 
+                        key={sanctuary.id} 
+                        sanctuary={sanctuary} 
+                        onView={() => handleViewInbox(sanctuary)}
+                        onCopyLink={() => handleCopyShareLink(sanctuary.id, sanctuary)}
+                        onRemove={() => handleRemoveSanctuary(sanctuary.id)}
+                        getStatusColor={getStatusColor}
+                        formatTimeRemaining={formatTimeRemaining}
+                      />
                     ))}
                   </div>
                 </ScrollArea>
               ) : (
                 <Card>
-                  <CardContent className="p-12 text-center">
-                    <Shield className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="font-semibold text-lg mb-2">
-                      {activeTab === 'active' ? 'No active sanctuaries' : 
-                       activeTab === 'expiring' ? 'No expiring sanctuaries' :
-                       activeTab === 'expired' ? 'No expired sanctuaries' : 'No sanctuaries yet'}
+                  <CardContent className="text-center py-12">
+                    <MessageCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold mb-2">
+                      {searchQuery ? 'No matching sanctuaries' : 
+                       activeTab === 'all' ? 'No Sanctuaries Yet' :
+                       activeTab === 'live-audio' ? 'No Live Audio Sessions' : 'No Anonymous Inboxes'}
                     </h3>
                     <p className="text-muted-foreground mb-6">
-                      {activeTab === 'all' ? 
-                        'Create your first sanctuary to start collecting anonymous feedback' :
-                        `No sanctuaries in the ${activeTab} category`
-                      }
+                      {searchQuery ? 'Try adjusting your search terms or filters.' :
+                       'Create your first sanctuary to start receiving anonymous feedback or host live audio sessions.'}
                     </p>
-                    {activeTab === 'all' && (
+                    {!searchQuery && (
                       <Button asChild>
                         <Link to="/sanctuary">
                           <Plus className="h-4 w-4 mr-2" />
@@ -672,43 +582,125 @@ const MySanctuariesEnhanced = () => {
           </Tabs>
         </CardHeader>
       </Card>
-
-      {/* Most Active Session Highlight */}
-      {analytics?.mostActiveSession && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-primary">
-              <Zap className="h-5 w-5" />
-              Most Active Sanctuary
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {analytics.mostActiveSession.emoji && (
-                  <span className="text-xl">{analytics.mostActiveSession.emoji}</span>
-                )}
-                <div>
-                  <h4 className="font-medium">{analytics.mostActiveSession.topic}</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {analytics.mostActiveSession.submissionCount} messages • 
-                    {analytics.mostActiveSession.uniqueParticipants} participants • 
-                    Score: {analytics.mostActiveSession.engagementScore}
-                  </p>
-                </div>
-              </div>
-              <Button 
-                onClick={() => handleViewInbox(analytics.mostActiveSession!)}
-                size="sm"
-              >
-                <Eye className="h-3 w-3 mr-1" />
-                View Inbox
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
+  );
+};
+
+// Sanctuary Card Component
+const SanctuaryCard = ({ 
+  sanctuary, 
+  onView, 
+  onCopyLink, 
+  onRemove, 
+  getStatusColor, 
+  formatTimeRemaining 
+}: {
+  sanctuary: EnhancedSanctuary;
+  onView: () => void;
+  onCopyLink: () => void;
+  onRemove: () => void;
+  getStatusColor: (status: string) => string;
+  formatTimeRemaining: (minutes: number, status: string) => string;
+}) => {
+  return (
+    <Card className="transition-all duration-200 hover:shadow-md">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="text-2xl">{sanctuary.emoji}</div>
+            <div>
+              <CardTitle className="text-base font-medium line-clamp-1">
+                {sanctuary.topic}
+              </CardTitle>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge 
+                  variant={sanctuary.status === 'active' ? 'default' : 
+                          sanctuary.status === 'expiring_soon' ? 'secondary' : 'outline'}
+                  className="text-xs"
+                >
+                  {sanctuary.type?.startsWith('flagship') ? 'Live Audio' : 'Anonymous Inbox'}
+                </Badge>
+                <Badge variant="outline" className={cn("text-xs", getStatusColor(sanctuary.status))}>
+                  {sanctuary.status.replace('_', ' ')}
+                </Badge>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" onClick={onView}>
+              <Eye className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={onCopyLink}>
+              <Copy className="h-4 w-4" />
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Remove Sanctuary</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will remove the sanctuary from your dashboard. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={onRemove}>Remove</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="pt-0">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div className="flex items-center gap-2">
+            <MessageCircle className="h-4 w-4 text-muted-foreground" />
+            <span>{sanctuary.submissionCount || 0}</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <span>{sanctuary.uniqueParticipants || 0}</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Activity className="h-4 w-4 text-muted-foreground" />
+            <span>{sanctuary.engagementScore}%</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span className={getStatusColor(sanctuary.status)}>
+              {formatTimeRemaining(sanctuary.timeRemaining, sanctuary.status)}
+            </span>
+          </div>
+        </div>
+        
+        {sanctuary.description && (
+          <p className="text-sm text-muted-foreground mt-3 line-clamp-2">
+            {sanctuary.description}
+          </p>
+        )}
+        
+        <div className="flex items-center justify-between mt-3 pt-3 border-t">
+          <span className="text-xs text-muted-foreground">
+            Created {formatDistanceToNow(new Date(sanctuary.createdAt), { addSuffix: true })}
+          </span>
+          
+          {sanctuary.scheduledDateTime && (
+            <span className="text-xs text-muted-foreground">
+              Scheduled: {format(new Date(sanctuary.scheduledDateTime), 'MMM d, h:mm a')}
+            </span>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

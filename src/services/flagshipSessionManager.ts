@@ -96,27 +96,38 @@ export class FlagshipSessionManager {
         return lastError;
       };
 
-      try {
-        // First attempt join
-        const joinResponse = await FlagshipSanctuaryApi.joinSession(sessionId, joinData);
-        if (joinResponse.success) {
-          return { success: true, data: joinResponse.data };
-        }
-
-        // If backend indicates moved to live, follow it
+    try {
+      // First attempt join
+      const joinResponse = await FlagshipSanctuaryApi.joinSession(sessionId, joinData);
+      
+      // Check if it's a success with redirect info
+      if (joinResponse.success) {
         if ((joinResponse as any).data?.liveSessionId) {
           const liveId = (joinResponse as any).data.liveSessionId as string;
-          const liveJoin = await tryJoin(liveId);
-          if (liveJoin?.success) {
-            return {
-              success: true,
-              data: liveJoin.data,
-              needsRedirect: true,
-              redirectUrl: `/flagship-sanctuary/${liveId}`
-            };
-          }
-          return { success: false, error: 'Failed to join converted session: ' + (liveJoin?.error || liveJoin?.message) };
+          return {
+            success: true,
+            data: joinResponse.data,
+            needsRedirect: true,
+            redirectUrl: `/flagship-sanctuary/${liveId}`
+          };
         }
+        return { success: true, data: joinResponse.data };
+      }
+
+      // If backend indicates moved to live, follow it
+      if ((joinResponse as any).data?.liveSessionId) {
+        const liveId = (joinResponse as any).data.liveSessionId as string;
+        const liveJoin = await tryJoin(liveId);
+        if (liveJoin?.success) {
+          return {
+            success: true,
+            data: liveJoin.data,
+            needsRedirect: true,
+            redirectUrl: `/flagship-sanctuary/${liveId}`
+          };
+        }
+        return { success: false, error: 'Failed to join converted session: ' + (liveJoin?.error || liveJoin?.message) };
+      }
 
         // If conversion required, start it then retry join on new live id
         const needsConversion = joinResponse.error === 'Session conversion required' ||
