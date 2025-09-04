@@ -683,8 +683,60 @@ router.post('/:sessionId/join', optionalAuthMiddleware, async (req, res) => {
           if (now >= scheduledTime) {
             // Auto-start the scheduled session
             console.log('🔄 Auto-starting scheduled session:', sessionId);
-            // Implementation would go here to convert scheduled to live
-            return res.error('Session is starting, please wait a moment', 202);
+            
+            // Create live session from scheduled session
+            const liveSessionData = {
+              id: `flagship-${nanoid(8)}`,
+              topic: scheduledSession.topic,
+              description: scheduledSession.description,
+              emoji: scheduledSession.emoji,
+              hostId: scheduledSession.hostId,
+              hostAlias: scheduledSession.hostAlias,
+              hostAvatarIndex: scheduledSession.hostAvatarIndex || 1,
+              accessType: scheduledSession.accessType,
+              maxParticipants: scheduledSession.maxParticipants,
+              allowAnonymous: scheduledSession.allowAnonymous,
+              moderationEnabled: scheduledSession.moderationEnabled,
+              recordingEnabled: scheduledSession.recordingEnabled,
+              voiceModulationEnabled: scheduledSession.voiceModulationEnabled,
+              tags: scheduledSession.tags,
+              category: scheduledSession.category,
+              language: scheduledSession.language || 'en',
+              duration: scheduledSession.duration,
+              participants: [],
+              participantCount: 0,
+              status: 'active',
+              actualStartTime: now,
+              createdAt: now,
+              expiresAt: new Date(now.getTime() + (scheduledSession.duration * 60 * 1000)),
+              
+              // Audio/Agora settings
+              agoraChannelName: `flagship_${nanoid(12)}`,
+              agoraToken: '', // Will be generated when needed
+              hostToken: '', // Will be generated when needed
+              audioOnly: true,
+              
+              // Features
+              emergencyProtocols: scheduledSession.emergencyProtocols || [],
+              emergencyContactEnabled: scheduledSession.emergencyContactEnabled || false,
+              breakoutRoomsEnabled: false,
+              breakoutRooms: []
+            };
+            
+            // Save live session
+            await stateManager.setState(liveSessionData.id, liveSessionData);
+            
+            // Update scheduled session with live session reference
+            scheduledSession.status = 'live';
+            scheduledSession.liveSessionId = liveSessionData.id;
+            scheduledSession.actualStartTime = now;
+            await stateManager.setState(sessionId, scheduledSession);
+            
+            console.log('✅ Scheduled session converted to live:', liveSessionData.id);
+            
+            // Now redirect to use the live session
+            session = liveSessionData;
+            isScheduledSession = false;
           } else {
             return res.error('Session has not started yet', 400);
           }

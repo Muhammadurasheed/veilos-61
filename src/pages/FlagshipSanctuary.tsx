@@ -2,7 +2,7 @@ import React from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useFlagshipSanctuary } from '@/hooks/useFlagshipSanctuary';
 import { FlagshipSanctuaryCreator } from '@/components/flagship/FlagshipSanctuaryCreator';
-import { LiveAudioSpace } from '@/components/sanctuary/LiveAudioSpace';
+import { EnhancedLiveAudioSpace } from '@/components/sanctuary/EnhancedLiveAudioSpace';
 import { SessionAcknowledgment } from '@/components/flagship/SessionAcknowledgment';
 import { SessionWaitingRoom } from '@/components/flagship/SessionWaitingRoom';
 import Layout from '@/components/layout/Layout';
@@ -197,7 +197,7 @@ const FlagshipSanctuary: React.FC = () => {
   return (
     <Layout>
       <div className="container py-4">
-        <LiveAudioSpace
+        <EnhancedLiveAudioSpace
           session={{
             id: session.id,
             topic: session.topic,
