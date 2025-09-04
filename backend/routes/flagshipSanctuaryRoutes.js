@@ -688,188 +688,79 @@ router.post('/:sessionId/join', optionalAuthMiddleware, async (req, res) => {
       voiceModulation: voiceModulation?.voiceId
     });
 
-    // Get session (try both live and scheduled)
-    let session = await LiveSanctuarySession.findOne({ id: sessionId });
-    let isScheduledSession = false;
+    // First, check if this is a live session in Redis/cache
+    let session = await redisService.getSessionState(sessionId);
     
     if (!session) {
-      // Check if it's a scheduled session that needs to be accessed
-      const scheduledSession = await ScheduledSession.findOne({ 
-        $or: [
-          { id: sessionId },
-          { liveSessionId: sessionId }
-        ]
-      });
+      // Check if it's a scheduled session that needs conversion
+      const scheduledSession = await redisService.getSessionState(sessionId);
       
-      if (scheduledSession) {
-        if (scheduledSession.liveSessionId) {
-          // Session already converted, use existing live session
-          session = await redisService.getSessionState(scheduledSession.liveSessionId);
-          if (!session) {
-            // Fallback to MongoDB if not in Redis
-            session = await LiveSanctuarySession.findOne({ id: scheduledSession.liveSessionId });
-          }
-          isScheduledSession = false; // Use live session, not scheduled
-          console.log('🔗 Using existing live session:', scheduledSession.liveSessionId);
-        } else if (scheduledSession.status === 'scheduled') {
-          // Check if it's time to start the session
-          const now = new Date();
-          const scheduledTime = new Date(scheduledSession.scheduledDateTime);
-          
-          if (now >= scheduledTime) {
-            // Return error indicating session should be converted
-            return res.status(400).json({
-              success: false,
-              message: 'Session conversion required',
-              data: {
-                needsConversion: true,
-                scheduledSessionId: sessionId
-              }
-            });
-          } else {
-            return res.status(400).json({
-              success: false,
-              message: 'Session has not started yet',
-              data: {
-                scheduledTime: scheduledSession.scheduledDateTime,
-                timeRemaining: Math.ceil((scheduledTime - now) / 1000)
-              }
-            });
-          }
+      if (scheduledSession && scheduledSession.type !== 'live') {
+        // This is a scheduled session
+        const now = new Date();
+        const scheduledTime = new Date(scheduledSession.scheduledDateTime);
+        
+        if (now >= scheduledTime && scheduledSession.status === 'scheduled') {
+          // Return error indicating session should be converted
+          return res.status(400).json({
+            success: false,
+            message: 'Session conversion required',
+            data: {
+              needsConversion: true,
+              scheduledSessionId: sessionId
+            }
+          });
+        } else if (now < scheduledTime) {
+          return res.status(400).json({
+            success: false,
+            message: 'Session has not started yet',
+            data: {
+              scheduledTime: scheduledSession.scheduledDateTime,
+              timeRemaining: Math.ceil((scheduledTime - now) / 1000)
+            }
+          });
+        } else if (scheduledSession.liveSessionId) {
+          // Session already converted, redirect to live session
+          return res.status(400).json({
+            success: false,
+            message: 'Session moved to live',
+            data: {
+              redirectTo: `/flagship-sanctuary/${scheduledSession.liveSessionId}`,
+              liveSessionId: scheduledSession.liveSessionId
+            }
+          });
         }
       }
     }
 
-    // Handle session start/conversion endpoint
-    if (req.path.endsWith('/start') && req.method === 'POST') {
-      try {
-        // Get the scheduled session
-        const scheduledSession = await redisService.getSessionState(sessionId);
-        if (!scheduledSession) {
-          return res.status(404).json({
-            success: false,
-            message: 'Scheduled session not found'
-          });
-        }
-
-        // Check if already converted
-        if (scheduledSession.liveSessionId) {
-          return res.status(200).json({
-            success: true,
-            message: 'Session already converted',
-            data: {
-              liveSessionId: scheduledSession.liveSessionId,
-              redirectTo: `/flagship-sanctuary/${scheduledSession.liveSessionId}`,
-              agoraToken: null // Will be generated on join
-            }
-          });
-        }
-
-        // Create live session from scheduled session
-        const liveSessionData = {
-          id: `flagship-${nanoid(8)}`,
-              topic: scheduledSession.topic,
-              description: scheduledSession.description,
-              emoji: scheduledSession.emoji,
-              hostId: scheduledSession.hostId,
-              hostAlias: scheduledSession.hostAlias,
-              hostAvatarIndex: scheduledSession.hostAvatarIndex || 1,
-              accessType: scheduledSession.accessType,
-              maxParticipants: scheduledSession.maxParticipants,
-              allowAnonymous: scheduledSession.allowAnonymous,
-              moderationEnabled: scheduledSession.moderationEnabled,
-              recordingEnabled: scheduledSession.recordingEnabled,
-              voiceModulationEnabled: scheduledSession.voiceModulationEnabled,
-              tags: scheduledSession.tags,
-              category: scheduledSession.category,
-              language: scheduledSession.language || 'en',
-              duration: scheduledSession.duration,
-              participants: [],
-              participantCount: 0,
-              status: 'active',
-              actualStartTime: now,
-              createdAt: now,
-              expiresAt: new Date(now.getTime() + (scheduledSession.duration * 60 * 1000)),
-              
-              // Audio/Agora settings
-              agoraChannelName: `flagship_${nanoid(12)}`,
-              agoraToken: '', // Will be generated when needed
-              hostToken: '', // Will be generated when needed
-              audioOnly: true,
-              
-              // Features
-              emergencyProtocols: scheduledSession.emergencyProtocols || [],
-              emergencyContactEnabled: scheduledSession.emergencyContactEnabled || false,
-              breakoutRoomsEnabled: false,
-              breakoutRooms: []
-            };
-            
-            // Save live session
-            await redisService.setSessionState(liveSessionData.id, liveSessionData);
-            
-            // Update scheduled session with live session reference
-            scheduledSession.status = 'live';
-            scheduledSession.liveSessionId = liveSessionData.id;
-            scheduledSession.actualStartTime = now;
-            await redisService.setSessionState(sessionId, scheduledSession);
-            
-            console.log('✅ Scheduled session converted to live:', liveSessionData.id);
-            
-            // Save session to user's history for My Sanctuaries tracking
-            if (req.user?.id) {
-              const userSessionKey = `user-sanctuaries-${req.user.id}`;
-              const userSessions = await redisService.getSessionState(userSessionKey) || [];
-              userSessions.push({
-                sessionId: liveSessionData.id,
-                originalScheduledId: sessionId,
-                topic: liveSessionData.topic,
-                emoji: liveSessionData.emoji,
-                mode: 'live-audio',
-                createdAt: now.toISOString(),
-                isHost: true
-              });
-              await redisService.setSessionState(userSessionKey, userSessions);
-              console.log('💾 Session saved to user history:', req.user.id);
-            }
-            
-            // Return successful conversion
-            return res.status(200).json({
-              success: true,
-              message: 'Session converted to live',
-              data: {
-                liveSessionId: liveSessionData.id,
-                redirectTo: `/flagship-sanctuary/${liveSessionData.id}`,
-                session: liveSessionData,
-                agoraToken: null // Will be generated on actual join
-              }
-            });
-        
-        } catch (conversionError) {
-          console.error('❌ Session conversion error:', conversionError);
-          return res.status(500).json({
-            success: false,
-            message: 'Failed to convert session: ' + conversionError.message
-          });
-        }
-      }
-      
-      // Continue with regular session logic if not a start endpoint
-
+    // Now check if session exists (should be live session at this point)
     if (!session) {
-      return res.error('Session not found', 404);
+      return res.status(404).json({
+        success: false,
+        message: 'Session not found'
+      });
     }
 
     // Validate session status
-    if (!session.isActive || session.status !== 'active') {
-      return res.error('Session is not active', 400);
+    if (session.status !== 'active') {
+      return res.status(400).json({
+        success: false,
+        message: 'Session is not active'
+      });
     }
 
-    if (new Date() > session.expiresAt) {
-      return res.error('Session has expired', 410);
+    if (new Date() > new Date(session.expiresAt)) {
+      return res.status(410).json({
+        success: false,
+        message: 'Session has expired'
+      });
     }
 
-    if (session.currentParticipants >= session.maxParticipants) {
-      return res.error('Session is full', 400);
+    if ((session.participantCount || 0) >= session.maxParticipants) {
+      return res.status(400).json({
+        success: false,
+        message: 'Session is full'
+      });
     }
 
     // Generate user ID for anonymous users

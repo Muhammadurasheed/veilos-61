@@ -135,15 +135,25 @@ const MySanctuariesEnhanced = () => {
           if (flagshipResponse.ok) {
             const flagshipData = await flagshipResponse.json();
             console.log('🏁 Flagship sessions response:', flagshipData);
-            if (flagshipData.success && Array.isArray(flagshipData.data)) {
-              flagshipSessions = flagshipData.data;
-              flagshipAnalytics = flagshipData.analytics;
+            if (flagshipData.success) {
+              // Handle both direct array and wrapped data
+              if (Array.isArray(flagshipData.data)) {
+                flagshipSessions = flagshipData.data;
+                flagshipAnalytics = flagshipData.analytics;
+              } else if (flagshipData.data && Array.isArray(flagshipData.data.data)) {
+                flagshipSessions = flagshipData.data.data;
+                flagshipAnalytics = flagshipData.data.analytics;
+              } else {
+                console.warn('⚠️ Flagship sessions data is not an array:', flagshipData);
+                flagshipSessions = [];
+              }
             } else {
-              console.warn('⚠️ Flagship sessions data is not an array:', flagshipData.data);
+              console.warn('⚠️ Flagship sessions request failed:', flagshipData.message);
               flagshipSessions = [];
             }
           } else {
             console.warn('⚠️ Flagship sessions request failed:', flagshipResponse.status);
+            flagshipSessions = [];
           }
         } catch (flagshipError) {
           console.error('❌ Error fetching flagship sanctuary sessions:', flagshipError);

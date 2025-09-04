@@ -16,10 +16,9 @@ export class FlagshipSessionManager {
   }> {
     // Prevent multiple simultaneous conversions of the same session
     if (this.conversionInProgress.has(scheduledSessionId)) {
-      return {
-        success: false,
-        error: 'Conversion already in progress'
-      };
+      // Wait a bit and try to get existing conversion result
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      this.conversionInProgress.delete(scheduledSessionId); // Clear to retry
     }
 
     try {
@@ -37,11 +36,16 @@ export class FlagshipSessionManager {
       const data = await response.json();
       
       if (data.success && data.data) {
-        return {
+        const result = {
           success: true,
           liveSessionId: data.data.liveSessionId,
           redirectUrl: data.data.redirectTo
         };
+        
+        // Clear conversion tracker
+        this.conversionInProgress.delete(scheduledSessionId);
+        
+        return result;
       } else {
         return {
           success: false,
