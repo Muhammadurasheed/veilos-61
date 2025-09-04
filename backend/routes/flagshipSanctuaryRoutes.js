@@ -832,15 +832,28 @@ router.post('/:sessionId/join', optionalAuthMiddleware, async (req, res) => {
               console.log('💾 Session saved to user history:', req.user.id);
             }
             
-            // Return successful join with live session data
-            session = liveSessionData;
-            isScheduledSession = false;
-          } else {
-            return res.error('Session has not started yet', 400);
-          }
+            // Return successful conversion
+            return res.status(200).json({
+              success: true,
+              message: 'Session converted to live',
+              data: {
+                liveSessionId: liveSessionData.id,
+                redirectTo: `/flagship-sanctuary/${liveSessionData.id}`,
+                session: liveSessionData,
+                agoraToken: null // Will be generated on actual join
+              }
+            });
+        
+        } catch (conversionError) {
+          console.error('❌ Session conversion error:', conversionError);
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to convert session: ' + conversionError.message
+          });
         }
       }
-    }
+      
+      // Continue with regular session logic if not a start endpoint
 
     if (!session) {
       return res.error('Session not found', 404);
