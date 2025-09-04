@@ -74,90 +74,72 @@ export class FlagshipSessionManager {
       needsRedirect?: boolean;
       redirectUrl?: string;
     }> {
-      const tryJoin = async (id: string, attempts = 5, delayMs = 500): Promise<any> => {
-        let lastError: any = null;
-        for (let i = 0; i < attempts; i++) {
-          const res = await FlagshipSanctuaryApi.joinSession(id, joinData);
-          if (res.success) return res;
-          const msg = (res.message || res.error || '').toLowerCase();
-          // Retry on eventual consistency conditions
-          if (res && (res.error === 'Session not found' || msg.includes('not found') || msg.includes('not active'))) {
-            await new Promise(r => setTimeout(r, delayMs + i * 200));
-            lastError = res;
-            continue;
-          }
-          // Redirect case from backend
-          if ((res as any).data?.liveSessionId) {
-            const liveId = (res as any).data.liveSessionId as string;
-            return await tryJoin(liveId, attempts, delayMs);
-          }
-          lastError = res;
-        }
-        return lastError;
-      };
-
     try {
+      console.log('🚪 Smart join attempt for session:', sessionId);
+      
       // First attempt join
       const joinResponse = await FlagshipSanctuaryApi.joinSession(sessionId, joinData);
       
-      // Check if it's a success with redirect info
+      // Check if response indicates redirect needed (backend converted session)
+      if (joinResponse.success && (joinResponse as any).data?.needsRedirect) {
+        console.log('✅ Backend converted session, redirecting to:', (joinResponse as any).data.liveSessionId);
+        return {
+          success: true,
+          data: joinResponse.data,
+          needsRedirect: true,
+          redirectUrl: (joinResponse as any).data.redirectTo || `/flagship-sanctuary/${(joinResponse as any).data.liveSessionId}`
+        };
+      }
+
+      // Check for other redirect indicators
+      if ((joinResponse as any).data?.liveSessionId && (joinResponse as any).data?.redirectTo) {
+        console.log('🔄 Session redirect detected:', (joinResponse as any).data.liveSessionId);
+        return {
+          success: true,
+          data: joinResponse.data,
+          needsRedirect: true,
+          redirectUrl: (joinResponse as any).data.redirectTo
+        };
+      }
+      
+      // Normal successful join
       if (joinResponse.success) {
-        if ((joinResponse as any).data?.liveSessionId) {
-          const liveId = (joinResponse as any).data.liveSessionId as string;
-          return {
-            success: true,
-            data: joinResponse.data,
-            needsRedirect: true,
-            redirectUrl: `/flagship-sanctuary/${liveId}`
-          };
-        }
+        console.log('✅ Direct join successful');
         return { success: true, data: joinResponse.data };
       }
 
-      // If backend indicates moved to live, follow it
-      if ((joinResponse as any).data?.liveSessionId) {
-        const liveId = (joinResponse as any).data.liveSessionId as string;
-        const liveJoin = await tryJoin(liveId);
-        if (liveJoin?.success) {
+      // Handle conversion cases
+      const needsConversion = joinResponse.error === 'Session conversion required' ||
+        joinResponse.message === 'Session conversion required' ||
+        joinResponse.message === 'Session not yet ready' ||
+        (joinResponse as any).data?.needsConversion;
+
+      if (needsConversion) {
+        console.log('🔄 Converting scheduled session to live:', sessionId);
+        const conversionResult = await this.convertScheduledSession(sessionId);
+        
+        if (conversionResult.success && conversionResult.liveSessionId) {
+          console.log('✅ Session converted, redirecting to:', conversionResult.liveSessionId);
           return {
             success: true,
-            data: liveJoin.data,
             needsRedirect: true,
-            redirectUrl: `/flagship-sanctuary/${liveId}`
+            redirectUrl: conversionResult.redirectUrl || `/flagship-sanctuary/${conversionResult.liveSessionId}`
+          };
+        } else {
+          return { 
+            success: false, 
+            error: 'Failed to convert scheduled session: ' + (conversionResult.error || 'unknown error') 
           };
         }
-        return { success: false, error: 'Failed to join converted session: ' + (liveJoin?.error || liveJoin?.message) };
       }
 
-        // If conversion required, start it then retry join on new live id
-        const needsConversion = joinResponse.error === 'Session conversion required' ||
-          joinResponse.message === 'Session conversion required' ||
-          (joinResponse as any).data?.needsConversion;
-
-        if (needsConversion) {
-          console.log('🔄 Converting scheduled session to live:', sessionId);
-          const conversionResult = await this.convertScheduledSession(sessionId);
-          if (conversionResult.success && conversionResult.liveSessionId) {
-            const liveId = conversionResult.liveSessionId;
-            const liveJoin = await tryJoin(liveId);
-            if (liveJoin?.success) {
-              return {
-                success: true,
-                data: liveJoin.data,
-                needsRedirect: true,
-                redirectUrl: `/flagship-sanctuary/${liveId}`
-              };
-            }
-            return { success: false, error: 'Failed to join converted session: ' + (liveJoin?.error || liveJoin?.message) };
-          }
-          return { success: false, error: 'Failed to convert scheduled session: ' + (conversionResult.error || 'unknown error') };
-        }
-
-        // Fallback: return original error
-        return { success: false, error: joinResponse.error || 'Failed to join session' };
-      } catch (error) {
-        console.error('❌ Smart join failed:', error);
-        return { success: false, error: error instanceof Error ? error.message : 'Join failed' };
-      }
+      // Fallback: return original error
+      console.log('❌ Join failed:', joinResponse.error || joinResponse.message);
+      return { success: false, error: joinResponse.error || joinResponse.message || 'Failed to join session' };
+      
+    } catch (error) {
+      console.error('❌ Smart join failed:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Join failed' };
     }
+  }
 }

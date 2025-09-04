@@ -74,7 +74,7 @@ const FlagshipSanctuary: React.FC = () => {
     
     if (acknowledged && (sessionLive || timeReached) && joinStatus === 'idle') {
       smartJoinTriggeredRef.current = true;
-      // Use smart join to handle conversion if needed
+      
       const handleSmartJoin = async () => {
         try {
           const { FlagshipSessionManager } = await import('@/services/flagshipSessionManager');
@@ -82,17 +82,28 @@ const FlagshipSanctuary: React.FC = () => {
           
           if (result.success) {
             if (result.needsRedirect && result.redirectUrl) {
+              console.log('🔄 Redirecting to converted session:', result.redirectUrl);
               window.location.replace(result.redirectUrl);
               return;
             }
             console.log('✅ Successfully joined session');
           } else {
             console.error('Smart join failed:', result.error);
-            await joinSession(sessionId, { acknowledged: true });
+            // Fallback to regular join
+            try {
+              await joinSession(sessionId, { acknowledged: true });
+            } catch (fallbackError) {
+              console.error('Fallback join also failed:', fallbackError);
+            }
           }
         } catch (error) {
           console.error('Failed to load session manager:', error);
-          await joinSession(sessionId, { acknowledged: true });
+          // Fallback to regular join
+          try {
+            await joinSession(sessionId, { acknowledged: true });
+          } catch (fallbackError) {
+            console.error('Fallback join also failed:', fallbackError);
+          }
         }
       };
       

@@ -803,75 +803,76 @@ router.post('/:sessionId/join', optionalAuthMiddleware, async (req, res) => {
       voiceModulation: voiceModulation?.voiceId
     });
 
-    // First, check if this is a live session in Redis/cache
-    let session = await redisService.getSessionState(sessionId);
+    // Check if it's a scheduled session that needs conversion
+    const scheduledSession = await ScheduledSession.findOne({ id: sessionId });
     
-    if (!session) {
-      // Check if it's a scheduled session that needs conversion
-      const scheduledSession = await ScheduledSession.findOne({ id: sessionId });
+    if (scheduledSession) {
+      // If already converted, redirect to live session
+      if (scheduledSession.liveSessionId) {
+        console.log('🔄 Session already converted, redirecting to:', scheduledSession.liveSessionId);
+        return res.status(200).json({
+          success: true,
+          message: 'Redirecting to live session',
+          data: {
+            liveSessionId: scheduledSession.liveSessionId,
+            redirectTo: `/flagship-sanctuary/${scheduledSession.liveSessionId}`,
+            needsRedirect: true
+          }
+        });
+      }
       
-      if (scheduledSession) {
-        // If already converted, redirect to live session
-        if (scheduledSession.liveSessionId) {
-          console.log('🔄 Session already converted, redirecting to:', scheduledSession.liveSessionId);
-          return res.status(200).json({
-            success: true,
-            message: 'Redirecting to live session',
-            data: {
-              liveSessionId: scheduledSession.liveSessionId,
-              redirectTo: `/flagship-sanctuary/${scheduledSession.liveSessionId}`,
-              participant: null // Will join after redirect
-            }
-          });
-        }
+      // Check if it's time to convert (scheduled time has passed or is within 1 minute)
+      const now = new Date();
+      const scheduledTime = new Date(scheduledSession.scheduledDateTime);
+      const timeDiff = scheduledTime.getTime() - now.getTime();
+      
+      if (timeDiff <= 60000) { // Within 1 minute or past scheduled time
+        console.log('🔄 Auto-converting scheduled session to live');
         
-        // Check if it's time to convert (scheduled time has passed or is within 1 minute)
-        const now = new Date();
-        const scheduledTime = new Date(scheduledSession.scheduledDateTime);
-        const timeDiff = scheduledTime.getTime() - now.getTime();
-        
-        if (timeDiff <= 60000) { // Within 1 minute or past scheduled time
-          console.log('🔄 Auto-converting scheduled session to live');
+        try {
+          const conversionResult = await convertScheduledToLive(sessionId, req.user?.id || scheduledSession.hostId, null, true);
           
-          // Convert the session automatically using internal conversion function
-          try {
-            const conversionResult = await convertScheduledToLive(sessionId, req.user?.id || scheduledSession.hostId, res, true);
-            
-            if (conversionResult && conversionResult.liveSessionId) {
-              // Update session to point to the new live session
-              sessionId = conversionResult.liveSessionId;
-              session = await redisService.getSessionState(conversionResult.liveSessionId);
-              
-              console.log('✅ Session converted successfully, continuing with join');
-            } else {
-              return res.status(500).json({
-                success: false,
-                message: 'Failed to convert session',
-                error: 'Session conversion failed'
-              });
-            }
-          } catch (conversionError) {
-            console.error('❌ Session conversion error:', conversionError);
+          if (conversionResult && conversionResult.liveSessionId) {
+            console.log('✅ Session converted successfully, redirecting to:', conversionResult.liveSessionId);
+            return res.status(200).json({
+              success: true,
+              message: 'Session converted and redirecting',
+              data: {
+                liveSessionId: conversionResult.liveSessionId,
+                redirectTo: `/flagship-sanctuary/${conversionResult.liveSessionId}`,
+                needsRedirect: true
+              }
+            });
+          } else {
             return res.status(500).json({
               success: false,
-              message: 'Session conversion failed',
-              error: conversionError.message
+              message: 'Failed to convert session',
+              error: 'Session conversion failed'
             });
           }
-        } else {
-          return res.status(400).json({
+        } catch (conversionError) {
+          console.error('❌ Session conversion error:', conversionError);
+          return res.status(500).json({
             success: false,
-            message: 'Session not yet ready',
-            data: {
-              scheduledDateTime: scheduledSession.scheduledDateTime,
-              timeRemaining: timeDiff
-            }
+            message: 'Session conversion failed',
+            error: conversionError.message
           });
         }
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: 'Session not yet ready',
+          data: {
+            scheduledDateTime: scheduledSession.scheduledDateTime,
+            timeRemaining: timeDiff
+          }
+        });
       }
     }
 
-    // Now check if session exists (should be live session at this point)
+    // Try to get from live sessions (MongoDB)
+    let session = await LiveSanctuarySession.findOne({ id: sessionId });
+    
     if (!session) {
       return res.status(404).json({
         success: false,
@@ -894,7 +895,7 @@ router.post('/:sessionId/join', optionalAuthMiddleware, async (req, res) => {
       });
     }
 
-    if ((session.participantCount || 0) >= session.maxParticipants) {
+    if ((session.participants?.length || 0) >= session.maxParticipants) {
       return res.status(400).json({
         success: false,
         message: 'Session is full'
