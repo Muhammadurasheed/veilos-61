@@ -52,6 +52,9 @@ interface EnhancedSanctuary {
   averageMessageLength: number;
   hostToken?: string;
   status: 'active' | 'expiring_soon' | 'expired';
+  type?: 'flagship-live' | 'flagship-scheduled' | 'regular';
+  scheduledDateTime?: string;
+  liveSessionId?: string;
 }
 
 interface SanctuaryAnalytics {
@@ -109,11 +112,6 @@ const MySanctuariesEnhanced = () => {
       const apiUrl = import.meta.env.VITE_API_BASE_URL || 
                      (import.meta.env.DEV ? 'http://localhost:3000' : 'http://localhost:3000');
       
-      const params = new URLSearchParams();
-      if (hostTokens.length > 0) {
-        params.append('hostTokens', hostTokens.join(','));
-      }
-
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
@@ -124,18 +122,70 @@ const MySanctuariesEnhanced = () => {
         headers['x-auth-token'] = authToken;
       }
 
-      const response = await fetch(`${apiUrl}/api/host-recovery/my-sanctuaries?${params.toString()}`, {
-        headers
-      });
-
-      const data = await response.json();
+      // Try to get flagship sanctuary sessions first
+      let flagshipSessions: EnhancedSanctuary[] = [];
+      let flagshipAnalytics = null;
       
-      if (data.success) {
-        setSanctuaries(data.data || []);
-        setAnalytics(data.analytics || null);
-      } else {
-        throw new Error(data.error || 'Failed to load sanctuaries');
+      if (authToken) {
+        try {
+          const flagshipResponse = await fetch(`${apiUrl}/api/flagship-sanctuary/user/sessions`, {
+            headers
+          });
+          
+          if (flagshipResponse.ok) {
+            const flagshipData = await flagshipResponse.json();
+            if (flagshipData.success) {
+              flagshipSessions = flagshipData.data || [];
+              flagshipAnalytics = flagshipData.analytics;
+            }
+          }
+        } catch (flagshipError) {
+          console.log('Note: Could not fetch flagship sanctuary sessions:', flagshipError);
+        }
       }
+
+      // Get regular sanctuary sessions
+      let regularSessions: EnhancedSanctuary[] = [];
+      let regularAnalytics = null;
+      
+      if (hostTokens.length > 0) {
+        const params = new URLSearchParams();
+        params.append('hostTokens', hostTokens.join(','));
+
+        const response = await fetch(`${apiUrl}/api/host-recovery/my-sanctuaries?${params.toString()}`, {
+          headers
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+          regularSessions = data.data || [];
+          regularAnalytics = data.analytics;
+        }
+      }
+
+      // Combine sessions
+      const allSessions = [...flagshipSessions, ...regularSessions];
+      
+      // Combine analytics
+      const combinedAnalytics = {
+        total: allSessions.length,
+        active: allSessions.filter(s => s.status === 'active').length,
+        expiringSoon: allSessions.filter(s => s.status === 'expiring_soon').length,
+        expired: allSessions.filter(s => s.status === 'expired').length,
+        totalMessages: allSessions.reduce((sum, s) => sum + s.submissionCount, 0),
+        totalParticipants: allSessions.reduce((sum, s) => sum + s.uniqueParticipants, 0),
+        averageEngagement: allSessions.length > 0 ? 
+          Math.round(allSessions.reduce((sum, s) => sum + s.engagementScore, 0) / allSessions.length) : 0,
+        mostActiveSession: allSessions.length > 0 ? 
+          allSessions.reduce((prev, current) => 
+            current.participantCount > prev.participantCount ? current : prev
+          ) : null
+      };
+      
+      setSanctuaries(allSessions);
+      setAnalytics(combinedAnalytics);
+      
     } catch (err) {
       console.error('Error fetching sanctuaries:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to connect to server';
@@ -165,15 +215,34 @@ const MySanctuariesEnhanced = () => {
   const handleViewInbox = (sanctuary: EnhancedSanctuary) => {
     // Update last accessed time
     localStorage.setItem(`sanctuary-last-accessed-${sanctuary.id}`, new Date().toISOString());
-    navigate(`/sanctuary/inbox/${sanctuary.id}`);
+    
+    // Handle different sanctuary types
+    if (sanctuary.type === 'flagship-live') {
+      navigate(`/flagship-sanctuary/${sanctuary.id}`);
+    } else if (sanctuary.type === 'flagship-scheduled') {
+      if (sanctuary.liveSessionId) {
+        navigate(`/flagship-sanctuary/${sanctuary.liveSessionId}`);
+      } else {
+        navigate(`/flagship-sanctuary/${sanctuary.id}`);
+      }
+    } else {
+      navigate(`/sanctuary/inbox/${sanctuary.id}`);
+    }
   };
 
-  const handleCopyShareLink = (sanctuaryId: string) => {
-    const shareUrl = `${window.location.origin}/sanctuary/submit/${sanctuaryId}`;
+  const handleCopyShareLink = (sanctuaryId: string, sanctuary: EnhancedSanctuary) => {
+    let shareUrl;
+    
+    if (sanctuary.type === 'flagship-live' || sanctuary.type === 'flagship-scheduled') {
+      shareUrl = `${window.location.origin}/flagship-sanctuary/${sanctuaryId}`;
+    } else {
+      shareUrl = `${window.location.origin}/sanctuary/submit/${sanctuaryId}`;
+    }
+    
     navigator.clipboard.writeText(shareUrl);
     toast({
       title: "Share Link Copied!",
-      description: "The sanctuary submission link has been copied to your clipboard.",
+      description: "The sanctuary link has been copied to your clipboard.",
     });
   };
 
@@ -510,7 +579,7 @@ const MySanctuariesEnhanced = () => {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => handleCopyShareLink(sanctuary.id)}
+                                    onClick={() => handleCopyShareLink(sanctuary.id, sanctuary)}
                                   >
                                     <Share2 className="h-3 w-3" />
                                   </Button>

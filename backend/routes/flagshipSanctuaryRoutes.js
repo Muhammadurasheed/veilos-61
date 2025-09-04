@@ -106,6 +106,21 @@ router.post('/create', authMiddleware, async (req, res) => {
       aiModerationEnabled
     }, sessionDurationSeconds);
 
+    // Save session to user's history for My Sanctuaries tracking
+    const userSessionKey = `user-sanctuaries-${req.user.id}`;
+    const userSessions = await redisService.getSessionState(userSessionKey) || [];
+    userSessions.push({
+      sessionId: liveSession.id,
+      topic: liveSession.topic,
+      emoji: liveSession.emoji,
+      mode: 'live-audio',
+      createdAt: new Date().toISOString(),
+      isHost: true,
+      type: 'instant'
+    });
+    await redisService.setSessionState(userSessionKey, userSessions);
+    console.log('💾 Instant session saved to user history:', req.user.id);
+
     console.log('✅ Instant flagship session created:', {
       sessionId,
       channelName,
@@ -376,6 +391,21 @@ router.post('/schedule', authMiddleware, async (req, res) => {
       invitationCode,
       status: 'scheduled'
     }, 7 * 24 * 3600); // Cache for 7 days
+
+    // Save session to user's history for My Sanctuaries tracking
+    const userSessionKey = `user-sanctuaries-${req.user.id}`;
+    const userSessions = await redisService.getSessionState(userSessionKey) || [];
+    userSessions.push({
+      sessionId: scheduledSession.id,
+      topic: scheduledSession.topic,
+      emoji: scheduledSession.emoji,
+      mode: 'live-audio',
+      createdAt: new Date().toISOString(),
+      isHost: true,
+      type: 'scheduled'
+    });
+    await redisService.setSessionState(userSessionKey, userSessions);
+    console.log('💾 Scheduled session saved to user history:', req.user.id);
 
     console.log('✅ Scheduled session created:', {
       sessionId,
@@ -673,15 +703,21 @@ router.post('/:sessionId/join', optionalAuthMiddleware, async (req, res) => {
       
       if (scheduledSession) {
         if (scheduledSession.liveSessionId) {
-          session = await LiveSanctuarySession.findOne({ id: scheduledSession.liveSessionId });
-          isScheduledSession = true;
+          // Session already converted, use existing live session
+          session = await redisService.getSessionState(scheduledSession.liveSessionId);
+          if (!session) {
+            // Fallback to MongoDB if not in Redis
+            session = await LiveSanctuarySession.findOne({ id: scheduledSession.liveSessionId });
+          }
+          isScheduledSession = false; // Use live session, not scheduled
+          console.log('🔗 Using existing live session:', scheduledSession.liveSessionId);
         } else if (scheduledSession.status === 'scheduled') {
           // Check if it's time to start the session
           const now = new Date();
           const scheduledTime = new Date(scheduledSession.scheduledDateTime);
           
           if (now >= scheduledTime) {
-            // Auto-start the scheduled session
+            // Auto-start the scheduled session (only if not already started)
             console.log('🔄 Auto-starting scheduled session:', sessionId);
             
             // Create live session from scheduled session
@@ -734,7 +770,24 @@ router.post('/:sessionId/join', optionalAuthMiddleware, async (req, res) => {
             
             console.log('✅ Scheduled session converted to live:', liveSessionData.id);
             
-            // Now redirect to use the live session
+            // Save session to user's history for My Sanctuaries tracking
+            if (req.user?.id) {
+              const userSessionKey = `user-sanctuaries-${req.user.id}`;
+              const userSessions = await redisService.getSessionState(userSessionKey) || [];
+              userSessions.push({
+                sessionId: liveSessionData.id,
+                originalScheduledId: sessionId,
+                topic: liveSessionData.topic,
+                emoji: liveSessionData.emoji,
+                mode: 'live-audio',
+                createdAt: now.toISOString(),
+                isHost: true
+              });
+              await redisService.setSessionState(userSessionKey, userSessions);
+              console.log('💾 Session saved to user history:', req.user.id);
+            }
+            
+            // Return successful join with live session data
             session = liveSessionData;
             isScheduledSession = false;
           } else {
@@ -1025,6 +1078,139 @@ router.post('/:sessionId/emergency', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('❌ Emergency alert error:', error);
     res.error('Failed to send emergency alert: ' + error.message, 500);
+  }
+});
+
+// ================== MY SANCTUARIES TRACKING ==================
+
+// Get user's flagship sanctuary sessions for My Sanctuaries page
+router.get('/user/sessions', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    console.log('📋 Getting user flagship sanctuary sessions:', userId);
+    
+    // Get sessions from Redis user history
+    const userSessionKey = `user-sanctuaries-${userId}`;
+    const userSessions = await redisService.getSessionState(userSessionKey) || [];
+    
+    // Get live sessions this user is hosting or has joined
+    const liveSessions = await LiveSanctuarySession.find({
+      $or: [
+        { hostId: userId },
+        { 'participants.id': userId }
+      ]
+    }).sort({ createdAt: -1 }).limit(50);
+    
+    // Get scheduled sessions this user created
+    const scheduledSessions = await ScheduledSession.find({
+      hostId: userId
+    }).sort({ createdAt: -1 }).limit(50);
+    
+    // Combine and format sessions
+    const allSessions = [];
+    
+    // Add live sessions
+    liveSessions.forEach(session => {
+      const participant = session.participants.find(p => p.id === userId);
+      const isHost = session.hostId === userId;
+      
+      allSessions.push({
+        id: session.id,
+        topic: session.topic,
+        description: session.description,
+        emoji: session.emoji || '🎙️',
+        mode: 'live-audio',
+        createdAt: session.startTime || session.createdAt,
+        expiresAt: session.expiresAt,
+        isExpired: new Date() > session.expiresAt,
+        submissionCount: session.participants.length,
+        participantCount: session.participants.length,
+        uniqueParticipants: session.participants.length,
+        recentActivity: isHost ? session.participants.length : 0,
+        lastActivity: session.endedAt || session.updatedAt,
+        timeRemaining: Math.max(0, Math.ceil((session.expiresAt - new Date()) / (1000 * 60))),
+        engagementScore: Math.min(100, (session.participants.length / session.maxParticipants) * 100),
+        averageMessageLength: 50, // Placeholder
+        hostToken: isHost ? session.hostToken : null,
+        status: session.status === 'active' ? 'active' : 'expired',
+        type: 'flagship-live'
+      });
+    });
+    
+    // Add scheduled sessions
+    scheduledSessions.forEach(session => {
+      const now = new Date();
+      const scheduledTime = new Date(session.scheduledDateTime);
+      const endTime = new Date(scheduledTime.getTime() + (session.duration * 60 * 1000));
+      
+      let status = 'expired';
+      if (session.status === 'live') {
+        status = 'active';
+      } else if (now < scheduledTime) {
+        status = 'active';
+      } else if (session.status === 'scheduled' && now >= scheduledTime) {
+        status = 'expiring_soon';
+      }
+      
+      allSessions.push({
+        id: session.id,
+        topic: session.topic,
+        description: session.description,
+        emoji: session.emoji || '📅',
+        mode: 'live-audio',
+        createdAt: session.createdAt,
+        expiresAt: endTime,
+        isExpired: status === 'expired',
+        submissionCount: session.preRegisteredParticipants.length,
+        participantCount: session.preRegisteredParticipants.length,
+        uniqueParticipants: session.preRegisteredParticipants.length,
+        recentActivity: session.preRegisteredParticipants.length,
+        lastActivity: session.updatedAt,
+        timeRemaining: status === 'expired' ? 0 : Math.max(0, Math.ceil((endTime - new Date()) / (1000 * 60))),
+        engagementScore: Math.min(100, (session.preRegisteredParticipants.length / session.maxParticipants) * 100),
+        averageMessageLength: 50, // Placeholder
+        hostToken: session.invitationCode,
+        status,
+        type: 'flagship-scheduled',
+        scheduledDateTime: session.scheduledDateTime,
+        liveSessionId: session.liveSessionId
+      });
+    });
+    
+    // Sort by creation date (newest first)
+    allSessions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    
+    // Calculate analytics
+    const analytics = {
+      total: allSessions.length,
+      active: allSessions.filter(s => s.status === 'active').length,
+      expiringSoon: allSessions.filter(s => s.status === 'expiring_soon').length,
+      expired: allSessions.filter(s => s.status === 'expired').length,
+      totalMessages: allSessions.reduce((sum, s) => sum + s.submissionCount, 0),
+      totalParticipants: allSessions.reduce((sum, s) => sum + s.uniqueParticipants, 0),
+      averageEngagement: allSessions.length > 0 ? 
+        Math.round(allSessions.reduce((sum, s) => sum + s.engagementScore, 0) / allSessions.length) : 0,
+      mostActiveSession: allSessions.length > 0 ? 
+        allSessions.reduce((prev, current) => 
+          current.participantCount > prev.participantCount ? current : prev
+        ) : null
+    };
+    
+    console.log('✅ User sessions retrieved:', {
+      userId,
+      totalSessions: allSessions.length,
+      active: analytics.active
+    });
+    
+    res.success({
+      data: allSessions,
+      analytics
+    }, 'User flagship sanctuary sessions retrieved');
+    
+  } catch (error) {
+    console.error('❌ Get user sessions error:', error);
+    res.error('Failed to retrieve user sessions: ' + error.message, 500);
   }
 });
 

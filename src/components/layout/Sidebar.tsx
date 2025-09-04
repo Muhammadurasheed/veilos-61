@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/optimized/AuthContextRefactored';
-import { 
+  import { 
   Home,
   MessageSquare,
   Calendar,
@@ -13,12 +13,9 @@ import {
   X,
   ChevronRight,
   LayoutDashboard,
-  Rss,
   Users,
-  Clock,
   UserCog,
-  ShieldCheck,
-  Star
+  ShieldCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -53,32 +50,32 @@ export const Sidebar = ({ className }: SidebarProps) => {
     {
       name: 'Dashboard',
       href: '/dashboard',
-      icon: LayoutDashboard
+      icon: Home
     },
     {
-      name: 'Feed',
+      name: 'Community Feed',
       href: '/feed',
-      icon: Rss
+      icon: MessageSquare
     },
     {
-      name: 'Sanctuary',
+      name: 'Create Sanctuary',
       href: '/sanctuary',
       icon: Shield
     },
     {
       name: 'My Sanctuaries',
       href: '/my-sanctuaries',
+      icon: LayoutDashboard
+    },
+    {
+      name: 'Find Experts',
+      href: '/beacons',
       icon: Users
     },
     {
-      name: 'Beacons',
-      href: '/beacons',
-      icon: Star
-    },
-    {
-      name: 'Sessions',
+      name: 'My Sessions',
       href: '/sessions',
-      icon: Clock
+      icon: Calendar
     },
     {
       name: 'Profile',
