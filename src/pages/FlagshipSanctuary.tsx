@@ -23,7 +23,8 @@ const FlagshipSanctuary: React.FC = () => {
     isLoading,
     error,
     leaveSession,
-    joinSession
+    joinSession,
+    joinStatus
   } = useFlagshipSanctuary({
     sessionId,
     autoJoin: false, // Load session data but don't auto-join
@@ -65,10 +66,12 @@ const FlagshipSanctuary: React.FC = () => {
   React.useEffect(() => {
     if (!sessionId || !session || currentParticipant) return;
     const acknowledged = hasAcknowledged || searchParams.get('acknowledged') === 'true';
-    if (acknowledged && (session.status === 'live' || session.status === 'active' || (session.scheduledDateTime && new Date(session.scheduledDateTime) <= new Date()))) {
+    const timeReached = session.scheduledDateTime && new Date(session.scheduledDateTime) <= new Date();
+    const sessionLive = session.status === 'live' || session.status === 'active';
+    if (acknowledged && (sessionLive || timeReached) && joinStatus === 'idle') {
       joinSession(sessionId, { acknowledged: true });
     }
-  }, [sessionId, session, currentParticipant, hasAcknowledged, searchParams, joinSession]);
+  }, [sessionId, session, currentParticipant, hasAcknowledged, searchParams, joinSession, joinStatus]);
 
   // Show creator if no session ID
   if (!sessionId || showCreator) {
@@ -149,6 +152,22 @@ const FlagshipSanctuary: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Show transitional state while joining/starting
+  if (joinStatus === 'joining' || joinStatus === 'starting') {
+    return (
+      <Layout>
+        <div className="container py-8 flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">
+              {joinStatus === 'starting' ? 'Starting your sanctuary…' : 'Joining sanctuary…'}
+            </p>
+          </div>
         </div>
       </Layout>
     );

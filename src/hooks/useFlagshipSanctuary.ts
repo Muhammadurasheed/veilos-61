@@ -26,6 +26,7 @@ interface UseFlagshipSanctuaryReturn {
   currentParticipant: FlagshipParticipant | null;
   isLoading: boolean;
   error: string | null;
+  joinStatus: 'idle' | 'joining' | 'starting' | 'joined';
   
   // Connection State
   isConnected: boolean;
@@ -109,6 +110,7 @@ export const useFlagshipSanctuary = (options: UseFlagshipSanctuaryOptions = {}):
   const [availableVoices, setAvailableVoices] = useState<ElevenLabsVoice[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<ElevenLabsVoice | null>(null);
   const [voiceProcessingEnabled, setVoiceProcessingEnabled] = useState(false);
+  const [joinStatus, setJoinStatus] = useState<'idle' | 'joining' | 'starting' | 'joined'>('idle');
   
   // Initialize socket connection
   const initializeSocket = useCallback(() => {
@@ -410,6 +412,7 @@ export const useFlagshipSanctuary = (options: UseFlagshipSanctuaryOptions = {}):
   const joinSession = useCallback(async (sessionId: string, data?: JoinFlagshipSanctuaryRequest): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
+    setJoinStatus('joining');
 
     try {
       // Always refresh latest session state
@@ -427,6 +430,7 @@ export const useFlagshipSanctuary = (options: UseFlagshipSanctuaryOptions = {}):
       const isPending = joinResponse.success === false && (pendingMsg.includes('starting') || pendingMsg.includes('please wait'));
       if (isPending) {
         // Do NOT surface as an error – keep user in waiting state and retry
+        setJoinStatus('starting');
         if (joinRetryRef.current === 0) {
           toast({
             title: 'Session is starting',
@@ -448,6 +452,7 @@ export const useFlagshipSanctuary = (options: UseFlagshipSanctuaryOptions = {}):
 
       // Success
       joinRetryRef.current = 0;
+      setJoinStatus('joined');
       setCurrentParticipant(joinResponse.data.participant);
       setParticipants(sessionResponse.data.participants || []);
 
@@ -466,6 +471,7 @@ export const useFlagshipSanctuary = (options: UseFlagshipSanctuaryOptions = {}):
       return true;
     } catch (error: any) {
       const errorMsg = error.message || 'Failed to join sanctuary';
+      setJoinStatus('idle');
       setError(errorMsg);
       toast({
         title: 'Join Failed',
@@ -796,6 +802,7 @@ export const useFlagshipSanctuary = (options: UseFlagshipSanctuaryOptions = {}):
     setCurrentParticipant(null);
     setIsConnected(false);
     setConnectionStatus('disconnected');
+    setJoinStatus('idle');
   }, []);
 
   return {
@@ -805,6 +812,7 @@ export const useFlagshipSanctuary = (options: UseFlagshipSanctuaryOptions = {}):
     currentParticipant,
     isLoading,
     error,
+    joinStatus,
     
     // Connection State
     isConnected,
