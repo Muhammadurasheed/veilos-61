@@ -724,13 +724,13 @@ router.post('/:sessionId/join', optionalAuthMiddleware, async (req, res) => {
             };
             
             // Save live session
-            await stateManager.setState(liveSessionData.id, liveSessionData);
+            await redisService.setSessionState(liveSessionData.id, liveSessionData);
             
             // Update scheduled session with live session reference
             scheduledSession.status = 'live';
             scheduledSession.liveSessionId = liveSessionData.id;
             scheduledSession.actualStartTime = now;
-            await stateManager.setState(sessionId, scheduledSession);
+            await redisService.setSessionState(sessionId, scheduledSession);
             
             console.log('✅ Scheduled session converted to live:', liveSessionData.id);
             

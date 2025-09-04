@@ -33,6 +33,7 @@ interface EnhancedLiveAudioSpaceProps {
   currentUser: {
     id: string;
     alias: string;
+    avatarIndex?: number;
     isHost?: boolean;
     isModerator?: boolean;
   };
@@ -63,6 +64,7 @@ export const EnhancedLiveAudioSpace = ({ session, currentUser, onLeave }: Enhanc
   // Socket connection for real-time events
   const {
     onEvent,
+    sendMessage,
     sendEmojiReaction,
     toggleHand,
     promoteToSpeaker,
@@ -303,43 +305,22 @@ export const EnhancedLiveAudioSpace = ({ session, currentUser, onLeave }: Enhanc
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
 
-    try {
-      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
-      const response = await fetch(`/api/sanctuary-chat/sessions/${session.id}/messages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'x-auth-token': token || ''
-        },
-        body: JSON.stringify({
-          content: newMessage.trim(),
-          type: 'text'
-        })
-      });
+    const messageContent = newMessage.trim();
+    setNewMessage(''); // Clear input immediately for better UX
 
-      if (!response.ok) {
-        throw new Error('Failed to send message');
-      }
+    // Add message locally for immediate feedback
+    const localMessage: ChatMessage = {
+      id: `local-${Date.now()}`,
+      senderAlias: currentUser.alias,
+      senderAvatarIndex: currentUser.avatarIndex || 1,
+      content: messageContent,
+      timestamp: new Date(),
+      type: 'text'
+    };
+    setMessages(prev => [...prev, localMessage]);
 
-      // Add message locally for immediate feedback
-      const localMessage: ChatMessage = {
-        id: `local-${Date.now()}`,
-        senderAlias: currentUser.alias,
-        senderAvatarIndex: 1,
-        content: newMessage.trim(),
-        timestamp: new Date(),
-        type: 'text'
-      };
-      setMessages(prev => [...prev, localMessage]);
-      setNewMessage('');
-    } catch (error) {
-      toast({
-        title: "Message Failed",
-        description: "Could not send message",
-        variant: "destructive"
-      });
-    }
+    // Send message via socket hook
+    sendMessage(messageContent, 'text');
   };
 
   const handleEmojiReaction = (emoji: string) => {
@@ -645,7 +626,7 @@ export const EnhancedLiveAudioSpace = ({ session, currentUser, onLeave }: Enhanc
 
             {/* Chat Panel */}
             {isChatVisible && (
-              <Card className="h-96">
+              <Card className="h-96 mb-6">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center justify-between text-lg">
                     <span>Chat</span>
@@ -660,7 +641,7 @@ export const EnhancedLiveAudioSpace = ({ session, currentUser, onLeave }: Enhanc
                 </CardHeader>
                 <CardContent className="space-y-4 h-full flex flex-col">
                   {/* Messages */}
-                  <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+                  <div className="flex-1 overflow-y-auto space-y-3 pr-2 min-h-0">
                     {messages.map((message) => (
                       <div key={message.id} className="space-y-1">
                         {message.type === 'system' ? (
@@ -707,7 +688,7 @@ export const EnhancedLiveAudioSpace = ({ session, currentUser, onLeave }: Enhanc
                   </div>
 
                   {/* Message Input */}
-                  <div className="flex items-center space-x-2 pt-2 border-t">
+                  <div className="flex items-center space-x-2 pt-2 border-t mt-auto">
                     <Input
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
