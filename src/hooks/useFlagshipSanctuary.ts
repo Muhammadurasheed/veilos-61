@@ -454,7 +454,9 @@ export const useFlagshipSanctuary = (options: UseFlagshipSanctuaryOptions = {}):
       joinRetryRef.current = 0;
       setJoinStatus('joined');
       setCurrentParticipant(joinResponse.data.participant);
-      setParticipants(sessionResponse.data.participants || []);
+      const baseParticipants = sessionResponse.data.participants || [];
+      const alreadyIncluded = baseParticipants.some((p: any) => p.id === joinResponse.data.participant.id);
+      setParticipants(alreadyIncluded ? baseParticipants : [...baseParticipants, joinResponse.data.participant]);
 
       if (socketRef.current) {
         socketRef.current.emit('sanctuary:join', {

@@ -87,6 +87,7 @@ const FlagshipSanctuary: React.FC = () => {
               return;
             }
             console.log('✅ Successfully joined session');
+            await joinSession(sessionId, { acknowledged: true });
           } else {
             console.error('Smart join failed:', result.error);
             // Fallback to regular join
@@ -146,6 +147,7 @@ const FlagshipSanctuary: React.FC = () => {
 
   // Check if this is an instant session (no scheduled time)
   const isInstantSession = session && !session.scheduledDateTime;
+  const timeReachedNow = session?.scheduledDateTime ? new Date(session.scheduledDateTime) <= new Date() : false;
 
   // Show waiting room for scheduled sessions that haven't started yet
   if (isWaitingForScheduledStart) {
@@ -157,8 +159,8 @@ const FlagshipSanctuary: React.FC = () => {
     );
   }
 
-  // For instant sessions or live scheduled sessions, show acknowledgment if needed
-  if (session && !hasAcknowledged && !currentParticipant && (isInstantSession || session.status === 'live' || session.status === 'active')) {
+  // For instant sessions or when scheduled time is reached, show acknowledgment if needed
+  if (session && !hasAcknowledged && !currentParticipant && (isInstantSession || timeReachedNow || session.status === 'live' || session.status === 'active')) {
     if (showAcknowledgment) {
       return (
         <SessionAcknowledgment
