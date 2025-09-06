@@ -45,6 +45,7 @@ React.useEffect(() => {
     if (acknowledged && sessionId) {
       setHasAcknowledged(true);
       setShowAcknowledgment(false);
+      
       try {
         // Use smart join logic for acknowledgment flow to handle session conversion
         const { FlagshipSessionManager } = await import('@/services/flagshipSessionManager');
@@ -56,20 +57,28 @@ React.useEffect(() => {
             window.location.replace(result.redirectUrl);
             return;
           }
-          console.log('✅ Acknowledgment: Successfully joined session via smart join');
-          // Smart join already handled everything, no need to call joinSession again
+          
+          console.log('✅ Acknowledgment: Smart join successful, updating frontend state...');
+          
+          // Smart join succeeded, now update frontend state via hook's joinSession
+          const hookJoinSuccess = await joinSession(sessionId, { acknowledged: true });
+          
+          if (!hookJoinSuccess) {
+            console.warn('⚠️ Smart join succeeded but hook join failed - user may already be in session');
+          }
+          
         } else {
-          console.error('Acknowledgment: Smart join failed:', result.error);
+          console.error('❌ Acknowledgment: Smart join failed:', result.error);
           // Fallback to regular join
           await joinSession(sessionId, { acknowledged: true });
         }
       } catch (error) {
-        console.error('Failed to join session:', error);
+        console.error('❌ Failed to join session:', error);
         // Fallback to regular join
         try {
           await joinSession(sessionId, { acknowledged: true });
         } catch (fallbackError) {
-          console.error('Fallback join also failed:', fallbackError);
+          console.error('❌ Fallback join also failed:', fallbackError);
         }
       }
     }
@@ -102,31 +111,39 @@ React.useEffect(() => {
               window.location.replace(result.redirectUrl);
               return;
             }
-            console.log('✅ Successfully joined session via smart join');
-            // Smart join already handled everything, no need to call joinSession again
+            
+            console.log('✅ Auto-join: Smart join successful, updating frontend state...');
+            
+            // Smart join succeeded, now update frontend state via hook's joinSession
+            const hookJoinSuccess = await joinSession(sessionId, { acknowledged: true });
+            
+            if (!hookJoinSuccess) {
+              console.warn('⚠️ Auto-join: Smart join succeeded but hook join failed - user may already be in session');
+            }
+            
           } else {
-            console.error('Smart join failed:', result.error);
+            console.error('❌ Auto-join: Smart join failed:', result.error);
             // Fallback to regular join
             try {
               await joinSession(sessionId, { acknowledged: true });
             } catch (fallbackError) {
-              console.error('Fallback join also failed:', fallbackError);
+              console.error('❌ Auto-join: Fallback join also failed:', fallbackError);
             }
           }
         } catch (error) {
-          console.error('Failed to load session manager:', error);
+          console.error('❌ Auto-join: Failed to load session manager:', error);
           // Fallback to regular join
           try {
             await joinSession(sessionId, { acknowledged: true });
           } catch (fallbackError) {
-            console.error('Fallback join also failed:', fallbackError);
+            console.error('❌ Auto-join: Fallback join also failed:', fallbackError);
           }
         }
       };
-      
+
       handleSmartJoin();
     }
-  }, [sessionId, session, currentParticipant, hasAcknowledged, searchParams, joinSession, joinStatus]);
+}, [sessionId, session, currentParticipant, hasAcknowledged, joinStatus, joinSession]);
 
   // Show creator if no session ID
   if (!sessionId || showCreator) {
