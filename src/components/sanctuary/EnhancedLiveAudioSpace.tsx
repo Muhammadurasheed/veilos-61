@@ -48,7 +48,8 @@ interface ChatMessage {
   senderAvatarIndex: number;
   content: string;
   timestamp: Date;
-  type: 'text' | 'system' | 'emoji-reaction';
+  type: 'text' | 'system' | 'emoji-reaction' | 'media';
+  attachment?: any;
 }
 
 export const EnhancedLiveAudioSpace = ({ session, currentUser, onLeave }: EnhancedLiveAudioSpaceProps) => {
@@ -167,7 +168,21 @@ useEffect(() => {
       }),
 
       onEvent('emoji_reaction', (data) => {
-        // Add reaction as chat message
+        console.log('Emoji reaction received:', data);
+        
+        // Add floating reaction animation with unique ID
+        const reactionId = `reaction_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        setReactions(prev => {
+          const newReactions = [...prev, {
+            id: reactionId,
+            emoji: data.emoji,
+            timestamp: Date.now()
+          }];
+          // Limit to 5 active reactions for performance
+          return newReactions.slice(-5);
+        });
+
+        // Add to chat messages
         const reactionMessage: ChatMessage = {
           id: `reaction-${Date.now()}`,
           senderAlias: data.participantAlias,
@@ -177,14 +192,6 @@ useEffect(() => {
           type: 'emoji-reaction'
         };
         setMessages(prev => [...prev, reactionMessage]);
-
-        // Add floating reaction animation
-        const animatedReaction = {
-          id: `animated-${Date.now()}-${Math.random()}`,
-          emoji: data.emoji,
-          timestamp: Date.now()
-        };
-        setReactions(prev => [...prev, animatedReaction]);
       }),
 
       // Remove this event listener as it doesn't exist in socket types
@@ -335,9 +342,9 @@ const monitorAudioLevel = () => {
     }
   };
 
-  const handleSendMessage = async (messageContent?: string) => {
+  const handleSendMessage = async (messageContent?: string, type?: 'text' | 'emoji-reaction' | 'media', attachment?: any) => {
     const content = messageContent || newMessage.trim();
-    if (!content) return;
+    if (!content && !attachment) return;
 
     // Clear input only if using the local newMessage
     if (!messageContent) {
@@ -351,12 +358,12 @@ const monitorAudioLevel = () => {
       senderAvatarIndex: currentUser.avatarIndex || 1,
       content: content,
       timestamp: new Date(),
-      type: 'text'
+      type: type || 'text'
     };
     setMessages(prev => [...prev, localMessage]);
 
     // Send message via socket hook
-    sendMessage(content, 'text');
+    sendMessage(content, type || 'text', attachment);
   };
 
   const handleEmojiReaction = (emoji: string) => {

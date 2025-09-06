@@ -262,21 +262,27 @@ const initializeSocket = (server) => {
     });
 
     socket.on('sanctuary_message', async (data) => {
-      const { sanctuaryId, content, type = 'text' } = data;
+      const { sanctuaryId, content, type = 'text', attachment, participantAlias, participantId } = data;
       
       const message = {
         id: `sanctuary_msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        participantId: socket.userId,
-        participantAlias: data.participantAlias || socket.userAlias || 'Anonymous',
+        participantId: participantId || socket.userId,
+        participantAlias: participantAlias || socket.userAlias || 'Anonymous',
         content,
         type,
+        attachment,
         timestamp: new Date().toISOString()
       };
 
-      // Broadcast to all participants in the sanctuary
+      // Broadcast to all participants in both sanctuary and audio room channels
       io.to(`sanctuary_${sanctuaryId}`).emit('sanctuary_new_message', message);
+      io.to(`audio_room_${sanctuaryId}`).emit('sanctuary_new_message', message);
       
-      console.log(`Sanctuary message in ${sanctuaryId}:`, content);
+      console.log(`Sanctuary message in ${sanctuaryId}:`, {
+        type: message.type,
+        hasAttachment: !!message.attachment,
+        participantAlias: message.participantAlias
+      });
     });
 
     // Handle live audio room events

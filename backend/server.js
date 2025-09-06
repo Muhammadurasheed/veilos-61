@@ -126,6 +126,7 @@ app.use('/api/flagship-sanctuary', (req, res, next) => {
 app.use('/api/flagship-sanctuary', flagshipSanctuaryRoutes);
 app.use('/api/sanctuary-invitations', sanctuaryInvitationRoutes);
 app.use('/api/sanctuary-chat', sanctuaryChatRoutes);
+app.use('/api/flagship-chat', require('./routes/flagshipChatRoutes'));
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/sessions', sessionRatingRoutes);

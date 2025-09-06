@@ -67,11 +67,15 @@ export const ReactionOverlay = ({ reactions }: ReactionOverlayProps) => {
   const [activeReactions, setActiveReactions] = useState<Array<{ id: string; emoji: string }>>([]);
 
   useEffect(() => {
+    // Only add new reactions that aren't already active
     reactions.forEach(reaction => {
-      const reactionWithId = { id: reaction.id, emoji: reaction.emoji };
-      setActiveReactions(prev => [...prev, reactionWithId]);
+      const isAlreadyActive = activeReactions.some(active => active.id === reaction.id);
+      if (!isAlreadyActive) {
+        const reactionWithId = { id: reaction.id, emoji: reaction.emoji };
+        setActiveReactions(prev => [...prev, reactionWithId]);
+      }
     });
-  }, [reactions]);
+  }, [reactions, activeReactions]);
 
   const handleReactionComplete = (id: string) => {
     setActiveReactions(prev => prev.filter(r => r.id !== id));

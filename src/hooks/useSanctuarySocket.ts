@@ -139,7 +139,7 @@ export const useSanctuarySocket = (config: SanctuarySocketConfig) => {
   }, []);
 
   // Send message to sanctuary
-  const sendMessage = useCallback((content: string, type: 'text' | 'emoji-reaction' = 'text') => {
+  const sendMessage = useCallback((content: string, type: 'text' | 'emoji-reaction' | 'media' = 'text', attachment?: any) => {
     const socket = socketRef.current;
     if (!socket || !isConnectedRef.current) {
       console.warn('Socket not connected, cannot send message');
@@ -150,9 +150,11 @@ export const useSanctuarySocket = (config: SanctuarySocketConfig) => {
       sanctuaryId: config.sessionId,
       content,
       type,
-      participantAlias: config.participant.alias
+      attachment,
+      participantAlias: config.participant.alias,
+      participantId: config.participant.id
     });
-  }, [config.sessionId, config.participant.alias]);
+  }, [config.sessionId, config.participant.alias, config.participant.id]);
 
   // Raise/lower hand
   const toggleHand = useCallback((isRaised: boolean) => {
