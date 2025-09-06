@@ -46,9 +46,30 @@ React.useEffect(() => {
       setHasAcknowledged(true);
       setShowAcknowledgment(false);
       try {
-        await joinSession(sessionId, { acknowledged: true });
+        // Use smart join logic for acknowledgment flow to handle session conversion
+        const { FlagshipSessionManager } = await import('@/services/flagshipSessionManager');
+        const result = await FlagshipSessionManager.joinSessionSmart(sessionId, { acknowledged: true });
+        
+        if (result.success) {
+          if (result.needsRedirect && result.redirectUrl) {
+            console.log('🔄 Acknowledgment: Redirecting to converted session:', result.redirectUrl);
+            window.location.replace(result.redirectUrl);
+            return;
+          }
+          console.log('✅ Acknowledgment: Successfully joined session via smart join');
+        } else {
+          console.error('Acknowledgment: Smart join failed:', result.error);
+          // Fallback to regular join
+          await joinSession(sessionId, { acknowledged: true });
+        }
       } catch (error) {
         console.error('Failed to join session:', error);
+        // Fallback to regular join
+        try {
+          await joinSession(sessionId, { acknowledged: true });
+        } catch (fallbackError) {
+          console.error('Fallback join also failed:', fallbackError);
+        }
       }
     }
   };
@@ -80,8 +101,8 @@ React.useEffect(() => {
               window.location.replace(result.redirectUrl);
               return;
             }
-            console.log('✅ Successfully joined session');
-            await joinSession(sessionId, { acknowledged: true });
+            console.log('✅ Successfully joined session via smart join');
+            // Smart join already handled the session joining, no need to call joinSession again
           } else {
             console.error('Smart join failed:', result.error);
             // Fallback to regular join
