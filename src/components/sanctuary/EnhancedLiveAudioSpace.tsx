@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useSanctuarySocket } from '@/hooks/useSanctuarySocket';
 import { ReactionOverlay } from './AnimatedReaction';
+import { EnhancedChatPanel } from './EnhancedChatPanel';
 import { 
   Mic, 
   MicOff, 
@@ -55,8 +56,25 @@ export const EnhancedLiveAudioSpace = ({ session, currentUser, onLeave }: Enhanc
   const [isMuted, setIsMuted] = useState(true);
   const [isDeafened, setIsDeafened] = useState(false);
   const [handRaised, setHandRaised] = useState(false);
-  const [participants, setParticipants] = useState<LiveParticipant[]>(session.participants || []);
+  // Filter unique participants to prevent duplicates
+  const uniqueParticipants = React.useMemo(() => {
+    const seen = new Set();
+    return (session.participants || []).filter(p => {
+      if (seen.has(p.id)) {
+        return false;
+      }
+      seen.add(p.id);
+      return true;
+    });
+  }, [session.participants]);
+  
+  const [participants, setParticipants] = useState<LiveParticipant[]>(uniqueParticipants);
   const [audioLevel, setAudioLevel] = useState(0);
+  
+  // Update participants when session data changes
+  useEffect(() => {
+    setParticipants(uniqueParticipants);
+  }, [uniqueParticipants]);
   const [isChatVisible, setIsChatVisible] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -107,7 +125,12 @@ useEffect(() => {
     // Listen for participant events
     const cleanupEvents = [
       onEvent('audio_participant_joined', (data) => {
-        setParticipants(prev => [...prev, data.participant]);
+        setParticipants(prev => {
+          // Prevent duplicate participants
+          const exists = prev.find(p => p.id === data.participant.id);
+          if (exists) return prev;
+          return [...prev, data.participant];
+        });
         addSystemMessage(`${data.participant.alias} joined the audio space`);
       }),
 
@@ -312,25 +335,28 @@ const monitorAudioLevel = () => {
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!newMessage.trim()) return;
+  const handleSendMessage = async (messageContent?: string) => {
+    const content = messageContent || newMessage.trim();
+    if (!content) return;
 
-    const messageContent = newMessage.trim();
-    setNewMessage(''); // Clear input immediately for better UX
+    // Clear input only if using the local newMessage
+    if (!messageContent) {
+      setNewMessage('');
+    }
 
     // Add message locally for immediate feedback
     const localMessage: ChatMessage = {
       id: `local-${Date.now()}`,
       senderAlias: currentUser.alias,
       senderAvatarIndex: currentUser.avatarIndex || 1,
-      content: messageContent,
+      content: content,
       timestamp: new Date(),
       type: 'text'
     };
     setMessages(prev => [...prev, localMessage]);
 
     // Send message via socket hook
-    sendMessage(messageContent, 'text');
+    sendMessage(content, 'text');
   };
 
   const handleEmojiReaction = (emoji: string) => {
@@ -502,8 +528,8 @@ const monitorAudioLevel = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4">
-                  {participants.map((participant, index) => (
-                    <div key={`${participant.id}-${index}`} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                  {participants.map((participant) => (
+                    <div key={participant.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <Avatar className="h-12 w-12">
                           <AvatarImage src={`/avatars/avatar-${participant.avatarIndex || 1}.svg`} />
@@ -531,12 +557,12 @@ const monitorAudioLevel = () => {
                               <Hand className="h-5 w-5 text-yellow-500 animate-pulse" />
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground flex items-center">
+                          <div className="text-sm text-muted-foreground flex items-center">
                             <div className={`w-2 h-2 rounded-full mr-2 ${
                               participant.connectionStatus === 'connected' ? 'bg-green-500' : 'bg-gray-400'
                             }`} />
-                            {participant.connectionStatus}
-                          </p>
+                            <span>{participant.connectionStatus}</span>
+                          </div>
                         </div>
                       </div>
 
@@ -649,92 +675,18 @@ const monitorAudioLevel = () => {
               </CardContent>
             </Card>
 
-            {/* Chat Panel */}
-            {isChatVisible && (
-              <Card className="h-96 mb-6">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center justify-between text-lg">
-                    <span>Chat</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsChatVisible(false)}
-                    >
-                      <ChevronUp className="h-4 w-4" />
-                    </Button>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4 h-full flex flex-col">
-                  {/* Messages */}
-                  <div className="flex-1 overflow-y-auto space-y-3 pr-2 min-h-0">
-                    {messages.map((message) => (
-                      <div key={message.id} className="space-y-1">
-                        {message.type === 'system' ? (
-                          <div className="text-center">
-                            <Badge variant="outline" className="text-xs">
-                              <Shield className="h-3 w-3 mr-1" />
-                              {message.content}
-                            </Badge>
-                          </div>
-                        ) : message.type === 'emoji-reaction' ? (
-                          <div className="text-center">
-                            <span className="text-2xl">{message.content}</span>
-                            <p className="text-xs text-muted-foreground">
-                              {message.senderAlias} • {formatTime(message.timestamp)}
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="flex items-start space-x-2">
-                            <Avatar className="h-6 w-6">
-                              <AvatarImage src={`/avatars/avatar-${message.senderAvatarIndex}.svg`} />
-                              <AvatarFallback className="text-xs">
-                                {message.senderAlias.substring(0, 2).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center space-x-1">
-                                <p className="text-xs font-medium truncate">
-                                  {message.senderAlias}
-                                </p>
-                                <span className="text-xs text-muted-foreground">
-                                  {formatTime(message.timestamp)}
-                                </span>
-                              </div>
-                              <p className="text-sm break-words">
-                                {message.content}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                    <div ref={messagesEndRef} />
-                  </div>
+            {/* Enhanced Chat Panel with Mention Support */}
+            <EnhancedChatPanel
+              isVisible={isChatVisible}
+              onToggle={() => setIsChatVisible(false)}
+              messages={messages}
+              participants={participants}
+              currentUserAlias={currentUser.alias}
+              onSendMessage={handleSendMessage}
+            />
 
-                  {/* Message Input */}
-                  <div className="flex items-center space-x-2 pt-2 border-t mt-auto">
-                    <Input
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                      placeholder="Type a message..."
-                      className="flex-1"
-                    />
-                    <Button
-                      onClick={handleSendMessage}
-                      disabled={!newMessage.trim()}
-                      size="sm"
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Emergency Controls */}
-            <Card className="border-red-200">
+            {/* Emergency Controls - Fixed Position to Avoid Overlap */}
+            <Card className="border-red-200 mt-4">
               <CardContent className="pt-6">
                 <div className="text-center space-y-3">
                   <Button
@@ -745,9 +697,9 @@ const monitorAudioLevel = () => {
                     <AlertTriangle className="h-4 w-4 mr-2" />
                     Emergency Help
                   </Button>
-                  <p className="text-xs text-muted-foreground">
+                  <div className="text-xs text-muted-foreground">
                     Use only in genuine emergencies
-                  </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>

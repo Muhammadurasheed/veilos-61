@@ -88,7 +88,7 @@ React.useEffect(() => {
     window.history.back();
   };
 
-// Auto-join only after explicit acknowledgment by the user
+// Auto-join only after explicit acknowledgment by the user - prevent double calls
 React.useEffect(() => {
   if (!sessionId || !session || currentParticipant) return;
   if (smartJoinTriggeredRef.current) return;
@@ -98,6 +98,7 @@ React.useEffect(() => {
   const sessionLive = session.status === 'live' || session.status === 'active';
   
   if (acknowledged && (sessionLive || timeReached) && joinStatus === 'idle') {
+    console.log('🎯 Starting auto-join process...');
     smartJoinTriggeredRef.current = true;
       
       const handleSmartJoin = async () => {
