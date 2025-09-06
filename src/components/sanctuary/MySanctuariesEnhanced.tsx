@@ -307,8 +307,7 @@ const MySanctuariesEnhanced = () => {
     let shareUrl;
     
     if (sanctuary.type === 'flagship-live' || sanctuary.type === 'flagship-scheduled') {
-      // Include instant + acknowledged to streamline joining for invitees when appropriate
-      shareUrl = `${window.location.origin}/flagship-sanctuary/${sanctuaryId}?instant=true&acknowledged=true`;
+shareUrl = `${window.location.origin}/flagship-sanctuary/${sanctuaryId}`;
     } else {
       shareUrl = `${window.location.origin}/sanctuary/submit/${sanctuaryId}`;
     }

@@ -88,11 +88,11 @@ export const EnhancedLiveAudioSpace = ({ session, currentUser, onLeave }: Enhanc
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Generate invite link
-  useEffect(() => {
-    const currentUrl = window.location.origin;
-    const link = `${currentUrl}/flagship-sanctuary/${session.id}?instant=true&acknowledged=true`;
-    setInviteLink(link);
-  }, [session.id]);
+useEffect(() => {
+  const currentUrl = window.location.origin;
+  const link = `${currentUrl}/flagship-sanctuary/${session.id}`;
+  setInviteLink(link);
+}, [session.id]);
 
   // Auto-scroll chat messages
   useEffect(() => {
@@ -226,22 +226,22 @@ export const EnhancedLiveAudioSpace = ({ session, currentUser, onLeave }: Enhanc
     }
   };
 
-  const monitorAudioLevel = () => {
-    if (!micAnalyserRef.current) return;
+const monitorAudioLevel = () => {
+  if (!micAnalyserRef.current) return;
 
-    const dataArray = new Uint8Array(micAnalyserRef.current.frequencyBinCount);
-    
-    const checkLevel = () => {
-      if (micAnalyserRef.current) {
-        micAnalyserRef.current.getByteFrequencyData(dataArray);
-        const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
-        setAudioLevel(Math.floor((average / 255) * 100));
-      }
-      requestAnimationFrame(checkLevel);
-    };
-    
-    checkLevel();
+  const dataArray = new Uint8Array(micAnalyserRef.current.frequencyBinCount);
+  
+  const checkLevel = () => {
+    if (micAnalyserRef.current) {
+      micAnalyserRef.current.getByteFrequencyData(dataArray);
+      const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+      setAudioLevel(Math.floor((average / 255) * 100));
+    }
+    requestAnimationFrame(checkLevel);
   };
+  
+  checkLevel();
+};
 
   const cleanup = () => {
     if (streamRef.current) {
@@ -451,19 +451,25 @@ export const EnhancedLiveAudioSpace = ({ session, currentUser, onLeave }: Enhanc
                   </Button>
                 </div>
 
-                {/* Audio Level Indicator */}
-                {!isMuted && (
-                  <div className="flex items-center justify-center space-x-3">
-                    <Mic className="h-5 w-5 text-green-500" />
-                    <div className="w-48 h-3 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-green-400 to-green-600 transition-all duration-150 rounded-full"
-                        style={{ width: `${audioLevel}%` }}
-                      />
-                    </div>
-                    <span className="text-sm text-muted-foreground min-w-[3rem]">{audioLevel}%</span>
-                  </div>
-                )}
+{/* Audio Level Indicator - Waveform */}
+{!isMuted && (
+  <div className="flex items-center justify-center space-x-3">
+    <Mic className="h-5 w-5 text-green-500" />
+    <div className="flex items-end space-x-1 h-10">
+      {Array.from({ length: 12 }).map((_, i) => {
+        const level = Math.max(4, Math.min(100, audioLevel + (i % 3 - 1) * 8));
+        return (
+          <div
+            key={i}
+            className="w-1.5 rounded-full bg-gradient-to-b from-green-400 to-green-600 transition-all duration-150"
+            style={{ height: `${level}%` }}
+          />
+        );
+      })}
+    </div>
+    <span className="text-sm text-muted-foreground min-w-[3rem]">{audioLevel}%</span>
+  </div>
+)}
               </CardContent>
             </Card>
 

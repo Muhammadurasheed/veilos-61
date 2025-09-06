@@ -24,12 +24,14 @@ interface SessionWaitingRoomProps {
   session: FlagshipSanctuarySession;
   onLeave: () => void;
   onTestAudio?: () => void;
+  onCountdownComplete?: () => void;
 }
 
 export const SessionWaitingRoom: React.FC<SessionWaitingRoomProps> = ({
   session,
   onLeave,
-  onTestAudio
+  onTestAudio,
+  onCountdownComplete
 }) => {
   const { toast } = useToast();
   const [timeRemaining, setTimeRemaining] = useState<{
@@ -55,9 +57,9 @@ export const SessionWaitingRoom: React.FC<SessionWaitingRoomProps> = ({
         });
         // Auto-refresh the page to check session status
         setTimeout(() => {
-          console.log('🔄 Session should be starting, refreshing...');
-          window.location.href = window.location.href.replace(/[?&]acknowledged=true/, '') + '?acknowledged=true';
-        }, 2000);
+          console.log('✅ Countdown complete, showing acknowledgment...');
+          onCountdownComplete?.();
+        }, 500);
         return;
       }
 

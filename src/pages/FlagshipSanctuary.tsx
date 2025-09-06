@@ -16,6 +16,7 @@ const FlagshipSanctuary: React.FC = () => {
   const [showCreator, setShowCreator] = React.useState(!sessionId);
   const [showAcknowledgment, setShowAcknowledgment] = React.useState(false);
   const [hasAcknowledged, setHasAcknowledged] = React.useState(false);
+  const [countdownComplete, setCountdownComplete] = React.useState(false);
   const smartJoinTriggeredRef = React.useRef(false);
   
   const {
@@ -33,19 +34,12 @@ const FlagshipSanctuary: React.FC = () => {
     moderationEnabled: true
   });
 
-  // Check if we need to show acknowledgment screen
-  React.useEffect(() => {
-    if (sessionId && !hasAcknowledged && !currentParticipant) {
-      const isInstant = searchParams.get('instant') === 'true';
-      const acknowledged = isInstant || searchParams.get('acknowledged') === 'true';
-      if (!acknowledged) {
-        setShowAcknowledgment(true);
-      } else {
-        setHasAcknowledged(true);
-        setShowAcknowledgment(false);
-      }
-    }
-  }, [sessionId, hasAcknowledged, currentParticipant, searchParams]);
+// Decide to show acknowledgment screen proactively (no URL auto-ack)
+React.useEffect(() => {
+  if (sessionId && !hasAcknowledged && !currentParticipant) {
+    setShowAcknowledgment(true);
+  }
+}, [sessionId, hasAcknowledged, currentParticipant]);
 
   const handleAcknowledgmentJoin = async (acknowledged: boolean) => {
     if (acknowledged && sessionId) {
@@ -63,17 +57,17 @@ const FlagshipSanctuary: React.FC = () => {
     window.history.back();
   };
 
-  // Auto-join when acknowledged via query or when countdown completes
-  React.useEffect(() => {
-    if (!sessionId || !session || currentParticipant) return;
-    if (smartJoinTriggeredRef.current) return;
-    
-    const acknowledged = hasAcknowledged || searchParams.get('acknowledged') === 'true';
-    const timeReached = session.scheduledDateTime && new Date(session.scheduledDateTime) <= new Date();
-    const sessionLive = session.status === 'live' || session.status === 'active';
-    
-    if (acknowledged && (sessionLive || timeReached) && joinStatus === 'idle') {
-      smartJoinTriggeredRef.current = true;
+// Auto-join only after explicit acknowledgment by the user
+React.useEffect(() => {
+  if (!sessionId || !session || currentParticipant) return;
+  if (smartJoinTriggeredRef.current) return;
+  
+  const acknowledged = hasAcknowledged; // do not trust URL params
+  const timeReached = session.scheduledDateTime && new Date(session.scheduledDateTime) <= new Date();
+  const sessionLive = session.status === 'live' || session.status === 'active';
+  
+  if (acknowledged && (sessionLive || timeReached) && joinStatus === 'idle') {
+    smartJoinTriggeredRef.current = true;
       
       const handleSmartJoin = async () => {
         try {
@@ -150,28 +144,45 @@ const FlagshipSanctuary: React.FC = () => {
   const timeReachedNow = session?.scheduledDateTime ? new Date(session.scheduledDateTime) <= new Date() : false;
 
   // Show waiting room for scheduled sessions that haven't started yet
-  if (isWaitingForScheduledStart) {
+if (isWaitingForScheduledStart) {
+  return (
+    <SessionWaitingRoom
+      session={session}
+      onLeave={leaveSession}
+      onCountdownComplete={() => {
+        setCountdownComplete(true);
+        setShowAcknowledgment(true);
+      }}
+    />
+  );
+}
+
+// For instant sessions or when scheduled time is reached, show acknowledgment if needed
+const canJoinNow = !!session && (isInstantSession || timeReachedNow || session.status === 'live' || session.status === 'active');
+if (session && !hasAcknowledged && !currentParticipant && canJoinNow) {
+  if (showAcknowledgment) {
     return (
-      <SessionWaitingRoom
+      <SessionAcknowledgment
         session={session}
-        onLeave={leaveSession}
+        onJoin={handleAcknowledgmentJoin}
+        onDecline={handleAcknowledgmentDecline}
+        isLoading={isLoading}
       />
     );
+  } else {
+    // Avoid "Access Required" flicker while turning on acknowledgment
+    return (
+      <Layout>
+        <div className="container py-8 flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Preparing to join…</p>
+          </div>
+        </div>
+      </Layout>
+    );
   }
-
-  // For instant sessions or when scheduled time is reached, show acknowledgment if needed
-  if (session && !hasAcknowledged && !currentParticipant && (isInstantSession || timeReachedNow || session.status === 'live' || session.status === 'active')) {
-    if (showAcknowledgment) {
-      return (
-        <SessionAcknowledgment
-          session={session}
-          onJoin={handleAcknowledgmentJoin}
-          onDecline={handleAcknowledgmentDecline}
-          isLoading={isLoading}
-        />
-      );
-    }
-  }
+}
 
   // Error state
   if (error || !session) {
@@ -213,26 +224,40 @@ const FlagshipSanctuary: React.FC = () => {
     );
   }
 
-  // Main sanctuary interface (only show if participant is in session)
-  if (!currentParticipant) {
+// Main sanctuary interface (only show if participant is in session)
+if (!currentParticipant) {
+  // If we can join now, avoid showing the Access card to prevent flicker
+  if (canJoinNow) {
     return (
       <Layout>
         <div className="container py-8 flex items-center justify-center min-h-[60vh]">
-          <Card className="max-w-md w-full">
-            <CardContent className="text-center p-6">
-              <h3 className="font-semibold text-lg mb-2">Access Required</h3>
-              <p className="text-muted-foreground mb-4">
-                Please acknowledge the session terms to participate.
-              </p>
-              <Button onClick={() => setShowAcknowledgment(true)}>
-                Review & Join
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Preparing to join…</p>
+          </div>
         </div>
       </Layout>
     );
   }
+
+  return (
+    <Layout>
+      <div className="container py-8 flex items-center justify-center min-h-[60vh]">
+        <Card className="max-w-md w-full">
+          <CardContent className="text-center p-6">
+            <h3 className="font-semibold text-lg mb-2">Access Required</h3>
+            <p className="text-muted-foreground mb-4">
+              Please acknowledge the session terms to participate.
+            </p>
+            <Button onClick={() => setShowAcknowledgment(true)}>
+              Review & Join
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    </Layout>
+  );
+}
 
   return (
     <Layout>
