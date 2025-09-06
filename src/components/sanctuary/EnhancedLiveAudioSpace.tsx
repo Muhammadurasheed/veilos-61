@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useSanctuarySocket } from '@/hooks/useSanctuarySocket';
+import { ReactionOverlay } from './AnimatedReaction';
 import { 
   Mic, 
   MicOff, 
@@ -60,6 +61,7 @@ export const EnhancedLiveAudioSpace = ({ session, currentUser, onLeave }: Enhanc
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [inviteLink, setInviteLink] = useState('');
+  const [reactions, setReactions] = useState<Array<{ id: string; emoji: string; timestamp: number }>>([]);
   
   // Socket connection for real-time events
   const {
@@ -152,6 +154,14 @@ useEffect(() => {
           type: 'emoji-reaction'
         };
         setMessages(prev => [...prev, reactionMessage]);
+
+        // Add floating reaction animation
+        const animatedReaction = {
+          id: `animated-${Date.now()}-${Math.random()}`,
+          emoji: data.emoji,
+          timestamp: Date.now()
+        };
+        setReactions(prev => [...prev, animatedReaction]);
       }),
 
       // Remove this event listener as it doesn't exist in socket types
@@ -325,6 +335,15 @@ const monitorAudioLevel = () => {
 
   const handleEmojiReaction = (emoji: string) => {
     sendEmojiReaction(emoji);
+    
+    // Add local reaction animation immediately for better UX
+    const localReaction = {
+      id: `local-${Date.now()}-${Math.random()}`,
+      emoji: emoji,
+      timestamp: Date.now()
+    };
+    setReactions(prev => [...prev, localReaction]);
+    
     toast({
       title: `${emoji} Reaction Sent`,
       description: "Your reaction was shared with everyone",
@@ -483,8 +502,8 @@ const monitorAudioLevel = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4">
-                  {participants.map((participant) => (
-                    <div key={participant.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                  {participants.map((participant, index) => (
+                    <div key={`${participant.id}-${index}`} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <Avatar className="h-12 w-12">
                           <AvatarImage src={`/avatars/avatar-${participant.avatarIndex || 1}.svg`} />
@@ -735,6 +754,9 @@ const monitorAudioLevel = () => {
           </div>
         </div>
       </div>
+
+      {/* Animated Reactions Overlay */}
+      <ReactionOverlay reactions={reactions} />
     </div>
   );
 };

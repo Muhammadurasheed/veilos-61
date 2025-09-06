@@ -57,8 +57,7 @@ React.useEffect(() => {
             return;
           }
           console.log('✅ Acknowledgment: Successfully joined session via smart join');
-          // Update hook state by calling regular joinSession after successful smart join
-          await joinSession(sessionId, { acknowledged: true });
+          // Smart join already handled everything, no need to call joinSession again
         } else {
           console.error('Acknowledgment: Smart join failed:', result.error);
           // Fallback to regular join
@@ -104,8 +103,7 @@ React.useEffect(() => {
               return;
             }
             console.log('✅ Successfully joined session via smart join');
-            // Update hook state by calling regular joinSession after successful smart join
-            await joinSession(sessionId, { acknowledged: true });
+            // Smart join already handled everything, no need to call joinSession again
           } else {
             console.error('Smart join failed:', result.error);
             // Fallback to regular join

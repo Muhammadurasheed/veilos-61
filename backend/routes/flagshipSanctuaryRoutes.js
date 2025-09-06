@@ -905,9 +905,16 @@ router.post('/:sessionId/join', optionalAuthMiddleware, async (req, res) => {
     // Generate user ID for anonymous users
     const userId = req.user?.id || `anon_${nanoid(8)}`;
     
-    // Check if already in session
-    const existingParticipant = session.participants.find(p => p.id === userId);
+    // Check if already in session (more robust check)
+    let existingParticipant = session.participants.find(p => p.id === userId);
+    
+    // Additional check with string comparison to avoid type mismatches
+    if (!existingParticipant) {
+      existingParticipant = session.participants.find(p => String(p.id) === String(userId));
+    }
+    
     if (existingParticipant) {
+      console.log('🔄 User already in session, returning existing participant:', userId);
       return res.success({
         participant: existingParticipant,
         session: {
