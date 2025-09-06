@@ -234,9 +234,9 @@ export const RealTimeChat: React.FC<RealTimeChatProps> = ({
         </CardTitle>
       </CardHeader>
       
-      <CardContent className="space-y-4">
-        {/* Messages Area */}
-        <div className="h-96 overflow-y-auto space-y-3 pr-2">
+      <CardContent className="flex flex-col h-full space-y-4">
+        {/* Messages Area - Fixed height to prevent overflow */}
+        <div className="flex-1 overflow-y-auto space-y-3 pr-2 max-h-[calc(100vh-16rem)]">
           {messages.map((message) => (
             <div key={message.id} className="space-y-1">
               {message.type === 'system' ? (
@@ -248,7 +248,7 @@ export const RealTimeChat: React.FC<RealTimeChatProps> = ({
                 </div>
               ) : (
                 <div className="flex items-start space-x-3">
-                  <Avatar className="h-8 w-8">
+                  <Avatar className="h-8 w-8 flex-shrink-0">
                     <AvatarFallback className={getAvatarColor(message.participantAlias)}>
                       {getInitials(message.participantAlias)}
                     </AvatarFallback>
@@ -256,9 +256,9 @@ export const RealTimeChat: React.FC<RealTimeChatProps> = ({
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2 mb-1">
-                      <p className="text-sm font-medium truncate">
+                      <span className="text-sm font-medium truncate">
                         {message.participantAlias}
-                      </p>
+                      </span>
                       {message.participantId === participant.id && (
                         <Badge variant="secondary" className="text-xs">You</Badge>
                       )}
@@ -266,9 +266,9 @@ export const RealTimeChat: React.FC<RealTimeChatProps> = ({
                         {formatTime(message.timestamp)}
                       </span>
                     </div>
-                    <p className="text-sm text-foreground leading-relaxed break-words">
+                    <div className="text-sm text-foreground leading-relaxed break-words">
                       {message.content}
-                    </p>
+                    </div>
                   </div>
                 </div>
               )}
@@ -277,8 +277,8 @@ export const RealTimeChat: React.FC<RealTimeChatProps> = ({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Message Input */}
-        <div className="flex items-center space-x-2 pt-2 border-t">
+        {/* Message Input - Fixed at bottom */}
+        <div className="flex items-center space-x-2 pt-3 mt-auto border-t bg-background">
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
@@ -291,6 +291,7 @@ export const RealTimeChat: React.FC<RealTimeChatProps> = ({
             onClick={handleSendMessage}
             disabled={!newMessage.trim() || !isConnected}
             size="sm"
+            className="flex-shrink-0"
           >
             <Send className="h-4 w-4" />
           </Button>
