@@ -29,7 +29,7 @@ const FlagshipSanctuary: React.FC = () => {
     joinStatus
   } = useFlagshipSanctuary({
     sessionId,
-    autoJoin: false,
+    autoJoin: false, // Load session data but don't auto-join
     voiceModulation: true,
     moderationEnabled: true
   });
@@ -42,28 +42,44 @@ React.useEffect(() => {
 }, [sessionId, hasAcknowledged, currentParticipant]);
 
   const handleAcknowledgmentJoin = async (acknowledged: boolean) => {
-    if (acknowledged && sessionId && !hasAcknowledged) {
-      console.log('🎯 Starting acknowledgment flow for session:', sessionId);
+    if (acknowledged && sessionId) {
       setHasAcknowledged(true);
       setShowAcknowledgment(false);
       
       try {
-        // Directly join via hook to avoid double backend calls
-        const success = await joinSession(sessionId, { acknowledged: true });
+        // Use smart join logic for acknowledgment flow to handle session conversion
+        const { FlagshipSessionManager } = await import('@/services/flagshipSessionManager');
+        const result = await FlagshipSessionManager.joinSessionSmart(sessionId, { acknowledged: true });
         
-        if (success) {
-          console.log('✅ Acknowledgment: Successfully joined session');
+        if (result.success) {
+          if (result.needsRedirect && result.redirectUrl) {
+            console.log('🔄 Acknowledgment: Redirecting to converted session:', result.redirectUrl);
+            window.location.replace(result.redirectUrl);
+            return;
+          }
+          
+          console.log('✅ Acknowledgment: Smart join successful, updating frontend state...');
+          
+          // Smart join succeeded, now update frontend state via hook's joinSession
+          const hookJoinSuccess = await joinSession(sessionId, { acknowledged: true });
+          
+          if (!hookJoinSuccess) {
+            console.warn('⚠️ Smart join succeeded but hook join failed - user may already be in session');
+          }
+          
         } else {
-          console.error('❌ Acknowledgment: Join failed');
-          // Reset acknowledgment state on failure
-          setHasAcknowledged(false);
-          setShowAcknowledgment(true);
+          console.error('❌ Acknowledgment: Smart join failed:', result.error);
+          // Fallback to regular join
+          await joinSession(sessionId, { acknowledged: true });
         }
       } catch (error) {
         console.error('❌ Failed to join session:', error);
-        // Reset acknowledgment state on failure
-        setHasAcknowledged(false);
-        setShowAcknowledgment(true);
+        // Fallback to regular join
+        try {
+          await joinSession(sessionId, { acknowledged: true });
+        } catch (fallbackError) {
+          console.error('❌ Fallback join also failed:', fallbackError);
+        }
       }
     }
   };
@@ -72,21 +88,62 @@ React.useEffect(() => {
     window.history.back();
   };
 
-// Auto-join effect for direct access (not needed for scheduled sessions)
+// Auto-join only after explicit acknowledgment by the user
 React.useEffect(() => {
-  const isDirectAccess = !searchParams.get('scheduled');
+  if (!sessionId || !session || currentParticipant) return;
+  if (smartJoinTriggeredRef.current) return;
   
-  if (sessionId && session && !currentParticipant && !hasAcknowledged && 
-      joinStatus !== 'joining' && joinStatus !== 'joined' && isDirectAccess) {
-    
-    console.log('🎯 Auto-join for direct access to session:', sessionId);
-    
-    // For direct access, join immediately without acknowledgment
-    joinSession(sessionId, { acknowledged: true }).catch(error => {
-      console.error('❌ Auto-join failed:', error);
-    });
-  }
-}, [sessionId, session, currentParticipant, hasAcknowledged, joinStatus, joinSession, searchParams]);
+  const acknowledged = hasAcknowledged; // do not trust URL params
+  const timeReached = session.scheduledDateTime && new Date(session.scheduledDateTime) <= new Date();
+  const sessionLive = session.status === 'live' || session.status === 'active';
+  
+  if (acknowledged && (sessionLive || timeReached) && joinStatus === 'idle') {
+    smartJoinTriggeredRef.current = true;
+      
+      const handleSmartJoin = async () => {
+        try {
+          const { FlagshipSessionManager } = await import('@/services/flagshipSessionManager');
+          const result = await FlagshipSessionManager.joinSessionSmart(sessionId, { acknowledged: true });
+          
+          if (result.success) {
+            if (result.needsRedirect && result.redirectUrl) {
+              console.log('🔄 Redirecting to converted session:', result.redirectUrl);
+              window.location.replace(result.redirectUrl);
+              return;
+            }
+            
+            console.log('✅ Auto-join: Smart join successful, updating frontend state...');
+            
+            // Smart join succeeded, now update frontend state via hook's joinSession
+            const hookJoinSuccess = await joinSession(sessionId, { acknowledged: true });
+            
+            if (!hookJoinSuccess) {
+              console.warn('⚠️ Auto-join: Smart join succeeded but hook join failed - user may already be in session');
+            }
+            
+          } else {
+            console.error('❌ Auto-join: Smart join failed:', result.error);
+            // Fallback to regular join
+            try {
+              await joinSession(sessionId, { acknowledged: true });
+            } catch (fallbackError) {
+              console.error('❌ Auto-join: Fallback join also failed:', fallbackError);
+            }
+          }
+        } catch (error) {
+          console.error('❌ Auto-join: Failed to load session manager:', error);
+          // Fallback to regular join
+          try {
+            await joinSession(sessionId, { acknowledged: true });
+          } catch (fallbackError) {
+            console.error('❌ Auto-join: Fallback join also failed:', fallbackError);
+          }
+        }
+      };
+
+      handleSmartJoin();
+    }
+}, [sessionId, session, currentParticipant, hasAcknowledged, joinStatus, joinSession]);
 
   // Show creator if no session ID
   if (!sessionId || showCreator) {
@@ -98,6 +155,8 @@ React.useEffect(() => {
       </Layout>
     );
   }
+
+  // This logic is now handled in the waiting room section below
 
   // Loading state
   if (isLoading) {
@@ -243,8 +302,60 @@ if (!currentParticipant) {
     <Layout>
       <div className="container py-4">
         <EnhancedLiveAudioSpace
-          session={session}
-          currentParticipant={currentParticipant}
+          session={{
+            id: session.id,
+            topic: session.topic,
+            description: session.description,
+            emoji: session.emoji,
+            hostId: session.hostId,
+            hostAlias: session.hostAlias,
+            createdAt: session.createdAt,
+            startTime: session.actualStartTime,
+            isActive: session.status === 'live' || session.status === 'active',
+            status: session.status === 'live' ? 'active' : session.status === 'scheduled' ? 'pending' : 'ended',
+            mode: session.accessType === 'public' ? 'public' : session.accessType === 'invite_only' ? 'invite-only' : 'private',
+            participants: (session.participants || []).map(p => ({
+              id: p.id,
+              alias: p.alias,
+              avatarIndex: p.avatarIndex,
+              joinedAt: p.joinedAt,
+              isHost: p.isHost,
+              isMuted: p.isMuted,
+              isModerator: p.isModerator,
+              isBlocked: p.isBanned,
+              audioLevel: p.audioLevel,
+              connectionStatus: p.connectionStatus as 'connected' | 'connecting' | 'disconnected',
+              handRaised: p.handRaised,
+              speakingTime: p.speakingTime,
+              reactions: (p.reactions || []).map(r => ({
+                id: `${p.id}-${r.timestamp}`,
+                emoji: r.emoji,
+                participantId: p.id,
+                timestamp: r.timestamp,
+                duration: r.ttl
+              }))
+            })),
+            maxParticipants: session.maxParticipants,
+            currentParticipants: session.participantCount,
+            estimatedDuration: session.duration,
+            tags: session.tags,
+            language: session.language,
+            expiresAt: session.expiresAt,
+            allowAnonymous: session.allowAnonymous,
+            recordingConsent: session.recordingEnabled,
+            aiMonitoring: session.moderationEnabled,
+            moderationLevel: session.moderationLevel,
+            emergencyProtocols: session.emergencyProtocols && session.emergencyProtocols.length > 0,
+            isRecorded: session.recordingEnabled,
+            hostToken: session.hostToken,
+            agoraChannelName: session.agoraChannelName,
+            agoraToken: session.agoraToken,
+            audioOnly: session.audioOnly,
+            breakoutRooms: [],
+            moderationEnabled: session.moderationEnabled,
+            emergencyContactEnabled: session.emergencyContactEnabled
+          }}
+          currentUser={currentParticipant}
           onLeave={leaveSession}
         />
       </div>
