@@ -85,13 +85,16 @@ const liveSanctuarySessionSchema = new mongoose.Schema({
     isHost: { type: Boolean, default: false },
     isModerator: { type: Boolean, default: false },
     isMuted: { type: Boolean, default: false },
+    hostMuted: { type: Boolean, default: false }, // Distinguishes host-mute from self-mute
     isBlocked: { type: Boolean, default: false },
+    isKicked: { type: Boolean, default: false }, // Track kicked status
     handRaised: { type: Boolean, default: false },
     joinedAt: { type: Date, default: Date.now },
     avatarIndex: { type: Number, default: 1 },
     connectionStatus: { type: String, default: 'connected' },
     audioLevel: { type: Number, default: 0 },
-    speakingTime: { type: Number, default: 0 }
+    speakingTime: { type: Number, default: 0 },
+    lastSeen: { type: Date, default: Date.now } // Track last activity
   }],
   hostAlias: {
     type: String

@@ -60,7 +60,7 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md mx-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] mx-auto overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Share Media</span>
@@ -70,20 +70,20 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto max-h-[calc(90vh-180px)]">
           {/* Media Preview */}
           <div className="bg-muted rounded-lg p-4 flex flex-col items-center">
             {file.type.startsWith('image/') ? (
               <img 
                 src={preview} 
                 alt={file.name}
-                className="max-w-full max-h-48 object-contain rounded"
+                className="max-w-full max-h-[60vh] object-contain rounded shadow-lg"
               />
             ) : file.type.startsWith('video/') ? (
               <video 
                 src={preview} 
                 controls
-                className="max-w-full max-h-48 rounded"
+                className="max-w-full max-h-[60vh] rounded shadow-lg"
               >
                 Your browser does not support the video tag.
               </video>

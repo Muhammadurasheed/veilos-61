@@ -1186,30 +1186,57 @@ router.post('/:sessionId/leave', optionalAuthMiddleware, async (req, res) => {
     
     console.log('👋 Leave request for session:', sessionId, 'User:', userId);
 
-    // Find session
-    const session = await LiveSanctuarySession.findOne({ id: sessionId });
+    // Use atomic operation with retry logic to prevent VersionError
+    const maxRetries = 3;
+    let retryCount = 0;
+    let session = null;
     
-    if (!session) {
-      return res.status(404).json({
-        success: false,
-        message: 'Session not found'
-      });
-    }
-
-    // Remove participant from session
-    const initialCount = session.participants.length;
-    session.participants = session.participants.filter(p => p.id !== userId);
-    const removedCount = initialCount - session.participants.length;
-    
-    if (removedCount > 0) {
-      session.currentParticipants = session.participants.length;
-      await session.save();
-      
-      console.log('✅ Participant removed from session:', {
-        sessionId,
-        userId,
-        remainingParticipants: session.currentParticipants
-      });
+    while (retryCount < maxRetries) {
+      try {
+        // Use findOneAndUpdate for atomic operation
+        session = await LiveSanctuarySession.findOneAndUpdate(
+          { 
+            id: sessionId,
+            'participants.id': userId
+          },
+          { 
+            $pull: { participants: { id: userId } },
+            $inc: { currentParticipants: -1 }
+          },
+          { 
+            new: true,
+            runValidators: true
+          }
+        );
+        
+        if (session) {
+          console.log('✅ Participant removed from session:', {
+            sessionId,
+            userId,
+            remainingParticipants: session.currentParticipants
+          });
+          break;
+        } else {
+          // Try to find session without participant filter (user might not be in session)
+          session = await LiveSanctuarySession.findOne({ id: sessionId });
+          if (!session) {
+            return res.status(404).json({
+              success: false,
+              message: 'Session not found'
+            });
+          }
+          break; // User wasn't in session, but session exists
+        }
+      } catch (error) {
+        if (error.name === 'VersionError' && retryCount < maxRetries - 1) {
+          retryCount++;
+          console.log(`🔄 Retrying leave operation (attempt ${retryCount + 1}/${maxRetries})`);
+          // Small delay before retry
+          await new Promise(resolve => setTimeout(resolve, 100 * retryCount));
+          continue;
+        }
+        throw error;
+      }
     }
 
     // Update Redis cache

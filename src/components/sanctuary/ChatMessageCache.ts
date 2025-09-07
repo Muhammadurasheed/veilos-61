@@ -8,6 +8,12 @@ interface CachedMessage {
   type: 'text' | 'system' | 'emoji-reaction' | 'media';
   attachment?: any;
   replyTo?: string;
+  replyToMessage?: {
+    id: string;
+    content: string;
+    senderAlias: string;
+    timestamp: string;
+  }; // Store complete reply context for proper chain display
 }
 
 interface MessageCache {

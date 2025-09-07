@@ -308,7 +308,17 @@ export const useSanctuarySocket = (config: SanctuarySocketConfig) => {
     // Event subscription
     onEvent,
     
-    // Actions
+  // Host mute participant with database persistence
+  const hostMuteParticipant = useCallback((data: { sessionId: string; participantId: string; muted: boolean }) => {
+    socketRef.current?.emit('flagship_host_mute_participant', data);
+  }, []);
+
+  // Update participant state in database
+  const updateParticipantState = useCallback((data: { sessionId: string; participantId: string; updates: any }) => {
+    socketRef.current?.emit('flagship_update_participant_state', data);
+  }, []);
+
+  return {
     sendMessage,
     toggleHand,
     sendEmojiReaction,
@@ -318,6 +328,9 @@ export const useSanctuarySocket = (config: SanctuarySocketConfig) => {
     unmuteAll,
     kickParticipant,
     sendEmergencyAlert,
-    leaveSanctuary
+    leaveSanctuary,
+    hostMuteParticipant,
+    updateParticipantState
   };
+};
 };

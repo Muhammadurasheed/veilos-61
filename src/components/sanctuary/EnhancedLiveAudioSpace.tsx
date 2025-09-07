@@ -421,15 +421,85 @@ const monitorAudioLevel = () => {
   };
 
   const handleToggleMute = () => {
-    // Prevent self-unmute if host has muted this user
-    if (isHostMuted && isMuted) {
-      toast({
-        title: "Cannot unmute",
-        description: "A moderator has muted you. You cannot unmute yourself.",
-        variant: "destructive"
-      });
-      return;
+    // Enhanced mute logic with host override
+    const participant = session?.participants.find(p => p.id === currentParticipant?.id);
+    
+    // If host has muted the participant, they cannot unmute themselves
+    if (participant?.hostMuted || isHostMuted) {
+      if (isMuted) {
+        toast({
+          title: "Cannot unmute",
+          description: "You have been muted by the host",
+          variant: "destructive"
+        });
+        return;
+      }
     }
+    
+    const newMutedState = !isMuted;
+    setIsMuted(newMutedState);
+    
+    if (agoraClient && localMicrophoneTrack) {
+      localMicrophoneTrack.setEnabled(!newMutedState);
+    }
+    
+    // Update server with self-mute state (not host-mute)
+    if (socketActions.updateParticipantState) {
+      socketActions.updateParticipantState({
+        sessionId: session?.id || '',
+        participantId: currentParticipant?.id || '',
+        updates: { 
+          isMuted: newMutedState,
+          // Only clear hostMuted if unmuting and not host-muted
+          ...((!newMutedState && !participant?.hostMuted) ? { hostMuted: false } : {})
+        }
+      });
+    }
+  };
+
+  // Host-only functions for mute control
+  const hostMuteParticipant = useCallback((participantId: string, shouldMute: boolean) => {
+    if (!currentParticipant?.isHost) return;
+    
+    if (socketActions.hostMuteParticipant) {
+      socketActions.hostMuteParticipant({
+        sessionId: session?.id || '',
+        participantId,
+        muted: shouldMute
+      });
+    }
+  }, [currentParticipant?.isHost, session?.id, socketActions]);
+
+  const hostMuteAll = useCallback(() => {
+    if (!currentParticipant?.isHost || !session) return;
+    
+    const nonHostParticipants = session.participants.filter(p => !p.isHost && p.id !== currentParticipant?.id);
+    nonHostParticipants.forEach(participant => {
+      hostMuteParticipant(participant.id, true);
+    });
+    
+    toast({
+      title: "All participants muted",
+      description: `Muted ${nonHostParticipants.length} participants`,
+    });
+  }, [currentParticipant?.isHost, currentParticipant?.id, session, hostMuteParticipant, toast]);
+
+  const hostUnmuteAll = useCallback(() => {
+    if (!currentParticipant?.isHost || !session) return;
+    
+    const mutedParticipants = session.participants.filter(p => 
+      !p.isHost && p.id !== currentParticipant?.id && (p.isMuted || p.hostMuted)
+    );
+    
+    mutedParticipants.forEach(participant => {
+      hostMuteParticipant(participant.id, false);
+    });
+    
+    toast({
+      title: "All participants unmuted",
+      description: `Unmuted ${mutedParticipants.length} participants`,
+    });
+  }, [currentParticipant?.isHost, currentParticipant?.id, session, hostMuteParticipant, toast]);
 
     if (streamRef.current) {
       const audioTrack = streamRef.current.getAudioTracks()[0];

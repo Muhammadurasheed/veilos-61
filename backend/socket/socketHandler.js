@@ -182,18 +182,59 @@ const initializeSocket = (server) => {
       const { sessionId, participant } = data;
       
       try {
-        // Get session data
-        const session = await FlagshipSanctuarySession.findOne({ id: sessionId });
+        // Get session data from MongoDB
+        const session = await LiveSanctuarySession.findOne({ id: sessionId });
         if (!session) {
           socket.emit('join_error', { message: 'Session not found' });
           return;
         }
 
+        console.log(`🎯 User joining flagship sanctuary: ${sessionId}`, participant);
+        
         // Join socket room
         socket.join(`flagship_${sessionId}`);
         socket.currentFlagshipSession = sessionId;
         socket.participantId = participant.id || socket.userId;
         socket.participantAlias = participant.alias || socket.userAlias;
+
+        // Check if participant was previously kicked or banned
+        const existingParticipant = session.participants.find(p => p.id === participant.id);
+        
+        if (existingParticipant?.isKicked) {
+          socket.emit('flagship_sanctuary_error', {
+            message: 'You have been removed from this session',
+            code: 'PARTICIPANT_KICKED'
+          });
+          return;
+        }
+        
+        // Add or update participant with preserved moderation state
+        if (existingParticipant) {
+          // Restore previous state including mute status
+          existingParticipant.connectionStatus = 'connected';
+          existingParticipant.lastSeen = new Date();
+        } else {
+          session.participants.push({
+            id: participant.id,
+            alias: participant.alias,
+            isHost: participant.isHost || false,
+            isModerator: participant.isModerator || false,
+            isMuted: false,
+            hostMuted: false,
+            isBlocked: false,
+            isKicked: false,
+            handRaised: false,
+            joinedAt: new Date(),
+            avatarIndex: participant.avatarIndex || Math.floor(Math.random() * 7) + 1,
+            connectionStatus: 'connected',
+            audioLevel: 0,
+            speakingTime: 0,
+            lastSeen: new Date()
+          });
+        }
+        
+        session.currentParticipants = session.participants.filter(p => !p.isKicked).length;
+        await session.save();
 
         // Initialize participant tracker for this session if needed
         if (!io.participantTracker.has(sessionId)) {
