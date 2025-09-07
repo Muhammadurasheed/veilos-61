@@ -59,32 +59,40 @@ React.useEffect(() => {
   }
 }, [sessionId, user?.id]);
 
-// Authentication guard - check if user is logged in
-React.useEffect(() => {
-  if (!authLoading && sessionId && !isAuthenticated && session) {
-    console.log('🔒 User not authenticated, showing auth dialog');
-    setShowAuthDialog(true);
-  }
-}, [authLoading, sessionId, isAuthenticated, session]);
+  // Authentication guard - check if user is logged in and redirect immediately
+  React.useEffect(() => {
+    if (!authLoading && sessionId && !isAuthenticated && session) {
+      console.log('🔒 User not authenticated, redirecting to auth');
+      const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+      navigate(`/auth?mode=login&returnTo=${returnUrl}`);
+      return;
+    }
+  }, [authLoading, sessionId, isAuthenticated, session, navigate]);
 
-// Smart acknowledgment display logic
+// Smart acknowledgment display logic - prevent duplicate shows
 React.useEffect(() => {
-  if (!sessionId || !session || acknowledgmentShownRef.current || showAuthDialog) return;
+  if (!sessionId || !session || acknowledgmentShownRef.current) return;
   
   const canJoinNow = !session.scheduledDateTime || 
     new Date(session.scheduledDateTime) <= new Date() || 
     session.status === 'live' || 
     session.status === 'active';
     
-  if (canJoinNow && !hasAcknowledged && !currentParticipant && isAuthenticated) {
-    console.log('📋 Showing acknowledgment screen');
+  if (canJoinNow && !hasAcknowledged && !currentParticipant && isAuthenticated && !showAcknowledgment) {
+    console.log('📋 Showing acknowledgment screen (first time)');
     acknowledgmentShownRef.current = true;
     setShowAcknowledgment(true);
   }
-}, [sessionId, session, hasAcknowledged, currentParticipant, isAuthenticated, showAuthDialog]);
+}, [sessionId, session, hasAcknowledged, currentParticipant, isAuthenticated, showAcknowledgment]);
 
   const handleAcknowledgmentJoin = async (acknowledged: boolean) => {
     if (acknowledged && sessionId && user?.id) {
+      // Prevent duplicate acknowledgments
+      if (hasAcknowledged) {
+        console.log('⚠️ User already acknowledged, preventing duplicate join');
+        return;
+      }
+      
       setHasAcknowledged(true);
       setShowAcknowledgment(false);
       
@@ -242,32 +250,8 @@ React.useEffect(() => {
     );
   }
 
-  // Auth Dialog for non-authenticated users
-  const AuthDialog = () => (
-    <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5" />
-            Authentication Required
-          </DialogTitle>
-          <DialogDescription>
-            You need to be logged in to join this flagship sanctuary session.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex flex-col gap-3">
-          <Button onClick={() => navigate('/auth?mode=login&returnTo=' + encodeURIComponent(window.location.pathname))} className="w-full">
-            <LogIn className="h-4 w-4 mr-2" />
-            Login
-          </Button>
-          <Button onClick={() => navigate('/auth?mode=register&returnTo=' + encodeURIComponent(window.location.pathname))} variant="outline" className="w-full">
-            <UserPlus className="h-4 w-4 mr-2" />
-            Create Account
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
+  // This is handled by the redirect effect above, no need for dialog
+  const AuthDialog = () => null;
 
   // Check if session is scheduled but not yet started
   const isWaitingForScheduledStart = session && 

@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, ChevronUp, Shield, AtSign, Paperclip } from 'lucide-react';
+import { Send, ChevronUp, Shield, AtSign, Paperclip, Reply } from 'lucide-react';
 import { MediaPreviewModal } from './MediaPreviewModal';
+import { chatMessageCache, type CachedMessage } from './ChatMessageCache';
 import type { LiveParticipant } from '@/types/sanctuary';
 
 interface ChatMessage {
@@ -17,6 +18,7 @@ interface ChatMessage {
   type: 'text' | 'system' | 'emoji-reaction' | 'media';
   mentions?: string[];
   attachment?: any;
+  replyTo?: string;
 }
 
 interface EnhancedChatPanelProps {
@@ -25,7 +27,8 @@ interface EnhancedChatPanelProps {
   messages: ChatMessage[];
   participants: LiveParticipant[];
   currentUserAlias: string;
-  onSendMessage: (content: string, type?: 'text' | 'emoji-reaction' | 'media', attachment?: any) => void;
+  sessionId: string;
+  onSendMessage: (content: string, type?: 'text' | 'emoji-reaction' | 'media', attachment?: any, replyTo?: string) => void;
 }
 
 export const EnhancedChatPanel = ({
@@ -34,6 +37,7 @@ export const EnhancedChatPanel = ({
   messages,
   participants,
   currentUserAlias,
+  sessionId,
   onSendMessage
 }: EnhancedChatPanelProps) => {
   const [newMessage, setNewMessage] = useState('');
@@ -42,9 +46,39 @@ export const EnhancedChatPanel = ({
   const [cursorPosition, setCursorPosition] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showMediaPreview, setShowMediaPreview] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load cached messages on mount
+  useEffect(() => {
+    if (sessionId) {
+      const cachedMessages = chatMessageCache.loadMessages(sessionId);
+      // Only show cached messages if current messages array is empty
+      if (messages.length === 0 && cachedMessages.length > 0) {
+        console.log('📥 Loading cached messages:', cachedMessages.length);
+        // You might want to emit these to the parent component
+      }
+    }
+  }, [sessionId, messages.length]);
+
+  // Cache messages when they change
+  useEffect(() => {
+    if (sessionId && messages.length > 0) {
+      const cachableMessages: CachedMessage[] = messages.map(msg => ({
+        id: msg.id,
+        senderAlias: msg.senderAlias,
+        senderAvatarIndex: msg.senderAvatarIndex,
+        content: msg.content,
+        timestamp: msg.timestamp.toISOString(),
+        type: msg.type,
+        attachment: msg.attachment,
+        replyTo: msg.replyTo
+      }));
+      chatMessageCache.saveMessages(sessionId, cachableMessages);
+    }
+  }, [sessionId, messages]);
 
   // Auto-scroll chat messages
   useEffect(() => {
@@ -117,16 +151,18 @@ export const EnhancedChatPanel = ({
           fileName: selectedFile.name,
           fileType: selectedFile.type,
           fileSize: selectedFile.size
-        });
+        }, replyingTo?.id);
         setSelectedFile(null);
         setNewMessage('');
+        setReplyingTo(null);
         setShowSuggestions(false);
         setMentionQuery('');
       };
       reader.readAsDataURL(selectedFile);
     } else {
-      onSendMessage(newMessage.trim());
+      onSendMessage(newMessage.trim(), 'text', undefined, replyingTo?.id);
       setNewMessage('');
+      setReplyingTo(null);
       setShowSuggestions(false);
       setMentionQuery('');
     }
@@ -174,6 +210,17 @@ export const EnhancedChatPanel = ({
     }
   };
 
+  const handleReplyToMessage = (message: ChatMessage) => {
+    setReplyingTo(message);
+    inputRef.current?.focus();
+  };
+
+  const handleDoubleClick = (message: ChatMessage) => {
+    if (message.type === 'text' || message.type === 'media') {
+      handleReplyToMessage(message);
+    }
+  };
+
   const renderMessage = (message: ChatMessage) => {
     if (message.type === 'system') {
       return (
@@ -199,7 +246,10 @@ export const EnhancedChatPanel = ({
 
     if (message.type === 'media' && message.attachment) {
       return (
-        <div className="flex items-start space-x-2">
+        <div 
+          className="flex items-start space-x-2 hover:bg-muted/30 p-1 rounded cursor-pointer"
+          onDoubleClick={() => handleDoubleClick(message)}
+        >
           <Avatar className="h-6 w-6">
             <AvatarImage src={`/avatars/avatar-${message.senderAvatarIndex}.svg`} />
             <AvatarFallback className="text-xs">
@@ -215,11 +265,24 @@ export const EnhancedChatPanel = ({
               <span className="text-xs text-muted-foreground">
                 {formatTime(message.timestamp)}
               </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100"
+                onClick={() => handleReplyToMessage(message)}
+              >
+                <Reply className="h-3 w-3" />
+              </Button>
             </div>
+            {message.replyTo && (
+              <div className="text-xs text-muted-foreground border-l-2 border-primary/30 pl-2 mb-1">
+                Replying to previous message
+              </div>
+            )}
             <div className="bg-muted rounded p-2 mt-1">
               {message.attachment.fileType?.startsWith('image/') ? (
                 <img 
-                  src={message.attachment.file} 
+                  src={message.attachment.file || message.attachment.url} 
                   alt={message.attachment.fileName}
                   className="max-w-xs rounded"
                 />

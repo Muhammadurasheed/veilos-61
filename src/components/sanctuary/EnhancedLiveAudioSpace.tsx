@@ -741,6 +741,7 @@ const monitorAudioLevel = () => {
               messages={messages}
               participants={participants}
               currentUserAlias={currentUser.alias}
+              sessionId={session.id}
               onSendMessage={handleSendMessage}
             />
 

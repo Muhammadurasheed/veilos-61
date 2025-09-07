@@ -568,21 +568,199 @@ const initializeSocket = (server) => {
       });
     });
 
+    // Handle audio room join for flagship sanctuary  
+    socket.on('join_audio_room', async (data) => {
+      const { sessionId, participant } = data;
+      console.log(`🔊 User attempting to join audio room ${sessionId}:`, {
+        userId: socket.userId,
+        userAlias: socket.userAlias,
+        participantData: participant
+      });
+
+      try {
+        // Check if already in room to prevent duplicates
+        if (socket.currentAudioRoom === sessionId) {
+          console.log(`⚠️ User ${socket.userId} already in audio room ${sessionId}`);
+          return;
+        }
+
+        socket.join(`audio_room_${sessionId}`);
+        socket.currentAudioRoom = sessionId;
+
+        // Enhanced participant object with socket data
+        const enhancedParticipant = {
+          id: socket.userId,
+          alias: participant?.alias || socket.userAlias || `Anonymous_${socket.id.substring(0, 6)}`,
+          avatarIndex: socket.userAvatarIndex || Math.floor(Math.random() * 7) + 1,
+          isHost: participant?.isHost || false,
+          isMuted: participant?.isMuted || false,
+          isAnonymous: socket.isAnonymous || false,
+          joinedAt: new Date().toISOString(),
+          socketId: socket.id
+        };
+
+        // Store participant in socket for easy access
+        socket.audioParticipant = enhancedParticipant;
+
+        // Get current participants before broadcasting
+        const roomSockets = await io.in(`audio_room_${sessionId}`).fetchSockets();
+        const currentParticipants = roomSockets
+          .filter(s => s.audioParticipant && s.id !== socket.id) // Exclude current socket
+          .map(s => s.audioParticipant);
+
+        // Add current participant
+        currentParticipants.push(enhancedParticipant);
+
+        // Broadcast to others in the room (excluding sender)
+        socket.to(`audio_room_${sessionId}`).emit('audio_participant_joined', {
+          participant: enhancedParticipant,
+          timestamp: new Date().toISOString(),
+          sessionId
+        });
+
+        // Send current participants list to new joiner
+        socket.emit('audio_room_state', {
+          sessionId,
+          participants: currentParticipants,
+          timestamp: new Date().toISOString()
+        });
+
+        console.log(`✅ User ${socket.userId} joined audio room ${sessionId} successfully`, {
+          participantCount: currentParticipants.length,
+          participants: currentParticipants.map(p => ({ id: p.id, alias: p.alias }))
+        });
+
+      } catch (error) {
+        console.error(`❌ Error joining audio room ${sessionId}:`, error);
+        socket.emit('audio_room_error', {
+          error: 'Failed to join audio room',
+          details: error.message
+        });
+      }
+    });
+
+    // Handle sending messages to flagship sanctuary
+    socket.on('send_flagship_message', async (data) => {
+      const { sessionId, content, type = 'text', attachment, replyTo } = data;
+      
+      console.log(`💬 Message from ${socket.userAlias} in session ${sessionId}:`, {
+        type,
+        hasAttachment: !!attachment,
+        contentLength: content?.length || 0
+      });
+
+      const message = {
+        id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        sessionId,
+        senderAlias: socket.userAlias || `Anonymous_${socket.id.substring(0, 6)}`,
+        senderAvatarIndex: socket.userAvatarIndex || Math.floor(Math.random() * 7) + 1,
+        content,
+        type,
+        timestamp: new Date(),
+        attachment,
+        replyTo
+      };
+
+      // Broadcast to all participants in the audio room (including sender for confirmation)
+      io.to(`audio_room_${sessionId}`).emit('flagship_new_message', message);
+      
+      console.log(`📨 Message broadcasted to audio room ${sessionId}`);
+    });
+
+    // Handle host controls for flagship sanctuary
+    socket.on('flagship_host_action', async (data) => {
+      const { sessionId, action, targetParticipantId, targetSocketId } = data;
+      
+      console.log(`🎛️ Host action from ${socket.userAlias}:`, {
+        sessionId,
+        action,
+        targetParticipantId,
+        targetSocketId
+      });
+
+      try {
+        if (action === 'mute' || action === 'unmute') {
+          // Broadcast mute/unmute to target participant
+          if (targetSocketId) {
+            io.to(targetSocketId).emit('flagship_host_muted', {
+              action,
+              sessionId,
+              by: socket.userAlias,
+              timestamp: new Date().toISOString()
+            });
+          }
+          
+          // Broadcast to all participants about the action
+          io.to(`audio_room_${sessionId}`).emit('flagship_participant_muted', {
+            participantId: targetParticipantId,
+            action,
+            by: socket.userAlias,
+            timestamp: new Date().toISOString()
+          });
+          
+        } else if (action === 'remove') {
+          // Force remove participant from session
+          if (targetSocketId) {
+            // Send removal notification to target
+            io.to(targetSocketId).emit('flagship_removed_from_session', {
+              sessionId,
+              by: socket.userAlias,
+              reason: 'Removed by host',
+              timestamp: new Date().toISOString()
+            });
+            
+            // Force disconnect from audio room after a brief delay
+            setTimeout(() => {
+              const targetSocket = io.sockets.sockets.get(targetSocketId);
+              if (targetSocket) {
+                targetSocket.leave(`audio_room_${sessionId}`);
+                targetSocket.currentAudioRoom = null;
+                targetSocket.audioParticipant = null;
+                
+                // Broadcast participant left to remaining participants
+                socket.to(`audio_room_${sessionId}`).emit('audio_participant_left', {
+                  participantId: targetParticipantId,
+                  participantAlias: targetSocket.userAlias,
+                  timestamp: new Date().toISOString()
+                });
+              }
+            }, 2000); // Give 2 seconds for the notification to show
+          }
+          
+        } else if (action === 'unmute_all') {
+          // Broadcast unmute all to all participants
+          io.to(`audio_room_${sessionId}`).emit('flagship_host_unmuted_all', {
+            sessionId,
+            by: socket.userAlias,
+            timestamp: new Date().toISOString()
+          });
+        }
+
+        console.log(`✅ Host action ${action} completed for participant ${targetParticipantId}`);
+        
+      } catch (error) {
+        console.error(`❌ Error executing host action:`, error);
+        socket.emit('flagship_host_action_error', {
+          error: 'Failed to execute host action',
+          details: error.message
+        });
+      }
+    });
+
     socket.on('send_emoji_reaction', (data) => {
       const { sessionId, emoji } = data;
       const participantId = socket.participantId || socket.userId;
       
       const reactionData = {
         participantId,
-        participantAlias: socket.participantAlias || 'Anonymous',
+        participantAlias: socket.participantAlias || socket.userAlias || 'Anonymous',
         emoji,
         timestamp: new Date().toISOString(),
         id: `reaction_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       };
       
       // Broadcast to all rooms for this session
-      io.to(`audio_room_${sessionId}`).emit('emoji_reaction', reactionData);
-      io.to(`flagship_${sessionId}`).emit('emoji_reaction', reactionData);
+      io.to(`audio_room_${sessionId}`).emit('flagship_reaction', reactionData);
     });
 
     socket.on('emergency_alert', (data) => {
