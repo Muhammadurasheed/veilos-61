@@ -102,6 +102,13 @@ export const useSanctuarySocket = (config: SanctuarySocketConfig) => {
       });
     });
 
+    socket.on('force_unmuted', (data) => {
+      toast({
+        title: "You're unmuted",
+        description: "A moderator has unmuted your microphone",
+      });
+    });
+
     socket.on('kicked_from_room', (data) => {
       toast({
         title: "Removed from sanctuary",

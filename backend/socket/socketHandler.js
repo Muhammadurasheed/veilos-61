@@ -238,7 +238,7 @@ const initializeSocket = (server) => {
     // Enhanced chat messaging for flagship sanctuaries
     socket.on('flagship_send_message', async (data) => {
       try {
-        const { sessionId, content, type = 'text', attachment } = data;
+        const { sessionId, content, type = 'text', attachment, replyTo } = data;
         const participantId = socket.participantId || socket.userId;
         const participantAlias = socket.participantAlias || socket.userAlias || 'Anonymous';
 
@@ -247,7 +247,7 @@ const initializeSocket = (server) => {
           return;
         }
 
-        // Create message object
+        // Create message object (support replyTo and attachments)
         const chatMessage = {
           id: `flagship_msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           senderAlias: participantAlias,
@@ -256,16 +256,17 @@ const initializeSocket = (server) => {
           type,
           attachment,
           timestamp: new Date().toISOString(),
-          participantId
+          participantId,
+          replyTo: replyTo || null
         };
 
-        // Broadcast to all participants in both flagship and audio room channels
+        // Emit ONLY once to prevent duplicate delivery to sockets joined in multiple rooms
         io.to(`flagship_${sessionId}`).emit('new_message', chatMessage);
-        io.to(`audio_room_${sessionId}`).emit('new_message', chatMessage);
 
         console.log(`💬 Flagship message in ${sessionId} by ${participantAlias}:`, {
           type: chatMessage.type,
-          hasAttachment: !!chatMessage.attachment
+          hasAttachment: !!chatMessage.attachment,
+          replyTo: !!chatMessage.replyTo
         });
 
       } catch (error) {
@@ -449,14 +450,7 @@ const initializeSocket = (server) => {
         }
       }
       
-      // Broadcast to all rooms for this session
-      io.to(`audio_room_${sessionId}`).emit('hand_raised', {
-        participantId,
-        participantAlias: socket.participantAlias || 'Anonymous',
-        isRaised,
-        timestamp: new Date().toISOString()
-      });
-      
+      // Broadcast to flagship room only (avoid duplicate events)
       io.to(`flagship_${sessionId}`).emit('hand_raised', {
         participantId,
         participantAlias: socket.participantAlias || 'Anonymous',
@@ -515,16 +509,75 @@ const initializeSocket = (server) => {
         });
       }
       
-      // Notify all rooms for this session
-      io.to(`audio_room_${sessionId}`).emit('participant_muted', {
+      // Notify flagship room only (avoid duplicates)
+      io.to(`flagship_${sessionId}`).emit('participant_muted', {
         participantId,
         mutedBy: socket.userId,
         timestamp: new Date().toISOString()
       });
-      
-      io.to(`flagship_${sessionId}`).emit('participant_muted', {
+    });
+
+    // Host/moderator can unmute a participant
+    socket.on('unmute_participant', (data) => {
+      const { sessionId, participantId } = data;
+
+      // Update participant tracker
+      if (io.participantTracker && io.participantTracker.has(sessionId)) {
+        const sessionParticipants = io.participantTracker.get(sessionId);
+        const participant = sessionParticipants.get(participantId);
+        if (participant) {
+          sessionParticipants.set(participantId, {
+            ...participant,
+            isMuted: false
+          });
+        }
+      }
+
+      // Find target user's socket
+      const targetSocket = Array.from(io.sockets.sockets.values())
+        .find(s => (s.participantId === participantId || s.userId === participantId));
+
+      if (targetSocket) {
+        targetSocket.emit('force_unmuted', {
+          sessionId,
+          unmutedBy: socket.userId,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Notify flagship room
+      io.to(`flagship_${sessionId}`).emit('participant_unmuted', {
         participantId,
-        mutedBy: socket.userId,
+        unmutedBy: socket.userId,
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    // Host/moderator can unmute everyone
+    socket.on('unmute_all', (data) => {
+      const { sessionId } = data;
+
+      if (io.participantTracker && io.participantTracker.has(sessionId)) {
+        const sessionParticipants = io.participantTracker.get(sessionId);
+        sessionParticipants.forEach((participant, pid) => {
+          sessionParticipants.set(pid, { ...participant, isMuted: false });
+
+          // Notify each participant directly
+          const targetSocket = Array.from(io.sockets.sockets.values())
+            .find(s => (s.participantId === pid || s.userId === pid));
+          if (targetSocket) {
+            targetSocket.emit('force_unmuted', {
+              sessionId,
+              unmutedBy: socket.userId,
+              timestamp: new Date().toISOString()
+            });
+          }
+        });
+      }
+
+      io.to(`flagship_${sessionId}`).emit('participants_unmuted', {
+        sessionId,
+        unmutedBy: socket.userId,
         timestamp: new Date().toISOString()
       });
     });
@@ -554,13 +607,7 @@ const initializeSocket = (server) => {
         targetSocket.leave(`flagship_${sessionId}`);
       }
       
-      // Notify all rooms for this session
-      io.to(`audio_room_${sessionId}`).emit('participant_kicked', {
-        participantId,
-        kickedBy: socket.userId,
-        timestamp: new Date().toISOString()
-      });
-      
+      // Notify flagship room only (avoid duplicates)
       io.to(`flagship_${sessionId}`).emit('participant_kicked', {
         participantId,
         kickedBy: socket.userId,
