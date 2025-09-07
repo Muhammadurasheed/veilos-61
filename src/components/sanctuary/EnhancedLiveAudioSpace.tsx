@@ -57,6 +57,8 @@ export const EnhancedLiveAudioSpace = ({ session, currentUser, onLeave }: Enhanc
   const [isMuted, setIsMuted] = useState(true);
   const [isDeafened, setIsDeafened] = useState(false);
   const [handRaised, setHandRaised] = useState(false);
+  const [isHostMuted, setIsHostMuted] = useState(false); // Track if host muted this user
+  
   // Filter unique participants to prevent duplicates
   const uniqueParticipants = React.useMemo(() => {
     const seen = new Set();
@@ -76,11 +78,31 @@ export const EnhancedLiveAudioSpace = ({ session, currentUser, onLeave }: Enhanc
   useEffect(() => {
     setParticipants(uniqueParticipants);
   }, [uniqueParticipants]);
+  
   const [isChatVisible, setIsChatVisible] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [inviteLink, setInviteLink] = useState('');
   const [reactions, setReactions] = useState<Array<{ id: string; emoji: string; timestamp: number }>>([]);
+  
+  // Hydrate chat cache on mount
+  useEffect(() => {
+    const { chatMessageCache } = require('./ChatMessageCache');
+    const cachedMessages = chatMessageCache.loadMessages(session.id);
+    if (cachedMessages.length > 0) {
+      console.log('💬 Hydrating cached messages:', cachedMessages.length);
+      const hydratedMessages: ChatMessage[] = cachedMessages.map(cached => ({
+        id: cached.id,
+        senderAlias: cached.senderAlias,
+        senderAvatarIndex: cached.senderAvatarIndex,
+        content: cached.content,
+        timestamp: new Date(cached.timestamp),
+        type: cached.type as 'text' | 'system' | 'emoji-reaction' | 'media',
+        attachment: cached.attachment
+      }));
+      setMessages(hydratedMessages);
+    }
+  }, [session.id]);
   
   // Socket connection for real-time events
   const {
@@ -90,6 +112,8 @@ export const EnhancedLiveAudioSpace = ({ session, currentUser, onLeave }: Enhanc
     toggleHand,
     promoteToSpeaker,
     muteParticipant,
+    unmuteParticipant,
+    unmuteAll,
     kickParticipant,
     sendEmergencyAlert
   } = useSanctuarySocket({
@@ -191,10 +215,28 @@ useEffect(() => {
         
         if (data.participantId === currentUser.id) {
           setIsMuted(true);
+          setIsHostMuted(true); // Lock mute state when host mutes
           toast({
             title: "You've been muted",
             description: "A moderator has muted your microphone",
             variant: "destructive"
+          });
+        }
+      }),
+
+      onEvent('participant_unmuted', (data) => {
+        console.log('Participant unmuted:', data);
+        setParticipants(prev => prev.map(p => 
+          p.id === data.participantId 
+            ? { ...p, isMuted: false }
+            : p
+        ));
+        
+        if (data.participantId === currentUser.id) {
+          setIsHostMuted(false); // Unlock mute state when host unmutes
+          toast({
+            title: "You've been unmuted",
+            description: "A moderator has unmuted your microphone",
           });
         }
       }),
@@ -364,6 +406,16 @@ const monitorAudioLevel = () => {
   };
 
   const handleToggleMute = () => {
+    // Prevent self-unmute if host has muted this user
+    if (isHostMuted && isMuted) {
+      toast({
+        title: "Cannot unmute",
+        description: "A moderator has muted you. You cannot unmute yourself.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (streamRef.current) {
       const audioTrack = streamRef.current.getAudioTracks()[0];
       if (audioTrack) {
@@ -508,14 +560,16 @@ const monitorAudioLevel = () => {
                     size="lg"
                     variant={isMuted ? "destructive" : "default"}
                     onClick={handleToggleMute}
-                    className="px-8 py-4 text-lg"
+                    disabled={isHostMuted && isMuted} // Disable unmute if host muted
+                    className={`px-8 py-4 text-lg ${isHostMuted && isMuted ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title={isHostMuted && isMuted ? 'You have been muted by a moderator' : ''}
                   >
                     {isMuted ? (
                       <MicOff className="h-6 w-6 mr-3" />
                     ) : (
                       <Mic className="h-6 w-6 mr-3" />
                     )}
-                    {isMuted ? 'Unmute' : 'Mute'}
+                    {isMuted ? (isHostMuted ? 'Muted by Host' : 'Unmute') : 'Mute'}
                   </Button>
                   
                   <Button
@@ -659,19 +713,43 @@ const monitorAudioLevel = () => {
                                 Allow
                               </Button>
                             )}
-                            <Button
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => muteParticipant(participant.id)}
-                            >
-                              Mute
-                            </Button>
+                            {participant.isMuted ? (
+                              <Button
+                                size="sm" 
+                                variant="default"
+                                onClick={() => unmuteParticipant(participant.id)}
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                Unmute
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => muteParticipant(participant.id)}
+                              >
+                                Mute
+                              </Button>
+                            )}
                             <Button
                               size="sm"
                               variant="destructive"
                               onClick={() => kickParticipant(participant.id)}
                             >
                               Remove
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* Unmute All Button - Only show for host/moderator */}
+                        {(currentUser.isHost || currentUser.isModerator) && participants.some(p => p.isMuted && p.id !== currentUser.id) && (
+                          <div className="mt-4 pt-4 border-t">
+                            <Button
+                              variant="outline"
+                              onClick={unmuteAll}
+                              className="w-full"
+                            >
+                              Unmute All Participants
                             </Button>
                           </div>
                         )}

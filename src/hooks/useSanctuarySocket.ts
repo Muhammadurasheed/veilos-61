@@ -24,16 +24,19 @@ interface SocketEvents {
   hand_raised: (data: { participantId: string; participantAlias: string; isRaised: boolean; timestamp: string }) => void;
   speaker_promoted: (data: { participantId: string; promotedBy: string; timestamp: string }) => void;
   participant_muted: (data: { participantId: string; mutedBy: string; timestamp: string }) => void;
+  participant_unmuted: (data: { participantId: string; unmutedBy: string; timestamp: string }) => void;
+  participants_unmuted: (data: { sessionId: string; unmutedBy: string; timestamp: string }) => void;
   participant_kicked: (data: { participantId: string; kickedBy: string; timestamp: string }) => void;
   emoji_reaction: (data: { participantId: string; participantAlias: string; emoji: string; timestamp: string; id?: string }) => void;
   emergency_alert: (data: { alertType: string; message: string; fromParticipant: string; timestamp: string }) => void;
   
   // Chat events
-  new_message: (data: { id: string; senderAlias: string; senderAvatarIndex: number; content: string; timestamp: string; type: string; attachment?: any }) => void;
+  new_message: (data: { id: string; senderAlias: string; senderAvatarIndex: number; content: string; timestamp: string; type: string; attachment?: any; replyTo?: string }) => void;
   
   // Personal events
   promoted_to_speaker: (data: { sessionId: string; promotedBy: string; timestamp: string }) => void;
   force_muted: (data: { sessionId: string; mutedBy: string; timestamp: string }) => void;
+  force_unmuted: (data: { sessionId: string; unmutedBy: string; timestamp: string }) => void;
   kicked_from_room: (data: { sessionId: string; kickedBy: string; timestamp: string }) => void;
 }
 
@@ -222,6 +225,29 @@ export const useSanctuarySocket = (config: SanctuarySocketConfig) => {
     });
   }, [config.sessionId, config.participant.isHost, config.participant.isModerator]);
 
+  // Unmute participant (host/moderator only)
+  const unmuteParticipant = useCallback((participantId: string) => {
+    const socket = socketRef.current;
+    if (!socket || !isConnectedRef.current) return;
+    if (!config.participant.isHost && !config.participant.isModerator) return;
+
+    socket.emit('unmute_participant', {
+      sessionId: config.sessionId,
+      participantId
+    });
+  }, [config.sessionId, config.participant.isHost, config.participant.isModerator]);
+
+  // Unmute all participants (host/moderator only)
+  const unmuteAll = useCallback(() => {
+    const socket = socketRef.current;
+    if (!socket || !isConnectedRef.current) return;
+    if (!config.participant.isHost && !config.participant.isModerator) return;
+
+    socket.emit('unmute_all', {
+      sessionId: config.sessionId
+    });
+  }, [config.sessionId, config.participant.isHost, config.participant.isModerator]);
+
   // Kick participant (host/moderator only)
   const kickParticipant = useCallback((participantId: string) => {
     const socket = socketRef.current;
@@ -259,6 +285,8 @@ export const useSanctuarySocket = (config: SanctuarySocketConfig) => {
     sendEmojiReaction,
     promoteToSpeaker,
     muteParticipant,
+    unmuteParticipant,
+    unmuteAll,
     kickParticipant,
     sendEmergencyAlert
   };

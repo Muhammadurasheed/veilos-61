@@ -20,12 +20,26 @@ const Auth = () => {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      navigate('/dashboard');
+      // Check for return URL in search params
+      const returnTo = searchParams.get('returnTo');
+      if (returnTo) {
+        console.log('🔄 Auth success: Redirecting to return URL:', returnTo);
+        window.location.href = decodeURIComponent(returnTo);
+      } else {
+        navigate('/dashboard');
+      }
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, user, navigate, searchParams]);
 
   const handleAuthSuccess = () => {
-    navigate('/dashboard');
+    // Check for return URL
+    const returnTo = searchParams.get('returnTo');
+    if (returnTo) {
+      console.log('🔄 Auth success handler: Redirecting to return URL:', returnTo);
+      window.location.href = decodeURIComponent(returnTo);
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   if (isAuthenticated) {
