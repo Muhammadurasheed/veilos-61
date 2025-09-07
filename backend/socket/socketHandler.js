@@ -554,7 +554,7 @@ const initializeSocket = (server) => {
     });
 
     // Host/moderator can unmute everyone
-    socket.on('unmute_all', (data) => {
+    socket.on('unmute_all_participants', (data) => {
       const { sessionId } = data;
 
       if (io.participantTracker && io.participantTracker.has(sessionId)) {

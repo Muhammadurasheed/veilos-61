@@ -270,6 +270,57 @@ router.post('/create', authMiddleware, async (req, res) => {
   }
 });
 
+// ================== PARTICIPANT MANAGEMENT ==================
+
+// Leave session
+router.post('/:sessionId/leave', authMiddleware, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const userId = req.user.id;
+    
+    console.log('🚪 Participant leaving session:', { sessionId, userId });
+
+    // Find the session
+    let session = await LiveSanctuarySession.findOne({ id: sessionId });
+    
+    if (!session) {
+      return res.error('Session not found', 404);
+    }
+
+    // Remove participant from session
+    const originalCount = session.participants.length;
+    session.participants = session.participants.filter(p => p.id !== userId);
+    const newCount = session.participants.length;
+
+    // Only save if participant was actually removed
+    if (originalCount > newCount) {
+      await session.save();
+      
+      // Notify other participants via socket
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`flagship_${sessionId}`).emit('participant_left', {
+          participantId: userId,
+          participantAlias: req.user.alias,
+          totalParticipants: newCount,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      console.log('✅ Participant left session successfully');
+    }
+
+    res.success({
+      sessionId,
+      participantCount: newCount
+    }, 'Left session successfully');
+
+  } catch (error) {
+    console.error('❌ Leave session error:', error);
+    res.error('Failed to leave session: ' + error.message, 500);
+  }
+});
+
 // ================== VOICE MODULATION ==================
 
 // Get available ElevenLabs voices

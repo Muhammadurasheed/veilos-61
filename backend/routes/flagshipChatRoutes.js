@@ -31,7 +31,8 @@ router.post('/sessions/:sessionId/messages',
   validate([
     body('content').optional().isLength({ max: 1000 }).trim(),
     body('type').optional().isIn(['text', 'emoji-reaction', 'media']),
-    body('participantAlias').isLength({ min: 1, max: 50 }).trim()
+    body('participantAlias').isLength({ min: 1, max: 50 }).trim(),
+    body('replyTo').optional().isString()
   ]),
   async (req, res) => {
     try {
@@ -52,7 +53,8 @@ router.post('/sessions/:sessionId/messages',
           fileName: req.file.originalname,
           fileType: req.file.mimetype,
           fileSize: req.file.size
-        } : null
+        } : null,
+        replyTo: req.body.replyTo || null
       };
 
       // Emit via socket to all participants
