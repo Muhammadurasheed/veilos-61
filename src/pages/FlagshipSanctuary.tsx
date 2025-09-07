@@ -69,9 +69,19 @@ React.useEffect(() => {
     }
   }, [authLoading, sessionId, isAuthenticated, session, navigate]);
 
-// Smart acknowledgment display logic - prevent duplicate shows
+// Smart acknowledgment display logic - show only AFTER conversion is complete
 React.useEffect(() => {
   if (!sessionId || !session || acknowledgmentShownRef.current) return;
+  
+  // Don't show acknowledgment during scheduled countdown - wait for conversion
+  const isScheduledButNotStarted = session.scheduledDateTime && 
+    new Date(session.scheduledDateTime) > new Date() &&
+    (session.status === 'scheduled' || session.status === 'waiting');
+    
+  if (isScheduledButNotStarted) {
+    console.log('⏳ Session is scheduled but not started yet, waiting...');
+    return;
+  }
   
   const canJoinNow = !session.scheduledDateTime || 
     new Date(session.scheduledDateTime) <= new Date() || 
@@ -79,7 +89,7 @@ React.useEffect(() => {
     session.status === 'active';
     
   if (canJoinNow && !hasAcknowledged && !currentParticipant && isAuthenticated && !showAcknowledgment) {
-    console.log('📋 Showing acknowledgment screen (first time)');
+    console.log('📋 Showing acknowledgment screen (conversion complete)');
     acknowledgmentShownRef.current = true;
     setShowAcknowledgment(true);
   }
@@ -263,15 +273,16 @@ React.useEffect(() => {
   const isInstantSession = session && !session.scheduledDateTime;
   const timeReachedNow = session?.scheduledDateTime ? new Date(session.scheduledDateTime) <= new Date() : false;
 
-  // Show waiting room for scheduled sessions that haven't started yet
+// Show waiting room for scheduled sessions that haven't started yet
 if (isWaitingForScheduledStart) {
   return (
     <SessionWaitingRoom
       session={session}
       onLeave={leaveSession}
       onCountdownComplete={() => {
+        console.log('⏰ Countdown complete - session should convert automatically');
         setCountdownComplete(true);
-        setShowAcknowledgment(true);
+        // Don't set showAcknowledgment here - let it be handled after conversion
       }}
     />
   );

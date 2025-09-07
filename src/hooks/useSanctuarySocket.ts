@@ -118,7 +118,10 @@ export const useSanctuarySocket = (config: SanctuarySocketConfig) => {
         description: "You have been removed by a moderator",
         variant: "destructive"
       });
-      // In a real app, this would redirect the user
+      // Force redirect user out of session
+      setTimeout(() => {
+        window.location.href = '/sanctuary';
+      }, 2000);
     });
 
     socket.on('emergency_alert', (data) => {

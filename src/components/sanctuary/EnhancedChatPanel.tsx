@@ -183,18 +183,60 @@ export const EnhancedChatPanel = ({
     event.target.value = '';
   };
 
-  const handleMediaSend = (file: File, caption?: string) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      onSendMessage(caption || `Shared ${file.type.startsWith('image/') ? 'image' : 'file'}: ${file.name}`, 'media', {
-        file: reader.result,
-        fileName: file.name,
-        fileType: file.type,
-        fileSize: file.size
+  const handleMediaSend = async (file: File, caption?: string) => {
+    try {
+      // Upload to backend Cloudinary endpoint for robust storage
+      const formData = new FormData();
+      formData.append('attachment', file);
+      formData.append('participantAlias', currentUserAlias);
+      if (caption) formData.append('content', caption);
+
+      const response = await fetch(`/api/flagship-chat/sessions/${sessionId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: formData
       });
-    };
-    reader.readAsDataURL(file);
-    setSelectedFile(null);
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Media uploaded successfully via backend:', result);
+        // Backend will emit the message via socket, so we don't need to call onSendMessage
+      } else {
+        console.warn('⚠️ Backend upload failed, falling back to base64...');
+        // Fallback to base64 method
+        const reader = new FileReader();
+        reader.onload = () => {
+          onSendMessage(caption || `Shared ${file.type.startsWith('image/') ? 'image' : 'file'}: ${file.name}`, 'media', {
+            file: reader.result,
+            fileName: file.name,
+            fileType: file.type,
+            fileSize: file.size
+          });
+        };
+        reader.readAsDataURL(file);
+      }
+      
+      setSelectedFile(null);
+      setShowMediaPreview(false);
+    } catch (error) {
+      console.error('❌ Media upload error:', error);
+      
+      // Fallback to base64 method
+      const reader = new FileReader();
+      reader.onload = () => {
+        onSendMessage(caption || `Shared ${file.type.startsWith('image/') ? 'image' : 'file'}: ${file.name}`, 'media', {
+          file: reader.result,
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size
+        });
+        setSelectedFile(null);
+        setShowMediaPreview(false);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -282,14 +324,35 @@ export const EnhancedChatPanel = ({
             <div className="bg-muted rounded p-2 mt-1">
               {message.attachment.fileType?.startsWith('image/') ? (
                 <img 
-                  src={message.attachment.file || message.attachment.url} 
-                  alt={message.attachment.fileName}
-                  className="max-w-xs rounded"
+                  src={message.attachment.file || message.attachment.url || message.attachment.preview} 
+                  alt={message.attachment.fileName || 'Shared image'}
+                  className="max-w-xs rounded cursor-pointer"
+                  onClick={() => {
+                    // Open image in new tab for full view
+                    const img = new Image();
+                    img.src = message.attachment.file || message.attachment.url || message.attachment.preview;
+                    const newWindow = window.open();
+                    newWindow?.document.write(`<img src="${img.src}" style="max-width:100%;height:auto;" />`);
+                  }}
                 />
               ) : (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 cursor-pointer hover:bg-muted-foreground/10 rounded p-1"
+                     onClick={() => {
+                       // Handle file download
+                       if (message.attachment.file) {
+                         const link = document.createElement('a');
+                         link.href = message.attachment.file;
+                         link.download = message.attachment.fileName || 'file';
+                         link.click();
+                       }
+                     }}>
                   <span className="text-lg">📎</span>
-                  <span className="text-sm">{message.attachment.fileName}</span>
+                  <div>
+                    <span className="text-sm font-medium">{message.attachment.fileName}</span>
+                    <div className="text-xs text-muted-foreground">
+                      {message.attachment.fileSize ? `${(message.attachment.fileSize / 1024).toFixed(1)} KB` : 'File'}
+                    </div>
+                  </div>
                 </div>
               )}
               {message.content && (

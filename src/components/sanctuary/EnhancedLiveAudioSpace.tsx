@@ -87,21 +87,22 @@ export const EnhancedLiveAudioSpace = ({ session, currentUser, onLeave }: Enhanc
   
   // Hydrate chat cache on mount
   useEffect(() => {
-    const { chatMessageCache } = require('./ChatMessageCache');
-    const cachedMessages = chatMessageCache.loadMessages(session.id);
-    if (cachedMessages.length > 0) {
-      console.log('💬 Hydrating cached messages:', cachedMessages.length);
-      const hydratedMessages: ChatMessage[] = cachedMessages.map(cached => ({
-        id: cached.id,
-        senderAlias: cached.senderAlias,
-        senderAvatarIndex: cached.senderAvatarIndex,
-        content: cached.content,
-        timestamp: new Date(cached.timestamp),
-        type: cached.type as 'text' | 'system' | 'emoji-reaction' | 'media',
-        attachment: cached.attachment
-      }));
-      setMessages(hydratedMessages);
-    }
+    import('./ChatMessageCache').then(({ chatMessageCache }) => {
+      const cachedMessages = chatMessageCache.loadMessages(session.id);
+      if (cachedMessages.length > 0) {
+        console.log('💬 Hydrating cached messages:', cachedMessages.length);
+        const hydratedMessages: ChatMessage[] = cachedMessages.map(cached => ({
+          id: cached.id,
+          senderAlias: cached.senderAlias,
+          senderAvatarIndex: cached.senderAvatarIndex,
+          content: cached.content,
+          timestamp: new Date(cached.timestamp),
+          type: cached.type as 'text' | 'system' | 'emoji-reaction' | 'media',
+          attachment: cached.attachment
+        }));
+        setMessages(hydratedMessages);
+      }
+    });
   }, [session.id]);
   
   // Socket connection for real-time events
