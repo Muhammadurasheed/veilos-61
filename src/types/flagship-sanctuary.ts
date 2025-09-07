@@ -225,6 +225,7 @@ export interface JoinFlagshipSanctuaryRequest {
   voicePreference?: string;
   acknowledgement?: boolean;
   acknowledged?: boolean;
+  participantId?: string;
 }
 
 export interface UpdateVoiceRequest {

@@ -1,55 +1,76 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface AnimatedReactionProps {
   emoji: string;
-  id: string;
-  onComplete: (id: string) => void;
+  participantId: string;
+  id: string; // Unique identifier to prevent duplicates
+  duration?: number;
+  onComplete?: () => void;
 }
 
-export const AnimatedReaction = ({ emoji, id, onComplete }: AnimatedReactionProps) => {
+export const AnimatedReaction: React.FC<AnimatedReactionProps> = ({
+  emoji,
+  participantId,
+  id,
+  duration = 2500,
+  onComplete
+}) => {
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsVisible(false);
-      setTimeout(() => onComplete(id), 300);
-    }, 2500);
+      onComplete?.();
+    }, duration);
 
     return () => clearTimeout(timer);
-  }, [id, onComplete]);
+  }, [duration, onComplete]);
+
+  // Generate consistent random values based on id to avoid layout shifts
+  const randomValues = React.useMemo(() => {
+    const seed = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const random = (seed * 9301 + 49297) % 233280;
+    return {
+      startX: (random % 80) + 10,
+      startY: (random % 60) + 20,
+      endX: ((random * 7) % 60) - 30,
+      finalScale: 0.7 + ((random % 30) / 100)
+    };
+  }, [id]);
 
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       {isVisible && (
         <motion.div
+          key={id}
           initial={{ 
-            y: 20, 
-            x: Math.random() * 100 - 50,
-            opacity: 0,
-            scale: 0.5
+            opacity: 0, 
+            scale: 0.3, 
+            y: 0,
+            x: 0
           }}
           animate={{ 
-            y: -100, 
-            x: Math.random() * 200 - 100,
-            opacity: 1,
-            scale: [0.5, 1.2, 1]
+            opacity: [0, 1, 0.8, 0], 
+            scale: [0.3, 1.4, 1, randomValues.finalScale], 
+            y: [-10, -30, -50, -80],
+            x: [0, randomValues.endX * 0.3, randomValues.endX * 0.7, randomValues.endX],
+            rotate: [0, 15, -10, 0]
           }}
           exit={{ 
             opacity: 0, 
-            scale: 0.3,
-            y: -150
+            scale: 0.2,
+            y: -100
           }}
           transition={{ 
-            duration: 2.5,
-            ease: "easeOut",
-            scale: { times: [0, 0.2, 1], duration: 0.5 }
+            duration: duration / 1000,
+            ease: [0.25, 0.46, 0.45, 0.94] // Custom easing for more natural motion
           }}
-          className="absolute pointer-events-none select-none text-4xl drop-shadow-lg"
+          className="absolute text-3xl pointer-events-none z-50 select-none"
           style={{
-            left: `${Math.random() * 80 + 10}%`,
-            bottom: '10%',
-            zIndex: 1000
+            left: `${randomValues.startX}%`,
+            top: `${randomValues.startY}%`,
+            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))'
           }}
         >
           {emoji}
@@ -77,8 +98,9 @@ export const ReactionOverlay = ({ reactions }: ReactionOverlayProps) => {
     });
   }, [reactions, activeReactions]);
 
-  const handleReactionComplete = (id: string) => {
-    setActiveReactions(prev => prev.filter(r => r.id !== id));
+  const handleReactionComplete = () => {
+    // Remove completed reactions based on timestamp
+    setActiveReactions(prev => prev.filter(r => Date.now() - parseInt(r.id.split('_')[1] || '0') < 3000));
   };
 
   return (
@@ -87,6 +109,7 @@ export const ReactionOverlay = ({ reactions }: ReactionOverlayProps) => {
         <AnimatedReaction
           key={reaction.id}
           id={reaction.id}
+          participantId="overlay"
           emoji={reaction.emoji}
           onComplete={handleReactionComplete}
         />
