@@ -164,8 +164,8 @@ export const useSanctuarySocket = (config: SanctuarySocketConfig) => {
     };
   }, []);
 
-  // Send message to sanctuary
-  const sendMessage = useCallback((content: string, type: 'text' | 'emoji-reaction' | 'media' = 'text', attachment?: any) => {
+  // Send message to sanctuary via socket or API
+  const sendMessage = useCallback((content: string, type: 'text' | 'emoji-reaction' | 'media' = 'text', attachment?: any, replyTo?: string) => {
     const socket = socketRef.current;
     if (!socket || !isConnectedRef.current) {
       console.warn('Socket not connected, cannot send message');
@@ -177,6 +177,7 @@ export const useSanctuarySocket = (config: SanctuarySocketConfig) => {
       content,
       type,
       attachment,
+      replyTo,
       participantAlias: config.participant.alias,
       participantId: config.participant.id
     });
@@ -275,6 +276,31 @@ export const useSanctuarySocket = (config: SanctuarySocketConfig) => {
     });
   }, [config.sessionId]);
 
+  // Leave sanctuary (API call)
+  const leaveSanctuary = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('veilo-auth-token') || localStorage.getItem('token');
+      const response = await fetch(`/api/flagship-sanctuary/${config.sessionId}/leave`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        body: JSON.stringify({
+          participantId: config.participant.id
+        })
+      });
+
+      if (response.ok) {
+        console.log('✅ Successfully left sanctuary via API');
+      } else {
+        console.warn('⚠️ API leave failed, but continuing...');
+      }
+    } catch (error) {
+      console.error('❌ Leave API error:', error);
+    }
+  }, [config.sessionId, config.participant.id]);
+
   return {
     // Connection state
     isConnected: isConnectedRef.current,
@@ -291,6 +317,7 @@ export const useSanctuarySocket = (config: SanctuarySocketConfig) => {
     unmuteParticipant,
     unmuteAll,
     kickParticipant,
-    sendEmergencyAlert
+    sendEmergencyAlert,
+    leaveSanctuary
   };
 };

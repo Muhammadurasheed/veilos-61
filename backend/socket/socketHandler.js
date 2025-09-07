@@ -172,6 +172,11 @@ const initializeSocket = (server) => {
     if (!io.participantTracker) {
       io.participantTracker = new Map(); // sessionId -> Map<participantId, participantData>
     }
+    
+    // Store host-muted participants to prevent self-unmute
+    if (!io.hostMutedParticipants) {
+      io.hostMutedParticipants = new Map(); // sessionId -> Set<participantId>
+    }
 
     socket.on('join_flagship_sanctuary', async (data) => {
       const { sessionId, participant } = data;

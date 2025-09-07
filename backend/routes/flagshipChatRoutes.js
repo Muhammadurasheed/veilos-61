@@ -31,12 +31,13 @@ router.post('/sessions/:sessionId/messages',
   validate([
     body('content').optional().isLength({ max: 1000 }).trim(),
     body('type').optional().isIn(['text', 'emoji-reaction', 'media']),
-    body('participantAlias').isLength({ min: 1, max: 50 }).trim()
+    body('participantAlias').isLength({ min: 1, max: 50 }).trim(),
+    body('replyTo').optional().isString().trim()
   ]),
   async (req, res) => {
     try {
       const { sessionId } = req.params;
-      const { content, type = 'text', participantAlias } = req.body;
+      const { content, type = 'text', participantAlias, replyTo } = req.body;
 
       // Create message object
       const message = {
@@ -47,6 +48,7 @@ router.post('/sessions/:sessionId/messages',
         content: content || '',
         type,
         timestamp: new Date().toISOString(),
+        replyTo: replyTo || null,
         attachment: req.file ? {
           url: req.file.path,
           fileName: req.file.originalname,
@@ -55,12 +57,22 @@ router.post('/sessions/:sessionId/messages',
         } : null
       };
 
-      // Emit via socket to all participants
+      // Emit via socket to all participants with proper event name
       const io = req.app.get('io');
       if (io) {
-        io.to(`audio_room_${sessionId}`).emit('sanctuary_new_message', message);
+        io.to(`audio_room_${sessionId}`).emit('new_message', {
+          id: message.id,
+          senderAlias: message.participantAlias,
+          senderAvatarIndex: 1,
+          content: message.content,
+          timestamp: message.timestamp,
+          type: message.type,
+          attachment: message.attachment,
+          replyTo: message.replyTo
+        });
         console.log(`Message sent to audio room ${sessionId}:`, {
           type: message.type,
+          hasReply: !!message.replyTo,
           hasAttachment: !!message.attachment,
           participantAlias: message.participantAlias
         });
@@ -75,7 +87,8 @@ router.post('/sessions/:sessionId/messages',
             content: message.content,
             type: message.type,
             timestamp: message.timestamp,
-            attachment: message.attachment
+            attachment: message.attachment,
+            replyTo: message.replyTo
           }
         },
         message: 'Message sent successfully'

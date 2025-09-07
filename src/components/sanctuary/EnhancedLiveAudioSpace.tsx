@@ -50,6 +50,7 @@ interface ChatMessage {
   timestamp: Date;
   type: 'text' | 'system' | 'emoji-reaction' | 'media';
   attachment?: any;
+  replyTo?: string;
 }
 
 export const EnhancedLiveAudioSpace = ({ session, currentUser, onLeave }: EnhancedLiveAudioSpaceProps) => {
@@ -116,7 +117,8 @@ export const EnhancedLiveAudioSpace = ({ session, currentUser, onLeave }: Enhanc
     unmuteParticipant,
     unmuteAll,
     kickParticipant,
-    sendEmergencyAlert
+    sendEmergencyAlert,
+    leaveSanctuary
   } = useSanctuarySocket({
     sessionId: session.id,
     participant: {
@@ -263,20 +265,32 @@ useEffect(() => {
 
       onEvent('new_message', (data) => {
         console.log('New message received:', data);
-        const messageType = (data.type === 'text' || data.type === 'emoji-reaction' || data.type === 'media' || data.type === 'system') 
-          ? data.type 
-          : 'text';
         
-        const newMessage: ChatMessage = {
-          id: data.id,
-          senderAlias: data.senderAlias,
-          senderAvatarIndex: data.senderAvatarIndex || 1,
-          content: data.content,
-          timestamp: new Date(data.timestamp),
-          type: messageType,
-          attachment: data.attachment
-        };
-        setMessages(prev => [...prev, newMessage]);
+        // Check if this message is already in our messages array to prevent duplicates
+        setMessages(prev => {
+          const exists = prev.find(m => m.id === data.id);
+          if (exists) {
+            console.log('Duplicate message ignored:', data.id);
+            return prev;
+          }
+          
+          const messageType = (data.type === 'text' || data.type === 'emoji-reaction' || data.type === 'media' || data.type === 'system') 
+            ? data.type 
+            : 'text';
+          
+          const newMessage: ChatMessage = {
+            id: data.id,
+            senderAlias: data.senderAlias,
+            senderAvatarIndex: data.senderAvatarIndex || 1,
+            content: data.content,
+            timestamp: new Date(data.timestamp),
+            type: messageType,
+            attachment: data.attachment,
+            replyTo: data.replyTo
+          };
+          
+          return [...prev, newMessage];
+        });
       }),
 
       onEvent('emoji_reaction', (data) => {
@@ -466,7 +480,7 @@ const monitorAudioLevel = () => {
     }
   };
 
-  const handleSendMessage = async (messageContent?: string, type?: 'text' | 'emoji-reaction' | 'media', attachment?: any) => {
+  const handleSendMessage = async (messageContent?: string, type?: 'text' | 'emoji-reaction' | 'media', attachment?: any, replyTo?: string) => {
     const content = messageContent || newMessage.trim();
     if (!content && !attachment) return;
 
@@ -475,8 +489,8 @@ const monitorAudioLevel = () => {
       setNewMessage('');
     }
 
-    // Send message via socket hook (no local preview since we get it back from server)
-    sendMessage(content, type || 'text', attachment);
+    // Send message via socket hook with reply support
+    sendMessage(content, type || 'text', attachment, replyTo);
   };
 
   const handleEmojiReaction = (emoji: string) => {
@@ -602,7 +616,10 @@ const monitorAudioLevel = () => {
                   <Button
                     size="lg"
                     variant="destructive"
-                    onClick={onLeave}
+                    onClick={() => {
+                      leaveSanctuary();
+                      onLeave();
+                    }}
                     className="px-8 py-4 text-lg"
                   >
                     <PhoneOff className="h-6 w-6 mr-3" />

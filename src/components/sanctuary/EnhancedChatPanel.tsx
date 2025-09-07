@@ -190,11 +190,12 @@ export const EnhancedChatPanel = ({
       formData.append('attachment', file);
       formData.append('participantAlias', currentUserAlias);
       if (caption) formData.append('content', caption);
+      if (replyingTo?.id) formData.append('replyTo', replyingTo.id);
 
       const response = await fetch(`/api/flagship-chat/sessions/${sessionId}/messages`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token') || localStorage.getItem('veilo-auth-token') || localStorage.getItem('token')}`
         },
         body: formData
       });
@@ -213,13 +214,14 @@ export const EnhancedChatPanel = ({
             fileName: file.name,
             fileType: file.type,
             fileSize: file.size
-          });
+          }, replyingTo?.id);
         };
         reader.readAsDataURL(file);
       }
       
       setSelectedFile(null);
       setShowMediaPreview(false);
+      setReplyingTo(null);
     } catch (error) {
       console.error('❌ Media upload error:', error);
       
@@ -231,9 +233,10 @@ export const EnhancedChatPanel = ({
           fileName: file.name,
           fileType: file.type,
           fileSize: file.size
-        });
+        }, replyingTo?.id);
         setSelectedFile(null);
         setShowMediaPreview(false);
+        setReplyingTo(null);
       };
       reader.readAsDataURL(file);
     }
@@ -289,7 +292,7 @@ export const EnhancedChatPanel = ({
     if (message.type === 'media' && message.attachment) {
       return (
         <div 
-          className="flex items-start space-x-2 hover:bg-muted/30 p-1 rounded cursor-pointer"
+          className="flex items-start space-x-2 hover:bg-muted/30 p-1 rounded cursor-pointer group"
           onDoubleClick={() => handleDoubleClick(message)}
         >
           <Avatar className="h-6 w-6">
@@ -318,7 +321,7 @@ export const EnhancedChatPanel = ({
             </div>
             {message.replyTo && (
               <div className="text-xs text-muted-foreground border-l-2 border-primary/30 pl-2 mb-1">
-                Replying to previous message
+                ↳ Replying to previous message
               </div>
             )}
             <div className="bg-muted rounded p-2 mt-1">
@@ -375,7 +378,10 @@ export const EnhancedChatPanel = ({
     };
 
     return (
-      <div className="flex items-start space-x-2">
+      <div 
+        className="flex items-start space-x-2 hover:bg-muted/30 p-1 rounded cursor-pointer group"
+        onDoubleClick={() => handleDoubleClick(message)}
+      >
         <Avatar className="h-6 w-6">
           <AvatarImage src={`/avatars/avatar-${message.senderAvatarIndex}.svg`} />
           <AvatarFallback className="text-xs">
@@ -391,7 +397,20 @@ export const EnhancedChatPanel = ({
             <span className="text-xs text-muted-foreground">
               {formatTime(message.timestamp)}
             </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100"
+              onClick={() => handleReplyToMessage(message)}
+            >
+              <Reply className="h-3 w-3" />
+            </Button>
           </div>
+          {message.replyTo && (
+            <div className="text-xs text-muted-foreground border-l-2 border-primary/30 pl-2 mb-1">
+              ↳ Replying to previous message
+            </div>
+          )}
           <div 
             className="text-sm break-words"
             dangerouslySetInnerHTML={{ __html: highlightMentions(message.content) }}
@@ -467,6 +486,29 @@ export const EnhancedChatPanel = ({
 
         {/* Message Input with Enhanced Features */}
         <div className="border-t p-3">
+          {/* Reply indicator */}
+          {replyingTo && (
+            <div className="bg-muted/50 p-2 text-xs border-l-2 border-primary/30 mb-2">
+              <div className="flex items-center justify-between">
+                <span>
+                  ↳ Replying to <strong>{replyingTo.senderAlias}</strong>: 
+                  {replyingTo.content.length > 50 
+                    ? `${replyingTo.content.substring(0, 50)}...` 
+                    : replyingTo.content
+                  }
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-4 w-4 p-0"
+                  onClick={() => setReplyingTo(null)}
+                >
+                  ×
+                </Button>
+              </div>
+            </div>
+          )}
+          
           <div className="flex items-center space-x-2">
             <Button
               variant="ghost"
@@ -489,12 +531,9 @@ export const EnhancedChatPanel = ({
                 value={newMessage}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyPress}
-                placeholder="Type a message... (@username to tag)"
-                className="text-sm pr-8"
+                placeholder={replyingTo ? "Reply to message..." : "Type @ to mention someone..."}
+                className="pr-20"
               />
-              {newMessage.includes('@') && (
-                <AtSign className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              )}
             </div>
             <Button
               onClick={handleSendMessage}

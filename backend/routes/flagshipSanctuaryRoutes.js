@@ -1176,6 +1176,64 @@ router.post('/:sessionId/emergency', authMiddleware, async (req, res) => {
   }
 });
 
+// ================== LEAVE SESSION ==================
+
+// Leave flagship sanctuary session
+router.post('/:sessionId/leave', optionalAuthMiddleware, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const userId = req.user?.id || req.body.participantId;
+    
+    console.log('👋 Leave request for session:', sessionId, 'User:', userId);
+
+    // Find session
+    const session = await LiveSanctuarySession.findOne({ id: sessionId });
+    
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message: 'Session not found'
+      });
+    }
+
+    // Remove participant from session
+    const initialCount = session.participants.length;
+    session.participants = session.participants.filter(p => p.id !== userId);
+    const removedCount = initialCount - session.participants.length;
+    
+    if (removedCount > 0) {
+      session.currentParticipants = session.participants.length;
+      await session.save();
+      
+      console.log('✅ Participant removed from session:', {
+        sessionId,
+        userId,
+        remainingParticipants: session.currentParticipants
+      });
+    }
+
+    // Update Redis cache
+    await redisService.removeParticipant(sessionId, userId);
+
+    return res.json({
+      success: true,
+      message: 'Successfully left session',
+      data: {
+        sessionId,
+        remainingParticipants: session.currentParticipants
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Leave session error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to leave session',
+      error: error.message
+    });
+  }
+});
+
 // ================== MY SANCTUARIES TRACKING ==================
 
 // Get user's flagship sanctuary sessions for My Sanctuaries page
