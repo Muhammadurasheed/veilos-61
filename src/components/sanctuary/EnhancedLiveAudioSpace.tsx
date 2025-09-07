@@ -125,29 +125,55 @@ useEffect(() => {
   useEffect(() => {
     // Listen for participant events
     const cleanupEvents = [
-      onEvent('audio_participant_joined', (data) => {
+      // Join/Leave events
+      onEvent('participant_joined', (data) => {
+        console.log('Participant joined:', data);
         setParticipants(prev => {
           // Prevent duplicate participants
           const exists = prev.find(p => p.id === data.participant.id);
           if (exists) return prev;
           return [...prev, data.participant];
         });
-        addSystemMessage(`${data.participant.alias} joined the audio space`);
+        addSystemMessage(`${data.participant.alias} joined the sanctuary`);
+      }),
+
+      onEvent('participant_left', (data) => {
+        console.log('Participant left:', data);
+        setParticipants(prev => prev.filter(p => p.id !== data.participantId));
+        addSystemMessage(`${data.participantAlias} left the sanctuary`);
+      }),
+
+      onEvent('audio_participant_joined', (data) => {
+        console.log('Audio participant joined:', data);
+        setParticipants(prev => {
+          // Update existing participant or add new one
+          const existing = prev.find(p => p.id === data.participant.id);
+          if (existing) {
+            return prev.map(p => 
+              p.id === data.participant.id 
+                ? { ...p, connectionStatus: 'connected' as const }
+                : p
+            );
+          }
+          return [...prev, data.participant];
+        });
       }),
 
       onEvent('audio_participant_left', (data) => {
+        console.log('Audio participant left:', data);
         setParticipants(prev => prev.filter(p => p.id !== data.participantId));
         addSystemMessage(`${data.participantAlias} left the audio space`);
       }),
 
       onEvent('hand_raised', (data) => {
+        console.log('Hand raised:', data);
         setParticipants(prev => prev.map(p => 
           p.id === data.participantId 
             ? { ...p, handRaised: data.isRaised }
             : p
         ));
         
-        if (data.isRaised) {
+        if (data.isRaised && data.participantId !== currentUser.id) {
           toast({
             title: "Hand Raised",
             description: `${data.participantAlias} raised their hand`,
@@ -156,6 +182,7 @@ useEffect(() => {
       }),
 
       onEvent('participant_muted', (data) => {
+        console.log('Participant muted:', data);
         setParticipants(prev => prev.map(p => 
           p.id === data.participantId 
             ? { ...p, isMuted: true }
@@ -164,14 +191,56 @@ useEffect(() => {
         
         if (data.participantId === currentUser.id) {
           setIsMuted(true);
+          toast({
+            title: "You've been muted",
+            description: "A moderator has muted your microphone",
+            variant: "destructive"
+          });
         }
+      }),
+
+      onEvent('participant_kicked', (data) => {
+        console.log('Participant kicked:', data);
+        setParticipants(prev => prev.filter(p => p.id !== data.participantId));
+        
+        if (data.participantId === currentUser.id) {
+          toast({
+            title: "Removed from sanctuary",
+            description: "You have been removed by a moderator",
+            variant: "destructive"
+          });
+          // Redirect after a short delay
+          setTimeout(() => {
+            onLeave();
+          }, 2000);
+        } else {
+          addSystemMessage(`${data.participantId} was removed from the sanctuary`);
+        }
+      }),
+
+      onEvent('new_message', (data) => {
+        console.log('New message received:', data);
+        const messageType = (data.type === 'text' || data.type === 'emoji-reaction' || data.type === 'media' || data.type === 'system') 
+          ? data.type 
+          : 'text';
+        
+        const newMessage: ChatMessage = {
+          id: data.id,
+          senderAlias: data.senderAlias,
+          senderAvatarIndex: data.senderAvatarIndex || 1,
+          content: data.content,
+          timestamp: new Date(data.timestamp),
+          type: messageType,
+          attachment: data.attachment
+        };
+        setMessages(prev => [...prev, newMessage]);
       }),
 
       onEvent('emoji_reaction', (data) => {
         console.log('Emoji reaction received:', data);
         
-        // Add floating reaction animation with unique ID
-        const reactionId = `reaction_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        // Add floating reaction animation with unique ID and timeout
+        const reactionId = data.id || `reaction_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         setReactions(prev => {
           const newReactions = [...prev, {
             id: reactionId,
@@ -182,20 +251,22 @@ useEffect(() => {
           return newReactions.slice(-5);
         });
 
+        // Remove reaction after 3 seconds
+        setTimeout(() => {
+          setReactions(prev => prev.filter(r => r.id !== reactionId));
+        }, 3000);
+
         // Add to chat messages
         const reactionMessage: ChatMessage = {
-          id: `reaction-${Date.now()}`,
+          id: `reaction-${data.timestamp}`,
           senderAlias: data.participantAlias,
           senderAvatarIndex: 1,
           content: data.emoji,
-          timestamp: new Date(),
+          timestamp: new Date(data.timestamp),
           type: 'emoji-reaction'
         };
         setMessages(prev => [...prev, reactionMessage]);
       }),
-
-      // Remove this event listener as it doesn't exist in socket types
-      // Chat messages will be handled via API polling or different socket events
 
       onEvent('emergency_alert', (data) => {
         toast({
@@ -209,7 +280,7 @@ useEffect(() => {
     return () => {
       cleanupEvents.forEach(cleanup => cleanup?.());
     };
-  }, [onEvent, currentUser.id, toast]);
+  }, [onEvent, currentUser.id, toast, onLeave]);
 
   // Initialize audio when component mounts
   useEffect(() => {
@@ -351,31 +422,12 @@ const monitorAudioLevel = () => {
       setNewMessage('');
     }
 
-    // Add message locally for immediate feedback
-    const localMessage: ChatMessage = {
-      id: `local-${Date.now()}`,
-      senderAlias: currentUser.alias,
-      senderAvatarIndex: currentUser.avatarIndex || 1,
-      content: content,
-      timestamp: new Date(),
-      type: type || 'text'
-    };
-    setMessages(prev => [...prev, localMessage]);
-
-    // Send message via socket hook
+    // Send message via socket hook (no local preview since we get it back from server)
     sendMessage(content, type || 'text', attachment);
   };
 
   const handleEmojiReaction = (emoji: string) => {
     sendEmojiReaction(emoji);
-    
-    // Add local reaction animation immediately for better UX
-    const localReaction = {
-      id: `local-${Date.now()}-${Math.random()}`,
-      emoji: emoji,
-      timestamp: Date.now()
-    };
-    setReactions(prev => [...prev, localReaction]);
     
     toast({
       title: `${emoji} Reaction Sent`,

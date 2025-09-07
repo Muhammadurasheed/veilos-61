@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, ChevronUp, Shield, AtSign } from 'lucide-react';
+import { Send, ChevronUp, Shield, AtSign, Paperclip } from 'lucide-react';
+import { MediaPreviewModal } from './MediaPreviewModal';
 import type { LiveParticipant } from '@/types/sanctuary';
 
 interface ChatMessage {
@@ -40,6 +41,7 @@ export const EnhancedChatPanel = ({
   const [mentionQuery, setMentionQuery] = useState('');
   const [cursorPosition, setCursorPosition] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [showMediaPreview, setShowMediaPreview] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -139,7 +141,24 @@ export const EnhancedChatPanel = ({
         return;
       }
       setSelectedFile(file);
+      setShowMediaPreview(true);
     }
+    // Reset file input
+    event.target.value = '';
+  };
+
+  const handleMediaSend = (file: File, caption?: string) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      onSendMessage(caption || `Shared ${file.type.startsWith('image/') ? 'image' : 'file'}: ${file.name}`, 'media', {
+        file: reader.result,
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size
+      });
+    };
+    reader.readAsDataURL(file);
+    setSelectedFile(null);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -309,24 +328,16 @@ export const EnhancedChatPanel = ({
           </div>
         )}
 
-        {/* File Preview */}
-        {selectedFile && (
-          <div className="border-t p-3 bg-muted/50">
-            <div className="flex items-center justify-between p-2 bg-background rounded border">
-              <span className="text-sm text-muted-foreground">
-                📎 {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedFile(null)}
-                className="text-red-500 hover:text-red-700"
-              >
-                ✕
-              </Button>
-            </div>
-          </div>
-        )}
+        {/* Media Preview Modal */}
+        <MediaPreviewModal
+          isOpen={showMediaPreview}
+          onClose={() => {
+            setShowMediaPreview(false);
+            setSelectedFile(null);
+          }}
+          file={selectedFile}
+          onSend={handleMediaSend}
+        />
 
         {/* Message Input with Enhanced Features */}
         <div className="border-t p-3">
@@ -337,7 +348,7 @@ export const EnhancedChatPanel = ({
               onClick={() => fileInputRef.current?.click()}
               className="text-muted-foreground hover:text-primary"
             >
-              📎
+              <Paperclip className="h-4 w-4" />
             </Button>
             <input
               ref={fileInputRef}

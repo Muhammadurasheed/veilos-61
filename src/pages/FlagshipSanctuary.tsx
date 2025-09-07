@@ -199,29 +199,17 @@ if (isWaitingForScheduledStart) {
 
 // For instant sessions or when scheduled time is reached, show acknowledgment if needed
 const canJoinNow = !!session && (isInstantSession || timeReachedNow || session.status === 'live' || session.status === 'active');
-if (session && !hasAcknowledged && !currentParticipant && canJoinNow) {
-  if (showAcknowledgment) {
-    return (
-      <SessionAcknowledgment
-        session={session}
-        onJoin={handleAcknowledgmentJoin}
-        onDecline={handleAcknowledgmentDecline}
-        isLoading={isLoading}
-      />
-    );
-  } else {
-    // Avoid "Access Required" flicker while turning on acknowledgment
-    return (
-      <Layout>
-        <div className="container py-8 flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-            <p className="text-muted-foreground">Preparing to join…</p>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
+
+// Only show acknowledgment once per session to prevent double acknowledgment
+if (session && !hasAcknowledged && !currentParticipant && canJoinNow && showAcknowledgment) {
+  return (
+    <SessionAcknowledgment
+      session={session}
+      onJoin={handleAcknowledgmentJoin}
+      onDecline={handleAcknowledgmentDecline}
+      isLoading={isLoading}
+    />
+  );
 }
 
   // Error state

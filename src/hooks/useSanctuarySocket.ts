@@ -13,6 +13,11 @@ interface SanctuarySocketConfig {
 }
 
 interface SocketEvents {
+  // Flagship sanctuary events
+  participant_joined: (data: { participant: any; totalParticipants: number }) => void;
+  participant_left: (data: { participantId: string; participantAlias: string; totalParticipants: number; timestamp: string }) => void;
+  join_confirmed: (data: { sessionId: string; participant: any; participants: any[]; totalParticipants: number }) => void;
+  
   // Live audio events
   audio_participant_joined: (data: { participant: any }) => void;
   audio_participant_left: (data: { participantId: string; participantAlias: string; timestamp: string }) => void;
@@ -20,8 +25,11 @@ interface SocketEvents {
   speaker_promoted: (data: { participantId: string; promotedBy: string; timestamp: string }) => void;
   participant_muted: (data: { participantId: string; mutedBy: string; timestamp: string }) => void;
   participant_kicked: (data: { participantId: string; kickedBy: string; timestamp: string }) => void;
-  emoji_reaction: (data: { participantId: string; participantAlias: string; emoji: string; timestamp: string }) => void;
+  emoji_reaction: (data: { participantId: string; participantAlias: string; emoji: string; timestamp: string; id?: string }) => void;
   emergency_alert: (data: { alertType: string; message: string; fromParticipant: string; timestamp: string }) => void;
+  
+  // Chat events
+  new_message: (data: { id: string; senderAlias: string; senderAvatarIndex: number; content: string; timestamp: string; type: string; attachment?: any }) => void;
   
   // Personal events
   promoted_to_speaker: (data: { sessionId: string; promotedBy: string; timestamp: string }) => void;
@@ -52,7 +60,12 @@ export const useSanctuarySocket = (config: SanctuarySocketConfig) => {
       console.log('Socket connected for sanctuary:', config.sessionId);
       isConnectedRef.current = true;
       
-      // Join the audio room
+      // Join both flagship sanctuary and audio room
+      socket.emit('join_flagship_sanctuary', {
+        sessionId: config.sessionId,
+        participant: config.participant
+      });
+      
       socket.emit('join_audio_room', {
         sessionId: config.sessionId,
         participant: config.participant
@@ -146,8 +159,8 @@ export const useSanctuarySocket = (config: SanctuarySocketConfig) => {
       return;
     }
 
-    socket.emit('sanctuary_message', {
-      sanctuaryId: config.sessionId,
+    socket.emit('flagship_send_message', {
+      sessionId: config.sessionId,
       content,
       type,
       attachment,

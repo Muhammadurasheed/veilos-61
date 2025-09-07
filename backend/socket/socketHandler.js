@@ -165,6 +165,115 @@ const initializeSocket = (server) => {
       console.log(`User ${socket.userId} joined sanctuary ${sanctuaryId}`);
     });
 
+    // Handle flagship sanctuary events with improved participant tracking
+    const FlagshipSanctuarySession = require('../models/LiveSanctuarySession');
+    
+    // Store active participants in memory for each session
+    if (!io.participantTracker) {
+      io.participantTracker = new Map(); // sessionId -> Map<participantId, participantData>
+    }
+
+    socket.on('join_flagship_sanctuary', async (data) => {
+      const { sessionId, participant } = data;
+      
+      try {
+        // Get session data
+        const session = await FlagshipSanctuarySession.findOne({ id: sessionId });
+        if (!session) {
+          socket.emit('join_error', { message: 'Session not found' });
+          return;
+        }
+
+        // Join socket room
+        socket.join(`flagship_${sessionId}`);
+        socket.currentFlagshipSession = sessionId;
+        socket.participantId = participant.id || socket.userId;
+        socket.participantAlias = participant.alias || socket.userAlias;
+
+        // Initialize participant tracker for this session if needed
+        if (!io.participantTracker.has(sessionId)) {
+          io.participantTracker.set(sessionId, new Map());
+        }
+
+        const sessionParticipants = io.participantTracker.get(sessionId);
+        
+        // Add/update participant data
+        const participantData = {
+          id: socket.participantId,
+          alias: socket.participantAlias,
+          avatarIndex: participant.avatarIndex || socket.userAvatarIndex || 1,
+          isHost: participant.isHost || false,
+          isModerator: participant.isModerator || false,
+          isMuted: true, // Start muted by default
+          handRaised: false,
+          joinedAt: new Date().toISOString(),
+          socketId: socket.id,
+          connectionStatus: 'connected'
+        };
+
+        sessionParticipants.set(socket.participantId, participantData);
+
+        // Broadcast to all participants in the session
+        socket.to(`flagship_${sessionId}`).emit('participant_joined', {
+          participant: participantData,
+          totalParticipants: sessionParticipants.size
+        });
+
+        // Send confirmation with current participants list
+        socket.emit('join_confirmed', {
+          sessionId,
+          participant: participantData,
+          participants: Array.from(sessionParticipants.values()),
+          totalParticipants: sessionParticipants.size
+        });
+
+        console.log(`✅ ${socket.participantAlias} joined flagship sanctuary ${sessionId}`);
+
+      } catch (error) {
+        console.error('❌ Error joining flagship sanctuary:', error);
+        socket.emit('join_error', { message: 'Failed to join session' });
+      }
+    });
+
+    // Enhanced chat messaging for flagship sanctuaries
+    socket.on('flagship_send_message', async (data) => {
+      try {
+        const { sessionId, content, type = 'text', attachment } = data;
+        const participantId = socket.participantId || socket.userId;
+        const participantAlias = socket.participantAlias || socket.userAlias || 'Anonymous';
+
+        if (!sessionId || !content) {
+          socket.emit('message_error', { message: 'Invalid message data' });
+          return;
+        }
+
+        // Create message object
+        const chatMessage = {
+          id: `flagship_msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          senderAlias: participantAlias,
+          senderAvatarIndex: socket.userAvatarIndex || 1,
+          content,
+          type,
+          attachment,
+          timestamp: new Date().toISOString(),
+          participantId
+        };
+
+        // Broadcast to all participants in both flagship and audio room channels
+        io.to(`flagship_${sessionId}`).emit('new_message', chatMessage);
+        io.to(`audio_room_${sessionId}`).emit('new_message', chatMessage);
+
+        console.log(`💬 Flagship message in ${sessionId} by ${participantAlias}:`, {
+          type: chatMessage.type,
+          hasAttachment: !!chatMessage.attachment
+        });
+
+      } catch (error) {
+        console.error('❌ Error sending flagship message:', error);
+        socket.emit('message_error', { message: 'Failed to send message' });
+      }
+    });
+
     // Handle joining sanctuary as host for real-time inbox updates
     socket.on('join_sanctuary_host', async (data) => {
       const { sanctuaryId, hostToken } = data;
@@ -291,27 +400,66 @@ const initializeSocket = (server) => {
       
       socket.join(`audio_room_${sessionId}`);
       socket.currentAudioRoom = sessionId;
+      socket.participantId = participant.id || socket.userId;
+      socket.participantAlias = participant.alias || socket.userAlias || 'Anonymous';
+
+      // Update participant tracker for flagship sessions
+      if (io.participantTracker && io.participantTracker.has(sessionId)) {
+        const sessionParticipants = io.participantTracker.get(sessionId);
+        const existingParticipant = sessionParticipants.get(socket.participantId);
+        
+        if (existingParticipant) {
+          // Update existing participant
+          sessionParticipants.set(socket.participantId, {
+            ...existingParticipant,
+            socketId: socket.id,
+            connectionStatus: 'connected'
+          });
+        }
+      }
       
       // Notify others of participant joining
       socket.to(`audio_room_${sessionId}`).emit('audio_participant_joined', {
         participant: {
-          id: socket.userId,
-          alias: participant.alias || socket.userAlias || 'Anonymous',
+          id: socket.participantId,
+          alias: socket.participantAlias,
           isHost: participant.isHost || false,
           isModerator: participant.isModerator || false,
-          joinedAt: new Date().toISOString()
+          joinedAt: new Date().toISOString(),
+          connectionStatus: 'connected'
         }
       });
       
-      console.log(`User ${socket.userId} joined audio room ${sessionId}`);
+      console.log(`User ${socket.participantAlias} joined audio room ${sessionId}`);
     });
 
     socket.on('raise_hand', (data) => {
       const { sessionId, isRaised } = data;
+      const participantId = socket.participantId || socket.userId;
       
-      socket.to(`audio_room_${sessionId}`).emit('hand_raised', {
-        participantId: socket.userId,
-        participantAlias: socket.userAlias || 'Anonymous',
+      // Update participant tracker
+      if (io.participantTracker && io.participantTracker.has(sessionId)) {
+        const sessionParticipants = io.participantTracker.get(sessionId);
+        const participant = sessionParticipants.get(participantId);
+        if (participant) {
+          sessionParticipants.set(participantId, {
+            ...participant,
+            handRaised: isRaised
+          });
+        }
+      }
+      
+      // Broadcast to all rooms for this session
+      io.to(`audio_room_${sessionId}`).emit('hand_raised', {
+        participantId,
+        participantAlias: socket.participantAlias || 'Anonymous',
+        isRaised,
+        timestamp: new Date().toISOString()
+      });
+      
+      io.to(`flagship_${sessionId}`).emit('hand_raised', {
+        participantId,
+        participantAlias: socket.participantAlias || 'Anonymous',
         isRaised,
         timestamp: new Date().toISOString()
       });
@@ -343,9 +491,21 @@ const initializeSocket = (server) => {
     socket.on('mute_participant', (data) => {
       const { sessionId, participantId } = data;
       
+      // Update participant tracker
+      if (io.participantTracker && io.participantTracker.has(sessionId)) {
+        const sessionParticipants = io.participantTracker.get(sessionId);
+        const participant = sessionParticipants.get(participantId);
+        if (participant) {
+          sessionParticipants.set(participantId, {
+            ...participant,
+            isMuted: true
+          });
+        }
+      }
+      
       // Find target user's socket
       const targetSocket = Array.from(io.sockets.sockets.values())
-        .find(s => s.userId === participantId);
+        .find(s => (s.participantId === participantId || s.userId === participantId));
       
       if (targetSocket) {
         targetSocket.emit('force_muted', {
@@ -353,22 +513,34 @@ const initializeSocket = (server) => {
           mutedBy: socket.userId,
           timestamp: new Date().toISOString()
         });
-        
-        // Notify room
-        io.to(`audio_room_${sessionId}`).emit('participant_muted', {
-          participantId,
-          mutedBy: socket.userId,
-          timestamp: new Date().toISOString()
-        });
       }
+      
+      // Notify all rooms for this session
+      io.to(`audio_room_${sessionId}`).emit('participant_muted', {
+        participantId,
+        mutedBy: socket.userId,
+        timestamp: new Date().toISOString()
+      });
+      
+      io.to(`flagship_${sessionId}`).emit('participant_muted', {
+        participantId,
+        mutedBy: socket.userId,
+        timestamp: new Date().toISOString()
+      });
     });
 
     socket.on('kick_participant', (data) => {
       const { sessionId, participantId } = data;
       
+      // Remove from participant tracker
+      if (io.participantTracker && io.participantTracker.has(sessionId)) {
+        const sessionParticipants = io.participantTracker.get(sessionId);
+        sessionParticipants.delete(participantId);
+      }
+      
       // Find target user's socket
       const targetSocket = Array.from(io.sockets.sockets.values())
-        .find(s => s.userId === participantId);
+        .find(s => (s.participantId === participantId || s.userId === participantId));
       
       if (targetSocket) {
         targetSocket.emit('kicked_from_room', {
@@ -377,26 +549,40 @@ const initializeSocket = (server) => {
           timestamp: new Date().toISOString()
         });
         
+        // Remove from all rooms
         targetSocket.leave(`audio_room_${sessionId}`);
-        
-        // Notify room
-        socket.to(`audio_room_${sessionId}`).emit('participant_kicked', {
-          participantId,
-          kickedBy: socket.userId,
-          timestamp: new Date().toISOString()
-        });
+        targetSocket.leave(`flagship_${sessionId}`);
       }
+      
+      // Notify all rooms for this session
+      io.to(`audio_room_${sessionId}`).emit('participant_kicked', {
+        participantId,
+        kickedBy: socket.userId,
+        timestamp: new Date().toISOString()
+      });
+      
+      io.to(`flagship_${sessionId}`).emit('participant_kicked', {
+        participantId,
+        kickedBy: socket.userId,
+        timestamp: new Date().toISOString()
+      });
     });
 
     socket.on('send_emoji_reaction', (data) => {
       const { sessionId, emoji } = data;
+      const participantId = socket.participantId || socket.userId;
       
-      socket.to(`audio_room_${sessionId}`).emit('emoji_reaction', {
-        participantId: socket.userId,
-        participantAlias: socket.userAlias || 'Anonymous',
+      const reactionData = {
+        participantId,
+        participantAlias: socket.participantAlias || 'Anonymous',
         emoji,
-        timestamp: new Date().toISOString()
-      });
+        timestamp: new Date().toISOString(),
+        id: `reaction_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      };
+      
+      // Broadcast to all rooms for this session
+      io.to(`audio_room_${sessionId}`).emit('emoji_reaction', reactionData);
+      io.to(`flagship_${sessionId}`).emit('emoji_reaction', reactionData);
     });
 
     socket.on('emergency_alert', (data) => {
