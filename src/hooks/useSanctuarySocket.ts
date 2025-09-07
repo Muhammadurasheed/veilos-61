@@ -246,7 +246,7 @@ export const useSanctuarySocket = (config: SanctuarySocketConfig) => {
     if (!socket || !isConnectedRef.current) return;
     if (!config.participant.isHost && !config.participant.isModerator) return;
 
-    socket.emit('unmute_all_participants', {
+    socket.emit('unmute_all', {
       sessionId: config.sessionId
     });
   }, [config.sessionId, config.participant.isHost, config.participant.isModerator]);

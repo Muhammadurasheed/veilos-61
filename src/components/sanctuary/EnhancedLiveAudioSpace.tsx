@@ -815,10 +815,13 @@ const monitorAudioLevel = () => {
 
             {/* Enhanced Chat Panel with Mention Support */}
             <EnhancedChatPanel
+              isVisible={isChatVisible}
+              onToggle={() => setIsChatVisible(false)}
+              messages={messages}
+              participants={participants}
+              currentUserAlias={currentUser.alias}
               sessionId={session.id}
-              participantAlias={currentUser.alias}
-              onEvent={onEvent}
-              sendMessage={sendMessage}
+              onSendMessage={handleSendMessage}
             />
 
             {/* Emergency Controls - Fixed Position to Avoid Overlap */}

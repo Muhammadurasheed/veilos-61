@@ -1,418 +1,480 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Smile, Send, Paperclip, X, Eye, Download, FileText, Reply } from "lucide-react";
-import { format } from "date-fns";
-import { motion, AnimatePresence } from "framer-motion";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Send, ChevronUp, Shield, AtSign, Paperclip, Reply } from 'lucide-react';
+import { MediaPreviewModal } from './MediaPreviewModal';
 import { chatMessageCache, type CachedMessage } from './ChatMessageCache';
-
-interface MediaPreview {
-  url?: string;
-  fileName: string;
-  fileType: string;
-  file?: File;
-}
+import type { LiveParticipant } from '@/types/sanctuary';
 
 interface ChatMessage {
   id: string;
   senderAlias: string;
   senderAvatarIndex: number;
   content: string;
-  timestamp: string;
+  timestamp: Date;
   type: 'text' | 'system' | 'emoji-reaction' | 'media';
+  mentions?: string[];
   attachment?: any;
   replyTo?: string;
 }
 
 interface EnhancedChatPanelProps {
+  isVisible: boolean;
+  onToggle: () => void;
+  messages: ChatMessage[];
+  participants: LiveParticipant[];
+  currentUserAlias: string;
   sessionId: string;
-  participantAlias: string;
-  onEvent?: (event: string, handler: Function) => Function;
-  sendMessage?: (content: string, type?: string, attachment?: any) => void;
+  onSendMessage: (content: string, type?: 'text' | 'emoji-reaction' | 'media', attachment?: any, replyTo?: string) => void;
 }
 
-export const EnhancedChatPanel = ({ 
-  sessionId, 
-  participantAlias, 
-  onEvent,
-  sendMessage: socketSendMessage 
+export const EnhancedChatPanel = ({
+  isVisible,
+  onToggle,
+  messages,
+  participants,
+  currentUserAlias,
+  sessionId,
+  onSendMessage
 }: EnhancedChatPanelProps) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [isUploading, setIsUploading] = useState(false);
-  const [mediaPreview, setMediaPreview] = useState<MediaPreview | null>(null);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [cursorPosition, setCursorPosition] = useState(0);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [showMediaPreview, setShowMediaPreview] = useState(false);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
-  const [isForceMuted, setIsForceMuted] = useState(false);
-  
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load cached messages on mount
   useEffect(() => {
-    const cachedMessages = chatMessageCache.loadMessages(sessionId);
-    if (cachedMessages.length > 0) {
-      console.log('💬 Loading cached messages:', cachedMessages.length);
-      const formattedMessages: ChatMessage[] = cachedMessages.map(cached => ({
-        id: cached.id,
-        senderAlias: cached.senderAlias,
-        senderAvatarIndex: cached.senderAvatarIndex,
-        content: cached.content,
-        timestamp: cached.timestamp,
-        type: cached.type,
-        attachment: cached.attachment,
-        replyTo: cached.replyTo
-      }));
-      setMessages(formattedMessages);
-    }
-  }, [sessionId]);
-
-  // Clean up URL object when component unmounts or media preview changes
-  useEffect(() => {
-    return () => {
-      if (mediaPreview?.url) {
-        URL.revokeObjectURL(mediaPreview.url);
+    if (sessionId) {
+      const cachedMessages = chatMessageCache.loadMessages(sessionId);
+      // Only show cached messages if current messages array is empty
+      if (messages.length === 0 && cachedMessages.length > 0) {
+        console.log('📥 Loading cached messages:', cachedMessages.length);
+        // You might want to emit these to the parent component
       }
-    };
-  }, [mediaPreview]);
+    }
+  }, [sessionId, messages.length]);
 
-  // Socket event listeners
+  // Cache messages when they change
   useEffect(() => {
-    if (!onEvent) return;
+    if (sessionId && messages.length > 0) {
+      const cachableMessages: CachedMessage[] = messages.map(msg => ({
+        id: msg.id,
+        senderAlias: msg.senderAlias,
+        senderAvatarIndex: msg.senderAvatarIndex,
+        content: msg.content,
+        timestamp: msg.timestamp.toISOString(),
+        type: msg.type,
+        attachment: msg.attachment,
+        replyTo: msg.replyTo
+      }));
+      chatMessageCache.saveMessages(sessionId, cachableMessages);
+    }
+  }, [sessionId, messages]);
 
-    const cleanupNewMessage = onEvent('new_message', (messageData) => {
-      console.log('📨 New message received:', messageData);
-      const newMsg: ChatMessage = {
-        id: messageData.id,
-        senderAlias: messageData.senderAlias,
-        senderAvatarIndex: messageData.senderAvatarIndex || 1,
-        content: messageData.content,
-        timestamp: messageData.timestamp,
-        type: messageData.type || 'text',
-        attachment: messageData.attachment,
-        replyTo: messageData.replyTo
+  // Auto-scroll chat messages
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  const formatTime = (timestamp: Date): string => {
+    return timestamp.toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
+  // Handle @ mentions
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const position = e.target.selectionStart || 0;
+    
+    setNewMessage(value);
+    setCursorPosition(position);
+
+    // Check for @ mentions
+    const textBeforeCursor = value.substring(0, position);
+    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+    
+    if (mentionMatch) {
+      setMentionQuery(mentionMatch[1]);
+      setShowSuggestions(true);
+    } else {
+      setShowSuggestions(false);
+      setMentionQuery('');
+    }
+  };
+
+  // Filter participants for mention suggestions
+  const mentionSuggestions = participants.filter(p => 
+    p.alias.toLowerCase().includes(mentionQuery.toLowerCase()) &&
+    p.alias !== currentUserAlias
+  ).slice(0, 5);
+
+  // Insert mention
+  const insertMention = (participantAlias: string) => {
+    const textBeforeCursor = newMessage.substring(0, cursorPosition);
+    const textAfterCursor = newMessage.substring(cursorPosition);
+    const beforeMention = textBeforeCursor.replace(/@\w*$/, `@${participantAlias} `);
+    
+    setNewMessage(beforeMention + textAfterCursor);
+    setShowSuggestions(false);
+    setMentionQuery('');
+    
+    // Focus back to input
+    setTimeout(() => {
+      inputRef.current?.focus();
+      const newPosition = beforeMention.length;
+      inputRef.current?.setSelectionRange(newPosition, newPosition);
+    }, 0);
+  };
+
+  const handleSendMessage = () => {
+    if (!newMessage.trim() && !selectedFile) return;
+    
+    if (selectedFile) {
+      // Handle file upload
+      const reader = new FileReader();
+      reader.onload = () => {
+        onSendMessage(newMessage.trim() || `Shared ${selectedFile.type.startsWith('image/') ? 'image' : 'file'}: ${selectedFile.name}`, 'media', {
+          file: reader.result,
+          fileName: selectedFile.name,
+          fileType: selectedFile.type,
+          fileSize: selectedFile.size
+        }, replyingTo?.id);
+        setSelectedFile(null);
+        setNewMessage('');
+        setReplyingTo(null);
+        setShowSuggestions(false);
+        setMentionQuery('');
       };
-      
-      setMessages(prev => {
-        // Prevent duplicate messages
-        if (prev.find(m => m.id === newMsg.id)) {
-          return prev;
-        }
-        const updated = [...prev, newMsg];
-        // Cache messages
-        chatMessageCache.saveMessages(sessionId, updated);
-        return updated;
-      });
-    });
-
-    const cleanupForceMuted = onEvent('force_muted', () => {
-      setIsForceMuted(true);
-    });
-
-    const cleanupForceUnmuted = onEvent('force_unmuted', () => {
-      setIsForceMuted(false);
-    });
-
-    return () => {
-      cleanupNewMessage?.();
-      cleanupForceMuted?.();
-      cleanupForceUnmuted?.();
-    };
-  }, [onEvent, sessionId]);
+      reader.readAsDataURL(selectedFile);
+    } else {
+      onSendMessage(newMessage.trim(), 'text', undefined, replyingTo?.id);
+      setNewMessage('');
+      setReplyingTo(null);
+      setShowSuggestions(false);
+      setMentionQuery('');
+    }
+  };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      // Limit file size to 10MB
+      if (file.size > 10 * 1024 * 1024) {
         alert('File size must be less than 10MB');
         return;
       }
-      
-      const preview: MediaPreview = {
-        fileName: file.name,
-        fileType: file.type,
-        file
-      };
-      
-      // Create preview URL for images
-      if (file.type.startsWith('image/')) {
-        preview.url = URL.createObjectURL(file);
-      }
-      
-      setMediaPreview(preview);
+      setSelectedFile(file);
+      setShowMediaPreview(true);
     }
+    // Reset file input
     event.target.value = '';
   };
 
-  const handleEmojiReaction = (emoji: string) => {
-    if (socketSendMessage) {
-      socketSendMessage(emoji, 'emoji-reaction');
-    }
-    setShowEmojiPicker(false);
-  };
-
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() && !mediaPreview) return;
-
+  const handleMediaSend = async (file: File, caption?: string) => {
     try {
-      const token = localStorage.getItem('auth_token');
+      // Upload to backend Cloudinary endpoint for robust storage
       const formData = new FormData();
-      
-      if (newMessage.trim()) {
-        formData.append('content', newMessage.trim());
-      }
-      
-      formData.append('type', mediaPreview ? 'media' : 'text');
-      formData.append('participantAlias', participantAlias);
-      
-      if (replyingTo) {
-        formData.append('replyTo', replyingTo.id);
-      }
-      
-      if (mediaPreview?.file) {
-        formData.append('attachment', mediaPreview.file);
-      }
+      formData.append('attachment', file);
+      formData.append('participantAlias', currentUserAlias);
+      if (caption) formData.append('content', caption);
 
       const response = await fetch(`/api/flagship-chat/sessions/${sessionId}/messages`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: formData
       });
 
       if (response.ok) {
-        setNewMessage('');
-        setMediaPreview(null);
-        setReplyingTo(null);
-        console.log('✅ Message sent successfully');
+        const result = await response.json();
+        console.log('✅ Media uploaded successfully via backend:', result);
+        // Backend will emit the message via socket, so we don't need to call onSendMessage
       } else {
-        console.error('❌ Failed to send message:', response.statusText);
+        console.warn('⚠️ Backend upload failed, falling back to base64...');
+        // Fallback to base64 method
+        const reader = new FileReader();
+        reader.onload = () => {
+          onSendMessage(caption || `Shared ${file.type.startsWith('image/') ? 'image' : 'file'}: ${file.name}`, 'media', {
+            file: reader.result,
+            fileName: file.name,
+            fileType: file.type,
+            fileSize: file.size
+          });
+        };
+        reader.readAsDataURL(file);
       }
+      
+      setSelectedFile(null);
+      setShowMediaPreview(false);
     } catch (error) {
-      console.error('❌ Send message error:', error);
+      console.error('❌ Media upload error:', error);
+      
+      // Fallback to base64 method
+      const reader = new FileReader();
+      reader.onload = () => {
+        onSendMessage(caption || `Shared ${file.type.startsWith('image/') ? 'image' : 'file'}: ${file.name}`, 'media', {
+          file: reader.result,
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size
+        });
+        setSelectedFile(null);
+        setShowMediaPreview(false);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  return (
-    <Card className="h-96 flex flex-col">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center justify-between">
-          <span>Chat</span>
-          <Badge variant="secondary" className="text-xs">
-            {messages.length} messages
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (showSuggestions && mentionSuggestions.length > 0) {
+        insertMention(mentionSuggestions[0].alias);
+      } else {
+        handleSendMessage();
+      }
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleReplyToMessage = (message: ChatMessage) => {
+    setReplyingTo(message);
+    inputRef.current?.focus();
+  };
+
+  const handleDoubleClick = (message: ChatMessage) => {
+    if (message.type === 'text' || message.type === 'media') {
+      handleReplyToMessage(message);
+    }
+  };
+
+  const renderMessage = (message: ChatMessage) => {
+    if (message.type === 'system') {
+      return (
+        <div className="text-center">
+          <Badge variant="outline" className="text-xs">
+            <Shield className="h-3 w-3 mr-1" />
+            {message.content}
           </Badge>
-        </CardTitle>
-      </CardHeader>
-      
-      <CardContent className="flex-1 flex flex-col p-0">
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 pb-2">
-          <div className="space-y-3 flex-1 overflow-y-auto">
-            {messages.map((message) => {
-              const replyMessage = message.replyTo ? messages.find(m => m.id === message.replyTo) : null;
-              
-              return (
-                <div
-                  key={message.id}
-                  className="flex gap-3 group hover:bg-background/5 p-2 rounded-lg transition-colors"
-                >
-                  {/* Avatar */}
-                  <div className="flex-shrink-0">
-                    <img
-                      src={`/avatars/avatar-${message.senderAvatarIndex}.svg`}
-                      alt="Avatar"
-                      className="w-8 h-8 rounded-full border-2 border-primary/20"
-                    />
-                  </div>
+        </div>
+      );
+    }
 
-                  {/* Message Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2 mb-1">
-                      <span className="font-medium text-foreground text-sm">
-                        {message.senderAlias}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(message.timestamp), 'HH:mm')}
-                      </span>
-                      
-                      {/* Reply Button */}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity ml-auto"
-                        onClick={() => setReplyingTo(message)}
-                      >
-                        <Reply className="w-3 h-3" />
-                      </Button>
+    if (message.type === 'emoji-reaction') {
+      return (
+        <div className="text-center">
+          <span className="text-2xl">{message.content}</span>
+          <div className="text-xs text-muted-foreground">
+            {message.senderAlias} • {formatTime(message.timestamp)}
+          </div>
+        </div>
+      );
+    }
+
+    if (message.type === 'media' && message.attachment) {
+      return (
+        <div 
+          className="flex items-start space-x-2 hover:bg-muted/30 p-1 rounded cursor-pointer"
+          onDoubleClick={() => handleDoubleClick(message)}
+        >
+          <Avatar className="h-6 w-6">
+            <AvatarImage src={`/avatars/avatar-${message.senderAvatarIndex}.svg`} />
+            <AvatarFallback className="text-xs">
+              {message.senderAlias.substring(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center space-x-1">
+              <span className="text-xs font-medium truncate">
+                {message.senderAlias}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {formatTime(message.timestamp)}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100"
+                onClick={() => handleReplyToMessage(message)}
+              >
+                <Reply className="h-3 w-3" />
+              </Button>
+            </div>
+            {message.replyTo && (
+              <div className="text-xs text-muted-foreground border-l-2 border-primary/30 pl-2 mb-1">
+                Replying to previous message
+              </div>
+            )}
+            <div className="bg-muted rounded p-2 mt-1">
+              {message.attachment.fileType?.startsWith('image/') ? (
+                <img 
+                  src={message.attachment.file || message.attachment.url || message.attachment.preview} 
+                  alt={message.attachment.fileName || 'Shared image'}
+                  className="max-w-xs rounded cursor-pointer"
+                  onClick={() => {
+                    // Open image in new tab for full view
+                    const img = new Image();
+                    img.src = message.attachment.file || message.attachment.url || message.attachment.preview;
+                    const newWindow = window.open();
+                    newWindow?.document.write(`<img src="${img.src}" style="max-width:100%;height:auto;" />`);
+                  }}
+                />
+              ) : (
+                <div className="flex items-center space-x-2 cursor-pointer hover:bg-muted-foreground/10 rounded p-1"
+                     onClick={() => {
+                       // Handle file download
+                       if (message.attachment.file) {
+                         const link = document.createElement('a');
+                         link.href = message.attachment.file;
+                         link.download = message.attachment.fileName || 'file';
+                         link.click();
+                       }
+                     }}>
+                  <span className="text-lg">📎</span>
+                  <div>
+                    <span className="text-sm font-medium">{message.attachment.fileName}</span>
+                    <div className="text-xs text-muted-foreground">
+                      {message.attachment.fileSize ? `${(message.attachment.fileSize / 1024).toFixed(1)} KB` : 'File'}
                     </div>
-
-                    {/* Reply Context */}
-                    {replyMessage && (
-                      <div className="mb-2 p-2 bg-muted/30 rounded border-l-2 border-primary/50">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Reply className="w-3 h-3 text-primary" />
-                          <span className="text-xs font-medium text-primary">
-                            {replyMessage.senderAlias}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {replyMessage.content || (replyMessage.attachment ? 'Sent an attachment' : 'Message')}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Message Text */}
-                    {message.content && (
-                      <p className="text-sm text-foreground/90 break-words">
-                        {message.content}
-                      </p>
-                    )}
-
-                    {/* Media Attachment */}
-                    {message.attachment && (
-                      <div className="mt-2">
-                        {message.attachment.fileType?.startsWith('image/') ? (
-                          <div className="relative group/media">
-                            <img
-                              src={message.attachment.url}
-                              alt={message.attachment.fileName}
-                              className="max-w-xs max-h-48 rounded-lg border border-border cursor-pointer hover:opacity-90 transition-opacity"
-                              onClick={() => setMediaPreview({
-                                url: message.attachment.url,
-                                fileName: message.attachment.fileName,
-                                fileType: message.attachment.fileType
-                              })}
-                            />
-                            <div className="absolute inset-0 bg-black/0 group-hover/media:bg-black/10 transition-colors rounded-lg flex items-center justify-center">
-                              <Eye className="w-6 h-6 text-white opacity-0 group-hover/media:opacity-100 transition-opacity" />
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2 p-3 bg-background/50 rounded-lg border border-border max-w-xs">
-                            <FileText className="w-4 h-4 text-primary" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-foreground truncate">
-                                {message.attachment.fileName}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {(message.attachment.fileSize / 1024).toFixed(1)} KB
-                              </p>
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => window.open(message.attachment.url, '_blank')}
-                            >
-                              <Download className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
                 </div>
-              );
-            })}
+              )}
+              {message.content && (
+                <div className="text-sm mt-1">{message.content}</div>
+              )}
+            </div>
           </div>
+        </div>
+      );
+    }
+
+    // Highlight mentions in text messages
+    const highlightMentions = (text: string) => {
+      return text.replace(/@(\w+)/g, (match, username) => {
+        const isCurrentUser = username === currentUserAlias;
+        return `<span class="bg-primary/20 text-primary font-medium px-1 rounded ${
+          isCurrentUser ? 'bg-accent/30 text-accent-foreground' : ''
+        }">${match}</span>`;
+      });
+    };
+
+    return (
+      <div className="flex items-start space-x-2">
+        <Avatar className="h-6 w-6">
+          <AvatarImage src={`/avatars/avatar-${message.senderAvatarIndex}.svg`} />
+          <AvatarFallback className="text-xs">
+            {message.senderAlias.substring(0, 2).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center space-x-1">
+            <span className="text-xs font-medium truncate">
+              {message.senderAlias}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {formatTime(message.timestamp)}
+            </span>
+          </div>
+          <div 
+            className="text-sm break-words"
+            dangerouslySetInnerHTML={{ __html: highlightMentions(message.content) }}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  if (!isVisible) return null;
+
+  return (
+    <Card className="mb-4">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center justify-between text-lg">
+          <span>Chat</span>
+          <Button variant="ghost" size="sm" onClick={onToggle}>
+            <ChevronUp className="h-4 w-4" />
+          </Button>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        {/* Messages Container with Fixed Height */}
+        <div className="h-64 overflow-y-auto space-y-3 px-4 pb-3">
+          {messages.map((message) => (
+            <div key={message.id} className="space-y-1">
+              {renderMessage(message)}
+            </div>
+          ))}
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Section */}
-        <div className="border-t border-border p-4 space-y-3">
-          {/* Reply Context */}
-          {replyingTo && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-2 p-2 bg-muted/30 rounded border-l-2 border-primary/50"
-            >
-              <Reply className="w-4 h-4 text-primary" />
-              <div className="flex-1">
-                <span className="text-xs font-medium text-primary">
-                  Replying to {replyingTo.senderAlias}
-                </span>
-                <p className="text-xs text-muted-foreground truncate">
-                  {replyingTo.content || (replyingTo.attachment ? 'Sent an attachment' : 'Message')}
-                </p>
-              </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setReplyingTo(null)}
-              >
-                <X className="w-3 h-3" />
-              </Button>
-            </motion.div>
-          )}
-
-          {/* Emoji Picker */}
-          <AnimatePresence>
-            {showEmojiPicker && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="bg-popover border border-border rounded-lg p-3 mb-3 shadow-lg"
-              >
-                <div className="grid grid-cols-8 gap-2">
-                  {['😀', '😂', '❤️', '👍', '🎉', '🔥', '✨', '💯', '🙏', '👏', '😭', '😍', '🤔', '😅', '🎵', '✅'].map((emoji) => (
-                    <button
-                      key={emoji}
-                      onClick={() => handleEmojiReaction(emoji)}
-                      className="text-2xl hover:bg-accent rounded p-2 transition-colors"
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Media Preview */}
-          {mediaPreview && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="p-3 bg-muted/50 rounded-lg border border-border"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Attachment Preview</span>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setMediaPreview(null)}
+        {/* Mention Suggestions */}
+        {showSuggestions && mentionSuggestions.length > 0 && (
+          <div className="border-t border-b bg-muted/50 p-2">
+            <div className="text-xs text-muted-foreground mb-2 flex items-center">
+              <AtSign className="h-3 w-3 mr-1" />
+              Participants
+            </div>
+            <div className="space-y-1">
+              {mentionSuggestions.map((participant) => (
+                <button
+                  key={participant.id}
+                  onClick={() => insertMention(participant.alias)}
+                  className="w-full text-left p-2 rounded hover:bg-muted/80 transition-colors flex items-center space-x-2"
                 >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-              
-              {mediaPreview.url ? (
-                <img
-                  src={mediaPreview.url}
-                  alt={mediaPreview.fileName}
-                  className="max-w-full max-h-32 rounded border border-border"
-                />
-              ) : (
-                <div className="flex items-center gap-2 p-2 bg-background rounded">
-                  <FileText className="w-4 h-4" />
-                  <span className="text-sm">{mediaPreview.fileName}</span>
-                </div>
-              )}
-            </motion.div>
-          )}
+                  <Avatar className="h-5 w-5">
+                    <AvatarImage src={`/avatars/avatar-${participant.avatarIndex || 1}.svg`} />
+                    <AvatarFallback className="text-xs">
+                      {participant.alias.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm">{participant.alias}</span>
+                  {participant.isHost && (
+                    <Badge variant="secondary" className="text-xs px-1 py-0">Host</Badge>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
-          {/* Message Input */}
-          <div className="flex gap-2">
+        {/* Media Preview Modal */}
+        <MediaPreviewModal
+          isOpen={showMediaPreview}
+          onClose={() => {
+            setShowMediaPreview(false);
+            setSelectedFile(null);
+          }}
+          file={selectedFile}
+          onSend={handleMediaSend}
+        />
+
+        {/* Message Input with Enhanced Features */}
+        <div className="border-t p-3">
+          <div className="flex items-center space-x-2">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => fileInputRef.current?.click()}
+              className="text-muted-foreground hover:text-primary"
             >
-              <Paperclip className="w-4 h-4" />
+              <Paperclip className="h-4 w-4" />
             </Button>
             <input
               ref={fileInputRef}
@@ -421,34 +483,25 @@ export const EnhancedChatPanel = ({
               accept="image/*,.pdf,.doc,.docx,.txt"
               className="hidden"
             />
-            
-            <Input
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type a message..."
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-              className="flex-1"
-            />
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            >
-              <Smile className="w-4 h-4" />
-            </Button>
-            
+            <div className="relative flex-1">
+              <Input
+                ref={inputRef}
+                value={newMessage}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyPress}
+                placeholder="Type a message... (@username to tag)"
+                className="text-sm pr-8"
+              />
+              {newMessage.includes('@') && (
+                <AtSign className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              )}
+            </div>
             <Button
               onClick={handleSendMessage}
+              disabled={!newMessage.trim() && !selectedFile}
               size="sm"
-              disabled={!newMessage.trim() && !mediaPreview}
             >
-              <Send className="w-4 h-4" />
+              <Send className="h-4 w-4" />
             </Button>
           </div>
         </div>
