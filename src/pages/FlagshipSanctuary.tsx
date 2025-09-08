@@ -3,7 +3,7 @@ import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useFlagshipSanctuary } from '@/hooks/useFlagshipSanctuary';
 import { useAuth } from '@/contexts/optimized/AuthContextRefactored';
 import { FlagshipSanctuaryCreator } from '@/components/flagship/FlagshipSanctuaryCreator';
-import { EnhancedLiveAudioSpace } from '@/components/sanctuary/EnhancedLiveAudioSpace';
+import EnhancedLiveAudioSpace from '@/components/sanctuary/EnhancedLiveAudioSpace';
 import { SessionAcknowledgment } from '@/components/flagship/SessionAcknowledgment';
 import { SessionWaitingRoom } from '@/components/flagship/SessionWaitingRoom';
 import Layout from '@/components/layout/Layout';

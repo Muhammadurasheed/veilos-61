@@ -28,16 +28,30 @@ import {
   ChevronUp,
   Sparkles
 } from 'lucide-react';
-import type { LiveSanctuarySession, LiveParticipant } from '@/types/sanctuary';
+
+interface LiveParticipant {
+  id: string;
+  alias: string;
+  isHost?: boolean;
+  isModerator?: boolean;
+  isMuted?: boolean;
+  handRaised?: boolean;
+  avatarIndex?: number;
+  joinedAt?: string;
+  hostMuted?: boolean;
+  lastSeen?: Date;
+  isKicked?: boolean;
+  reactions?: any[];
+}
 
 interface EnhancedLiveAudioSpaceProps {
-  session: LiveSanctuarySession;
+  session: any;
   currentUser: {
     id: string;
     alias: string;
-    avatarIndex?: number;
     isHost?: boolean;
     isModerator?: boolean;
+    avatarIndex?: number;
   };
   onLeave: () => void;
 }
@@ -53,17 +67,17 @@ interface ChatMessage {
   replyTo?: string;
 }
 
-export const EnhancedLiveAudioSpace = ({ session, currentUser, onLeave }: EnhancedLiveAudioSpaceProps) => {
+const EnhancedLiveAudioSpace = ({ session, currentUser, onLeave }: EnhancedLiveAudioSpaceProps) => {
   const { toast } = useToast();
   const [isMuted, setIsMuted] = useState(true);
   const [isDeafened, setIsDeafened] = useState(false);
   const [handRaised, setHandRaised] = useState(false);
-  const [isHostMuted, setIsHostMuted] = useState(false); // Track if host muted this user
+  const [isHostMuted, setIsHostMuted] = useState(false);
   
   // Filter unique participants to prevent duplicates
   const uniqueParticipants = React.useMemo(() => {
     const seen = new Set();
-    return (session.participants || []).filter(p => {
+    return (session.participants || []).filter((p: any) => {
       if (seen.has(p.id)) {
         return false;
       }
@@ -72,53 +86,57 @@ export const EnhancedLiveAudioSpace = ({ session, currentUser, onLeave }: Enhanc
     });
   }, [session.participants]);
   
-  const [participants, setParticipants] = useState<LiveParticipant[]>(uniqueParticipants);
+  const [participants, setParticipants] = useState<any[]>(uniqueParticipants);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [reactions, setReactions] = useState<any[]>([]);
+  const [isChatVisible, setIsChatVisible] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
   
-  // Update participants when session data changes
+  const streamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const micAnalyserRef = useRef<AnalyserNode | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Load cached messages on mount
   useEffect(() => {
-    setParticipants(uniqueParticipants);
-  }, [uniqueParticipants]);
-  
-  const [isChatVisible, setIsChatVisible] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [inviteLink, setInviteLink] = useState('');
-  const [reactions, setReactions] = useState<Array<{ id: string; emoji: string; timestamp: number }>>([]);
-  
-  // Hydrate chat cache on mount
-  useEffect(() => {
-    import('./ChatMessageCache').then(({ chatMessageCache }) => {
-      const cachedMessages = chatMessageCache.loadMessages(session.id);
-      if (cachedMessages.length > 0) {
-        console.log('💬 Hydrating cached messages:', cachedMessages.length);
-        const hydratedMessages: ChatMessage[] = cachedMessages.map(cached => ({
-          id: cached.id,
-          senderAlias: cached.senderAlias,
-          senderAvatarIndex: cached.senderAvatarIndex,
-          content: cached.content,
-          timestamp: new Date(cached.timestamp),
-          type: cached.type as 'text' | 'system' | 'emoji-reaction' | 'media',
-          attachment: cached.attachment
-        }));
-        setMessages(hydratedMessages);
+    const loadCachedMessages = async () => {
+      try {
+        const { chatMessageCache } = await import('./ChatMessageCache');
+        const cachedMessages = chatMessageCache.loadMessages(session.id);
+        if (cachedMessages.length > 0) {
+          console.log('📥 Loading cached messages:', cachedMessages.length);
+          const hydratedMessages: ChatMessage[] = cachedMessages.map(cached => ({
+            id: cached.id,
+            senderAlias: cached.senderAlias,
+            senderAvatarIndex: cached.senderAvatarIndex || 0,
+            content: cached.content,
+            timestamp: new Date(cached.timestamp),
+            type: cached.type as 'text' | 'system' | 'emoji-reaction' | 'media',
+            attachment: cached.attachment,
+            replyTo: cached.replyTo
+          }));
+          setMessages(hydratedMessages);
+        }
+      } catch (error) {
+        console.error('Error loading cached messages:', error);
       }
-    });
+    };
+    
+    loadCachedMessages();
   }, [session.id]);
-  
-  // Socket connection for real-time events
+
   const {
     onEvent,
     sendMessage,
-    sendEmojiReaction,
     toggleHand,
+    sendEmojiReaction,
     promoteToSpeaker,
     muteParticipant,
     unmuteParticipant,
     unmuteAll,
     kickParticipant,
     sendEmergencyAlert,
-    leaveSanctuary
+    leaveSanctuary,
   } = useSanctuarySocket({
     sessionId: session.id,
     participant: {
@@ -129,96 +147,75 @@ export const EnhancedLiveAudioSpace = ({ session, currentUser, onLeave }: Enhanc
     }
   });
 
-  // Audio context and stream management
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const micAnalyserRef = useRef<AnalyserNode | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Generate invite link
-useEffect(() => {
-  const currentUrl = window.location.origin;
-  const link = `${currentUrl}/flagship-sanctuary/${session.id}`;
-  setInviteLink(link);
-}, [session.id]);
-
-  // Auto-scroll chat messages
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
 
+  // Set up socket event listeners
   useEffect(() => {
-    // Listen for participant events
+    if (!onEvent) return;
+
     const cleanupEvents = [
-      // Join/Leave events
       onEvent('participant_joined', (data) => {
         console.log('Participant joined:', data);
         setParticipants(prev => {
-          // Prevent duplicate participants
           const exists = prev.find(p => p.id === data.participant.id);
           if (exists) return prev;
           return [...prev, data.participant];
         });
-        addSystemMessage(`${data.participant.alias} joined the sanctuary`);
       }),
 
       onEvent('participant_left', (data) => {
-        console.log('Participant left:', data);
         setParticipants(prev => prev.filter(p => p.id !== data.participantId));
-        addSystemMessage(`${data.participantAlias} left the sanctuary`);
       }),
 
       onEvent('audio_participant_joined', (data) => {
         console.log('Audio participant joined:', data);
         setParticipants(prev => {
-          // Update existing participant or add new one
           const existing = prev.find(p => p.id === data.participant.id);
           if (existing) {
-            return prev.map(p => 
-              p.id === data.participant.id 
-                ? { ...p, connectionStatus: 'connected' as const }
-                : p
-            );
+            return prev.map(p => p.id === data.participant.id ? { ...p, ...data.participant } : p);
           }
           return [...prev, data.participant];
         });
       }),
 
       onEvent('audio_participant_left', (data) => {
-        console.log('Audio participant left:', data);
         setParticipants(prev => prev.filter(p => p.id !== data.participantId));
-        addSystemMessage(`${data.participantAlias} left the audio space`);
       }),
 
       onEvent('hand_raised', (data) => {
-        console.log('Hand raised:', data);
-        setParticipants(prev => prev.map(p => 
-          p.id === data.participantId 
-            ? { ...p, handRaised: data.isRaised }
-            : p
-        ));
-        
+        setParticipants(prev => 
+          prev.map(p => 
+            p.id === data.participantId 
+              ? { ...p, handRaised: data.isRaised }
+              : p
+          )
+        );
+
         if (data.isRaised && data.participantId !== currentUser.id) {
           toast({
             title: "Hand Raised",
-            description: `${data.participantAlias} raised their hand`,
+            description: `${data.participantAlias} wants to speak`,
           });
         }
       }),
 
       onEvent('participant_muted', (data) => {
-        console.log('Participant muted:', data);
-        setParticipants(prev => prev.map(p => 
-          p.id === data.participantId 
-            ? { ...p, isMuted: true }
-            : p
-        ));
-        
+        setParticipants(prev => 
+          prev.map(p => 
+            p.id === data.participantId 
+              ? { ...p, isMuted: true, hostMuted: true }
+              : p
+          )
+        );
+
         if (data.participantId === currentUser.id) {
+          setIsHostMuted(true);
           setIsMuted(true);
-          setIsHostMuted(true); // Lock mute state when host mutes
           toast({
             title: "You've been muted",
             description: "A moderator has muted your microphone",
@@ -228,98 +225,102 @@ useEffect(() => {
       }),
 
       onEvent('participant_unmuted', (data) => {
-        console.log('Participant unmuted:', data);
-        setParticipants(prev => prev.map(p => 
-          p.id === data.participantId 
-            ? { ...p, isMuted: false }
-            : p
-        ));
-        
+        setParticipants(prev => 
+          prev.map(p => 
+            p.id === data.participantId 
+              ? { ...p, isMuted: false, hostMuted: false }
+              : p
+          )
+        );
+
         if (data.participantId === currentUser.id) {
-          setIsHostMuted(false); // Unlock mute state when host unmutes
+          setIsHostMuted(false);
           toast({
-            title: "You've been unmuted",
+            title: "You're unmuted",
             description: "A moderator has unmuted your microphone",
           });
         }
       }),
 
       onEvent('participant_kicked', (data) => {
-        console.log('Participant kicked:', data);
         setParticipants(prev => prev.filter(p => p.id !== data.participantId));
-        
+
         if (data.participantId === currentUser.id) {
           toast({
             title: "Removed from sanctuary",
             description: "You have been removed by a moderator",
             variant: "destructive"
           });
-          // Redirect after a short delay
           setTimeout(() => {
             onLeave();
           }, 2000);
         } else {
-          addSystemMessage(`${data.participantId} was removed from the sanctuary`);
+          toast({
+            title: "Participant removed",
+            description: `${data.participantId} has been removed`
+          });
         }
       }),
 
       onEvent('new_message', (data) => {
-        console.log('New message received:', data);
+        console.log('📨 New message received:', data);
         
-        // Check if this message is already in our messages array to prevent duplicates
         setMessages(prev => {
           const exists = prev.find(m => m.id === data.id);
           if (exists) {
-            console.log('Duplicate message ignored:', data.id);
+            console.log('⚠️ Duplicate message detected, skipping:', data.id);
             return prev;
           }
-          
-          const messageType = (data.type === 'text' || data.type === 'emoji-reaction' || data.type === 'media' || data.type === 'system') 
-            ? data.type 
-            : 'text';
-          
+
           const newMessage: ChatMessage = {
             id: data.id,
             senderAlias: data.senderAlias,
-            senderAvatarIndex: data.senderAvatarIndex || 1,
+            senderAvatarIndex: data.senderAvatarIndex || 0,
             content: data.content,
             timestamp: new Date(data.timestamp),
-            type: messageType,
+            type: data.type as 'text' | 'system' | 'emoji-reaction' | 'media',
             attachment: data.attachment,
             replyTo: data.replyTo
           };
-          
+
+          // Cache the message
+          import('./ChatMessageCache').then(({ chatMessageCache }) => {
+            const messageToCache = {
+              ...newMessage,
+              timestamp: newMessage.timestamp.toISOString()
+            };
+            const existingMessages = chatMessageCache.loadMessages(session.id);
+            chatMessageCache.saveMessages(session.id, [...existingMessages, messageToCache]);
+          });
+
           return [...prev, newMessage];
         });
       }),
 
       onEvent('emoji_reaction', (data) => {
-        console.log('Emoji reaction received:', data);
-        
-        // Add floating reaction animation with unique ID and timeout
-        const reactionId = data.id || `reaction_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        console.log('Emoji reaction:', data);
+
         setReactions(prev => {
           const newReactions = [...prev, {
-            id: reactionId,
+            id: data.id || Math.random().toString(36),
             emoji: data.emoji,
+            x: Math.random() * 100,
+            y: Math.random() * 100,
             timestamp: Date.now()
           }];
-          // Limit to 5 active reactions for performance
-          return newReactions.slice(-5);
+          return newReactions;
         });
 
-        // Remove reaction after 3 seconds
         setTimeout(() => {
-          setReactions(prev => prev.filter(r => r.id !== reactionId));
+          setReactions(prev => prev.filter(r => Date.now() - r.timestamp < 3000));
         }, 3000);
 
-        // Add to chat messages
         const reactionMessage: ChatMessage = {
-          id: `reaction-${data.timestamp}`,
+          id: `reaction-${Date.now()}`,
           senderAlias: data.participantAlias,
-          senderAvatarIndex: 1,
+          senderAvatarIndex: 0,
           content: data.emoji,
-          timestamp: new Date(data.timestamp),
+          timestamp: new Date(),
           type: 'emoji-reaction'
         };
         setMessages(prev => [...prev, reactionMessage]);
@@ -365,51 +366,59 @@ useEffect(() => {
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true
+          autoGainControl: true,
+          sampleRate: 44100,
+          sampleSize: 16,
+          channelCount: 1
         } 
       });
       
       streamRef.current = stream;
       
-      // Initialize audio context for level monitoring
-      audioContextRef.current = new AudioContext();
-      const source = audioContextRef.current.createMediaStreamSource(stream);
-      micAnalyserRef.current = audioContextRef.current.createAnalyser();
-      source.connect(micAnalyserRef.current);
+      // Create audio context for level monitoring
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const analyser = audioContext.createAnalyser();
+      const microphone = audioContext.createMediaStreamSource(stream);
       
-      // Start audio level monitoring
+      analyser.fftSize = 256;
+      microphone.connect(analyser);
+      
+      audioContextRef.current = audioContext;
+      micAnalyserRef.current = analyser;
+      
       monitorAudioLevel();
       
       toast({
-        title: "Audio Ready",
-        description: "Microphone access granted",
+        title: "Audio initialized",
+        description: "Your microphone is ready"
       });
     } catch (error) {
-      console.error('Audio initialization failed:', error);
+      console.error('Failed to initialize audio:', error);
       toast({
-        title: "Audio Access Required",
-        description: "Please allow microphone access to participate",
+        title: "Audio Error",
+        description: "Could not access your microphone",
         variant: "destructive"
       });
     }
   };
 
-const monitorAudioLevel = () => {
-  if (!micAnalyserRef.current) return;
+  const monitorAudioLevel = () => {
+    if (!micAnalyserRef.current) return;
 
-  const dataArray = new Uint8Array(micAnalyserRef.current.frequencyBinCount);
-  
-  const checkLevel = () => {
-    if (micAnalyserRef.current) {
-      micAnalyserRef.current.getByteFrequencyData(dataArray);
-      const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-      setAudioLevel(Math.floor((average / 255) * 100));
-    }
-    requestAnimationFrame(checkLevel);
+    const dataArray = new Uint8Array(micAnalyserRef.current.frequencyBinCount);
+    
+    const checkLevel = () => {
+      if (micAnalyserRef.current) {
+        micAnalyserRef.current.getByteFrequencyData(dataArray);
+        const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+        const normalizedLevel = Math.round((average / 255) * 100);
+        setAudioLevel(normalizedLevel);
+        requestAnimationFrame(checkLevel);
+      }
+    };
+    
+    checkLevel();
   };
-  
-  checkLevel();
-};
 
   const cleanup = () => {
     if (streamRef.current) {
@@ -421,154 +430,87 @@ const monitorAudioLevel = () => {
   };
 
   const handleToggleMute = () => {
-    // Enhanced mute logic with host override
-    const participant = session?.participants.find(p => p.id === currentParticipant?.id);
+    const participant = participants.find(p => p.id === currentUser.id);
     
-    // If host has muted the participant, they cannot unmute themselves
+    // If host muted, user cannot unmute themselves
     if (participant?.hostMuted || isHostMuted) {
       if (isMuted) {
         toast({
           title: "Cannot unmute",
-          description: "You have been muted by the host",
+          description: "You have been muted by a moderator",
           variant: "destructive"
         });
         return;
       }
     }
-    
+
     const newMutedState = !isMuted;
     setIsMuted(newMutedState);
     
-    if (agoraClient && localMicrophoneTrack) {
-      localMicrophoneTrack.setEnabled(!newMutedState);
-    }
-    
-    // Update server with self-mute state (not host-mute)
-    if (socketActions.updateParticipantState) {
-      socketActions.updateParticipantState({
-        sessionId: session?.id || '',
-        participantId: currentParticipant?.id || '',
-        updates: { 
-          isMuted: newMutedState,
-          // Only clear hostMuted if unmuting and not host-muted
-          ...((!newMutedState && !participant?.hostMuted) ? { hostMuted: false } : {})
-        }
-      });
-    }
-  };
-
-  // Host-only functions for mute control
-  const hostMuteParticipant = useCallback((participantId: string, shouldMute: boolean) => {
-    if (!currentParticipant?.isHost) return;
-    
-    if (socketActions.hostMuteParticipant) {
-      socketActions.hostMuteParticipant({
-        sessionId: session?.id || '',
-        participantId,
-        muted: shouldMute
-      });
-    }
-  }, [currentParticipant?.isHost, session?.id, socketActions]);
-
-  const hostMuteAll = useCallback(() => {
-    if (!currentParticipant?.isHost || !session) return;
-    
-    const nonHostParticipants = session.participants.filter(p => !p.isHost && p.id !== currentParticipant?.id);
-    nonHostParticipants.forEach(participant => {
-      hostMuteParticipant(participant.id, true);
-    });
-    
-    toast({
-      title: "All participants muted",
-      description: `Muted ${nonHostParticipants.length} participants`,
-    });
-  }, [currentParticipant?.isHost, currentParticipant?.id, session, hostMuteParticipant, toast]);
-
-  const hostUnmuteAll = useCallback(() => {
-    if (!currentParticipant?.isHost || !session) return;
-    
-    const mutedParticipants = session.participants.filter(p => 
-      !p.isHost && p.id !== currentParticipant?.id && (p.isMuted || p.hostMuted)
-    );
-    
-    mutedParticipants.forEach(participant => {
-      hostMuteParticipant(participant.id, false);
-    });
-    
-    toast({
-      title: "All participants unmuted",
-      description: `Unmuted ${mutedParticipants.length} participants`,
-    });
-  }, [currentParticipant?.isHost, currentParticipant?.id, session, hostMuteParticipant, toast]);
-
     if (streamRef.current) {
       const audioTrack = streamRef.current.getAudioTracks()[0];
       if (audioTrack) {
-        audioTrack.enabled = isMuted;
-        setIsMuted(!isMuted);
-        
-        toast({
-          title: isMuted ? "Microphone On" : "Microphone Off",
-          description: isMuted ? "You can now speak" : "Your microphone is muted",
-        });
+        audioTrack.enabled = !newMutedState;
       }
     }
+    
+    toast({
+      title: newMutedState ? "Muted" : "Unmuted",
+      description: newMutedState ? "Your microphone is now muted" : "Your microphone is now active"
+    });
   };
 
   const handleToggleDeafen = () => {
     setIsDeafened(!isDeafened);
     toast({
-      title: isDeafened ? "Audio On" : "Audio Off", 
-      description: isDeafened ? "You can now hear others" : "Audio output disabled",
+      title: isDeafened ? "Undeafened" : "Deafened",
+      description: isDeafened ? "You can now hear others" : "You cannot hear others"
     });
   };
 
   const handleRaiseHand = () => {
-    const newState = !handRaised;
-    setHandRaised(newState);
-    toggleHand(newState);
+    const newHandState = !handRaised;
+    setHandRaised(newHandState);
+    toggleHand(newHandState);
     
     toast({
-      title: newState ? "Hand Raised" : "Hand Lowered",
-      description: newState ? "Waiting for host permission to speak" : "Hand lowered",
+      title: newHandState ? "Hand raised" : "Hand lowered",
+      description: newHandState ? "You want to speak" : "You no longer want to speak"
     });
   };
 
   const handleCopyInviteLink = async () => {
     try {
+      const inviteLink = `${window.location.origin}/sanctuary/${session.id}`;
       await navigator.clipboard.writeText(inviteLink);
       toast({
-        title: "Invite Link Copied",
-        description: "Share this link to invite others to join",
+        title: "Link copied",
+        description: "Invite link copied to clipboard"
       });
     } catch (error) {
       toast({
-        title: "Copy Failed",
-        description: "Please copy the link manually",
-        variant: "destructive"
+        title: "Copy failed",
+        description: "Could not copy invite link",
+        variant: "destructive" 
       });
     }
   };
 
   const handleSendMessage = async (messageContent?: string, type?: 'text' | 'emoji-reaction' | 'media', attachment?: any, replyTo?: string) => {
-    const content = messageContent || newMessage.trim();
-    if (!content && !attachment) return;
-
-    // Clear input only if using the local newMessage
-    if (!messageContent) {
-      setNewMessage('');
+    if (!messageContent?.trim() && !attachment) return;
+    
+    const content = messageContent || '';
+    if (content) {
+      sendMessage(content, type, attachment, replyTo);
     }
-
-    // Send message via socket hook with reply support
-    sendMessage(content, type || 'text', attachment, replyTo);
   };
 
   const handleEmojiReaction = (emoji: string) => {
     sendEmojiReaction(emoji);
     
     toast({
-      title: `${emoji} Reaction Sent`,
-      description: "Your reaction was shared with everyone",
+      title: "Reaction sent",
+      description: `You reacted with ${emoji}`
     });
   };
 
@@ -578,6 +520,8 @@ const monitorAudioLevel = () => {
       minute: '2-digit' 
     });
   };
+
+  const inviteLink = `${window.location.origin}/sanctuary/${session.id}`;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5">
@@ -620,183 +564,206 @@ const monitorAudioLevel = () => {
                   </Badge>
                 )}
               </Button>
+
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={async () => {
+                  await leaveSanctuary();
+                  onLeave();
+                }}
+              >
+                <PhoneOff className="h-4 w-4 mr-2" />
+                Leave
+              </Button>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Main Content */}
       <div className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Main Audio Controls */}
-          <div className="lg:col-span-3">
-            <Card className="mb-6">
+        <div className="grid lg:grid-cols-4 gap-6">
+          {/* Left Panel - Audio Controls */}
+          <div className="lg:col-span-1 space-y-6">
+            <Card>
               <CardHeader>
-                <CardTitle className="flex items-center justify-between">
+                <CardTitle className="flex items-center space-x-2">
+                  <Mic className="h-5 w-5" />
                   <span>Audio Controls</span>
-                  <Badge variant="outline" className="text-xs">
-                    <Users className="h-3 w-3 mr-1" />
-                    {participants.length} participants
-                  </Badge>
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="flex justify-center space-x-4 mb-6">
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
                   <Button
-                    size="lg"
                     variant={isMuted ? "destructive" : "default"}
                     onClick={handleToggleMute}
-                    disabled={isHostMuted && isMuted} // Disable unmute if host muted
-                    className={`px-8 py-4 text-lg ${isHostMuted && isMuted ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    title={isHostMuted && isMuted ? 'You have been muted by a moderator' : ''}
+                    className="w-full justify-start"
+                    disabled={isHostMuted}
                   >
                     {isMuted ? (
-                      <MicOff className="h-6 w-6 mr-3" />
+                      <>
+                        <MicOff className="h-4 w-4 mr-2" />
+                        {isHostMuted ? "Muted by Host" : "Unmute"}
+                      </>
                     ) : (
-                      <Mic className="h-6 w-6 mr-3" />
+                      <>
+                        <Mic className="h-4 w-4 mr-2" />
+                        Mute
+                      </>
                     )}
-                    {isMuted ? (isHostMuted ? 'Muted by Host' : 'Unmute') : 'Mute'}
                   </Button>
-                  
+
                   <Button
-                    size="lg" 
                     variant={isDeafened ? "destructive" : "outline"}
                     onClick={handleToggleDeafen}
-                    className="px-8 py-4 text-lg"
+                    className="w-full justify-start"
                   >
                     {isDeafened ? (
-                      <VolumeX className="h-6 w-6 mr-3" />
+                      <>
+                        <VolumeX className="h-4 w-4 mr-2" />
+                        Undeafen
+                      </>
                     ) : (
-                      <Volume2 className="h-6 w-6 mr-3" />
+                      <>
+                        <Volume2 className="h-4 w-4 mr-2" />
+                        Deafen
+                      </>
                     )}
-                    {isDeafened ? 'Undeafen' : 'Deafen'}
                   </Button>
 
                   {!currentUser.isHost && (
                     <Button
-                      size="lg"
                       variant={handRaised ? "default" : "outline"}
                       onClick={handleRaiseHand}
-                      className={`px-8 py-4 text-lg ${handRaised ? "bg-yellow-500 hover:bg-yellow-600 text-white" : ""}`}
+                      className="w-full justify-start"
                     >
-                      <Hand className="h-6 w-6 mr-3" />
-                      {handRaised ? 'Lower Hand' : 'Raise Hand'}
+                      <Hand className="h-4 w-4 mr-2" />
+                      {handRaised ? "Lower Hand" : "Raise Hand"}
                     </Button>
                   )}
-
-                  <Button
-                    size="lg"
-                    variant="destructive"
-                    onClick={() => {
-                      leaveSanctuary();
-                      onLeave();
-                    }}
-                    className="px-8 py-4 text-lg"
-                  >
-                    <PhoneOff className="h-6 w-6 mr-3" />
-                    Leave
-                  </Button>
                 </div>
 
-{/* Audio Level Indicator - Waveform */}
-{!isMuted && (
-  <div className="flex items-center justify-center space-x-3">
-    <Mic className="h-5 w-5 text-green-500" />
-    <div className="flex items-end space-x-1 h-10">
-      {Array.from({ length: 12 }).map((_, i) => {
-        const level = Math.max(4, Math.min(100, audioLevel + (i % 3 - 1) * 8));
-        return (
-          <div
-            key={i}
-            className="w-1.5 rounded-full bg-gradient-to-b from-green-400 to-green-600 transition-all duration-150"
-            style={{ height: `${level}%` }}
-          />
-        );
-      })}
-    </div>
-    <span className="text-sm text-muted-foreground min-w-[3rem]">{audioLevel}%</span>
-  </div>
-)}
+                {/* Audio Level Indicator */}
+                {!isMuted && (
+                  <div className="flex items-center justify-center space-x-3">
+                    <Mic className="h-5 w-5 text-green-500" />
+                    <div className="flex items-end space-x-1 h-10">
+                      {Array.from({ length: 12 }).map((_, i) => {
+                        const level = Math.max(4, Math.min(100, audioLevel + (i % 3 - 1) * 8));
+                        return (
+                          <div
+                            key={i}
+                            className="w-1.5 rounded-full bg-gradient-to-b from-green-400 to-green-600 transition-all duration-150"
+                            style={{ height: `${level}%` }}
+                          />
+                        );
+                      })}
+                    </div>
+                    <span className="text-sm text-muted-foreground min-w-[3rem]">{audioLevel}%</span>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
-            {/* Participants */}
+            {/* Quick Reactions */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Users className="h-5 w-5 mr-2" />
-                  Participants ({participants.length})
+                <CardTitle className="flex items-center space-x-2">
+                  <Sparkles className="h-5 w-5" />
+                  <span>Quick Reactions</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-4 gap-2">
+                  {['👍', '❤️', '😂', '🔥', '👏', '🤔', '😮', '💯'].map((emoji) => (
+                    <Button
+                      key={emoji}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEmojiReaction(emoji)}
+                      className="aspect-square p-2 text-lg hover:scale-110 transition-transform"
+                    >
+                      {emoji}
+                    </Button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Center Panel - Participants */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Users className="h-5 w-5" />
+                    <span>Participants ({participants.length})</span>
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4">
                   {participants.map((participant) => (
-                    <div key={participant.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="h-12 w-12">
-                          <AvatarImage src={`/avatars/avatar-${participant.avatarIndex || 1}.svg`} />
-                          <AvatarFallback className="text-lg">
-                            {participant.alias.substring(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            <p className="font-semibold text-lg">{participant.alias}</p>
-                            {participant.isHost && (
-                              <Badge className="bg-gradient-to-r from-primary to-primary/80">
-                                <Sparkles className="h-3 w-3 mr-1" />
-                                Host
-                              </Badge>
-                            )}
-                            {participant.isModerator && (
-                              <Badge variant="outline">
-                                <Shield className="h-3 w-3 mr-1" />
-                                Mod
-                              </Badge>
-                            )}
-                            {participant.handRaised && (
-                              <Hand className="h-5 w-5 text-yellow-500 animate-pulse" />
-                            )}
-                          </div>
-                          <div className="text-sm text-muted-foreground flex items-center">
-                            <div className={`w-2 h-2 rounded-full mr-2 ${
-                              participant.connectionStatus === 'connected' ? 'bg-green-500' : 'bg-gray-400'
-                            }`} />
-                            <span>{participant.connectionStatus}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-3">
-                        {participant.isMuted ? (
-                          <MicOff className="h-5 w-5 text-red-500" />
-                        ) : (
-                          <div className="flex items-center space-x-2">
-                            <Mic className="h-5 w-5 text-green-500" />
-                            {/* Audio level bars */}
-                            <div className="flex space-x-1">
-                              {[...Array(3)].map((_, i) => (
-                                <div
-                                  key={i}
-                                  className={`w-1 h-4 rounded-full transition-colors ${
-                                    (participant.audioLevel || 0) > (i + 1) * 33
-                                      ? 'bg-green-500'
-                                      : 'bg-muted'
-                                  }`}
-                                />
-                              ))}
+                    <div
+                      key={participant.id}
+                      className={`p-4 rounded-lg border transition-all ${
+                        participant.id === currentUser.id 
+                          ? 'bg-primary/5 border-primary/20 ring-1 ring-primary/10' 
+                          : 'bg-card hover:bg-accent/50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={`/avatars/avatar-${participant.avatarIndex || 1}.svg`} />
+                            <AvatarFallback>{participant.alias?.[0]?.toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2">
+                              <h3 className="font-medium">{participant.alias}</h3>
+                              {participant.isHost && (
+                                <Badge variant="secondary" className="text-xs">
+                                  <Shield className="h-3 w-3 mr-1" />
+                                  Host
+                                </Badge>
+                              )}
+                              {participant.isModerator && (
+                                <Badge variant="outline" className="text-xs">
+                                  Moderator
+                                </Badge>
+                              )}
+                              {participant.id === currentUser.id && (
+                                <Badge variant="outline" className="text-xs">
+                                  You
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            <div className="flex items-center space-x-2 mt-1">
+                              {participant.isMuted ? (
+                                <MicOff className="h-4 w-4 text-red-500" />
+                              ) : (
+                                <Mic className="h-4 w-4 text-green-500" />
+                              )}
+                              
+                              {participant.handRaised && (
+                                <Hand className="h-4 w-4 text-yellow-500 animate-bounce" />
+                              )}
                             </div>
                           </div>
-                        )}
+                        </div>
 
-                        {/* Host/Moderator Controls */}
+                        {/* Host Controls */}
                         {(currentUser.isHost || currentUser.isModerator) && participant.id !== currentUser.id && (
-                          <div className="flex space-x-2">
+                          <div className="flex items-center space-x-2">
                             {participant.handRaised && (
                               <Button
                                 size="sm"
+                                variant="outline"
                                 onClick={() => promoteToSpeaker(participant.id)}
-                                className="bg-green-600 hover:bg-green-700"
                               >
                                 Allow
                               </Button>
@@ -849,34 +816,12 @@ const monitorAudioLevel = () => {
             </Card>
           </div>
 
-          {/* Right Sidebar */}
-          <div className="lg:col-span-1">
-            {/* Quick Reactions */}
-            <Card className="mb-6">
+          {/* Right Panel - Session Info & Controls */}
+          <div className="lg:col-span-1 space-y-6">
+            <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Quick Reactions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-3 gap-2">
-                  {['👍', '👏', '❤️', '😂', '🤔', '👎', '🔥', '✨', '🙏'].map((emoji) => (
-                    <Button
-                      key={emoji}
-                      variant="outline"
-                      onClick={() => handleEmojiReaction(emoji)}
-                      className="text-2xl p-3 h-auto hover:scale-110 transition-transform duration-200 hover:shadow-lg"
-                    >
-                      {emoji}
-                    </Button>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Share Link Card */}
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                  <Share2 className="h-5 w-5 mr-2" />
+                <CardTitle className="flex items-center space-x-2">
+                  <Share2 className="h-5 w-5" />
                   Invite Link
                 </CardTitle>
               </CardHeader>
@@ -911,7 +856,7 @@ const monitorAudioLevel = () => {
               onSendMessage={handleSendMessage}
             />
 
-            {/* Emergency Controls - Fixed Position to Avoid Overlap */}
+            {/* Emergency Controls */}
             <Card className="border-red-200 mt-4">
               <CardContent className="pt-6">
                 <div className="text-center space-y-3">
@@ -938,3 +883,5 @@ const monitorAudioLevel = () => {
     </div>
   );
 };
+
+export default EnhancedLiveAudioSpace;

@@ -106,6 +106,9 @@ export interface LiveParticipant {
   handRaised?: boolean;
   speakingTime?: number;
   reactions: EmojiReaction[];
+  hostMuted?: boolean;
+  isKicked?: boolean;
+  lastSeen?: Date;
 }
 
 export interface EmojiReaction {

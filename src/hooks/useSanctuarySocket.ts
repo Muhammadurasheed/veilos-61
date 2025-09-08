@@ -301,13 +301,6 @@ export const useSanctuarySocket = (config: SanctuarySocketConfig) => {
     }
   }, [config.sessionId, config.participant.id]);
 
-  return {
-    // Connection state
-    isConnected: isConnectedRef.current,
-    
-    // Event subscription
-    onEvent,
-    
   // Host mute participant with database persistence
   const hostMuteParticipant = useCallback((data: { sessionId: string; participantId: string; muted: boolean }) => {
     socketRef.current?.emit('flagship_host_mute_participant', data);
@@ -319,6 +312,13 @@ export const useSanctuarySocket = (config: SanctuarySocketConfig) => {
   }, []);
 
   return {
+    // Connection state
+    isConnected: isConnectedRef.current,
+    
+    // Event subscription
+    onEvent,
+    
+    // Actions
     sendMessage,
     toggleHand,
     sendEmojiReaction,
@@ -332,5 +332,4 @@ export const useSanctuarySocket = (config: SanctuarySocketConfig) => {
     hostMuteParticipant,
     updateParticipantState
   };
-};
 };
